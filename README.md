@@ -1,3 +1,27 @@
+# Dependencies
+
+To use this library, you will need liblttng-ust-dev >= 2.10.
+
+For Ubuntu 16.04 and below, you will need to add a PPA that includes this dependency:
+sudo apt-add-repository ppa:lttng/stable-2.10 -y
+sudo apt -y update
+
+Then the final step is to install the dependent library:
+sudo apt install liblttng-ust-dev
+
+# Integration
+
+Add this project as a subdirectory in your project, either as a git submodule or copying the code directly.
+Then add that directory to your top-level CMakeLists.txt with 'add_subdirectory'.
+This will make the target 'tracelogging' available.  
+Add that to the target_link_libraries of any target that will use TraceLogging.
+
+# Usage
+
+At global scope, use TRACELOGGING_DEFINE_PROVIDER to definie a provider handle.
+Then at runtime, before writing any events, call TraceLoggingRegister.
+To write events, use TraceLoggingWrite.
+Finally, at shutdown, use TraceLoggingUnregister.
 
 # Contributing
 

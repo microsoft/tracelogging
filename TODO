@@ -1,0 +1,5 @@
+- Fix azure-pipelines.
+- Fix install location.
+- Try to support liblttng-ust-dev 2.9 or even 2.7
+- Consider a CMake export config file
+- Pull in lttng-ust with a proper find-package that considers version and reports failure <2.10
