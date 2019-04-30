@@ -1,3 +1,5 @@
+[![Build Status](https://mscodehub.visualstudio.com/Azile/_apis/build/status/github-TraceLogging-CI?branchName=master)](https://mscodehub.visualstudio.com/Azile/_build/latest?definitionId=920&branchName=master)
+
 # Dependencies
 
 To use this library, you will need liblttng-ust-dev >= 2.10.
