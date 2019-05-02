@@ -9,6 +9,8 @@ target_include_directories(lttngh PUBLIC ${LTTNGH_IncludeDir})
 target_link_libraries(lttngh PUBLIC lttng-ust lttng-ust-tracepoint)
 
 set_property(TARGET lttngh PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET lttngh PROPERTY VERSION "1.0")
+set_property(TARGET lttngh PROPERTY SOVERSION 1)
 
 set(TraceLogging_IncludeDir ${PROJECT_SOURCE_DIR}/include/traceloggingroot/)
 
