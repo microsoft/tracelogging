@@ -6,6 +6,8 @@ include(GNUInstallDirs)
 
 # Include sub-projects.
 
+add_compile_options(-Wall -Wextra)
+
 # Include source
 add_subdirectory(src)
 
