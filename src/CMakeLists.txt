@@ -4,6 +4,7 @@ set(LTTNGH_IncludeDir ${PROJECT_SOURCE_DIR}/include/lttnghroot/)
 
 # Add source to this project's executable.
 add_library(lttngh LttngActivityHelpers.c LttngHelpers.c)
+target_compile_features(lttngh PRIVATE c_std_99)
 target_include_directories(lttngh PUBLIC ${LTTNGH_IncludeDir})
 target_link_libraries(lttngh PUBLIC lttng-ust lttng-ust-tracepoint)
 

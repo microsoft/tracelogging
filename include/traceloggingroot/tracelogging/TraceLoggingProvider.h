@@ -323,7 +323,7 @@ LTTNG-specific:
     TRACELOGGING_DECLARE_PROVIDER(providerSymbol);                                                  \
     static_assert(sizeof("" providerName) <= LTTNG_UST_SYM_NAME_LEN - 3,                            \
                   "TRACELOGGING_DEFINE_PROVIDER providerName must be no more than 253 characters"); \
-    _tlgParseProviderId(providerId) struct _tlg_Provider_t _tlgProv_##providerSymbol = {{("" providerName), NULL, 0, {}, {}, 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR, {}}, 0}
+    _tlgParseProviderId(providerId) struct _tlg_Provider_t _tlgProv_##providerSymbol = {{("" providerName), NULL, 0, cds_list_head(), cds_list_head(), 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR, {}}, 0}
 
 /*
 Macro TraceLoggingOptionGroup(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11):
@@ -1891,7 +1891,7 @@ struct _tlgTypeMapInt
         {atype_integer, {.basic = {.integer = {8u * size, 8u * align, isSigned, _tlg_IntFieldType_tlgDecimal}}}};
 
     static const lttngh_DataType _tlgType = isSigned ? lttngh_DataType_Signed : lttngh_DataType_Unsigned;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -1904,7 +1904,7 @@ struct _tlgTypeMapHexInt
         {atype_integer, {.basic = {.integer = {8u * size, 8u * align, 0, _tlg_IntFieldType_tlgHex}}}};
 
     static const lttngh_DataType _tlgType = lttngh_DataType_Unsigned;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -1915,7 +1915,7 @@ struct _tlgTypeMapUtf8String
     static constexpr lttng_type _tlgLttngType =
         {atype_string, {.basic = {.string = {lttng_encode_UTF8}}}};
 
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -1926,7 +1926,7 @@ struct _tlgTypeMapUtf8Sequence
     static constexpr lttng_type _tlgLttngType =
         {atype_sequence, {.sequence = {{atype_integer, {.basic = {.integer = {8u * sizeof(uint16_t), 8u * lttng_alignof(uint16_t), 0, _tlg_IntFieldType_tlgDecimal}}}}, {atype_integer, {.basic = {.integer = {8u * sizeof(char), 8u * lttng_alignof(char), 0, _tlg_IntFieldType_tlgUTF8}}}}}}};
 
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -1983,7 +1983,7 @@ struct _tlgTypeMapBase<bool>
                       }}};
 
     static const lttngh_DataType _tlgType = lttngh_DataType_Unsigned;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -1996,7 +1996,7 @@ struct _tlgTypeMapBase<float>
         {atype_float, {.basic = {._float = {_tlg_FloatFieldType_float}}}};
 
     static const lttngh_DataType _tlgType = lttngh_DataType_Float;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -2009,7 +2009,7 @@ struct _tlgTypeMapBase<double>
         {atype_float, {.basic = {._float = {_tlg_FloatFieldType_double}}}};
 
     static const lttngh_DataType _tlgType = lttngh_DataType_Float;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }
@@ -2124,7 +2124,7 @@ struct _tlgTypeMapBase<char>
         {atype_array, {.array = {{atype_integer, {.basic = {.integer = {8u * sizeof(char), 8u * lttng_alignof(char), 0, _tlg_IntFieldType_tlgUTF8}}}}, 1}}};
 
     static const lttngh_DataType _tlgType = lttngh_DataType_Unsigned;
-    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES
+    static inline constexpr lttng_event_field _tlgField(char const *szName) _tlg_NOEXCEPT
     {
         return {szName, _tlgLttngType, 0, {}};
     }

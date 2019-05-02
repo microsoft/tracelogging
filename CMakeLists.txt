@@ -4,6 +4,8 @@ project(tracelogging)
 
 include(GNUInstallDirs)
 
+add_compile_options(-Wall -Wextra -Werror)
+
 # Include source
 add_subdirectory(src)
 
