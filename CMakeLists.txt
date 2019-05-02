@@ -4,8 +4,6 @@ project(tracelogging)
 
 include(GNUInstallDirs)
 
-# Include sub-projects.
-
 # Include source
 add_subdirectory(src)
 
