@@ -37,7 +37,7 @@ TraceLoggingUnregister(g_providerHandle);
 
 ### Logging LTTNG events through TraceLogging API
 
-In C++, TraceLoggingValue will attempt to deduce the logging type for you. There are specific macro variants for C or for cases
+In C++, TraceLoggingValue will attempt to deduce the logging type for you. There are specific per-type macro variants for C or for cases
 where you wish to explicitly pick the logged type yourself. The TraceLogging header contains extensive comments on the type system.
 The header also contains more detailed descriptions of keywords and levels, which are ways to split events into logical groupings.
 Below is an example of logging a more complex event:
@@ -55,7 +55,7 @@ TraceLoggingWrite(
 
 ### Consuming LTTNG events logged through TraceLogging API
 
-To consume TraceLogging events sent through LTTNG, you will need the lttng-tools package (see Dependencies). You can collect trace points using event wildcards:
+To consume TraceLogging events sent through LTTNG, you will need the lttng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
 
 ```bash
 lttng create
@@ -72,7 +72,7 @@ For more information, see the [LTTNG Documentation](https://lttng.org/docs/v2.10
 
 ## Dependencies
 
-This project carries a dependency on the lttng-ust library. To use this library, you will need liblttng-ust-dev >= 2.10. The library will compile with 2.7, but this is currently considered experimental.
+This project carries a dependency on the lttng-ust library. To use this library, you will need liblttng-ust-dev >= 2.10. The library will compile with 2.7, but this is currently considered experimental. To get liblttng-ust-dev 2.10:
 
 ```bash
 sudo apt-add-repository ppa:lttng/stable-2.10 -y
