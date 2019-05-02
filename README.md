@@ -8,7 +8,7 @@ The TraceLogging for LTTNG project enables structured event emission through LTT
 
 ### Definition, registration, unregistration
 
-To emit events through a TraceLogging provider, you must at minimum:
+To emit events through a TraceLogging provider, you must, at minimum:
 
 1) Define a provider handle with a **unique provider UUID**.
 2) At runtime, before writing any events, call TraceLoggingRegister.
@@ -18,16 +18,18 @@ To emit events through a TraceLogging provider, you must at minimum:
 For example:
 
 ```cpp
-// 22731e9c-e31a-4484-98d6-efa23d791456
+// Provider UUID: 22731e9c-e31a-4484-98d6-efa23d791456
 TRACELOGGING_DEFINE_PROVIDER(
     g_providerHandle,
-    "Company.Organization.Team.ProviderName",
+    // By contention: "Company.Organization.Team.ProviderName"
+    "Microsoft.Windows.Fundamentals.TestProvider",
     (0x7ea733d9, 0xf4eb, 0x4593, 0x8a, 0x8a, 0x8f, 0x9e, 0x75, 0xb0, 0x80, 0x04));
 
 TraceLoggingRegister(g_providerHandle);
 
 int x = 5;
-TraceLoggingWrite(g_providerHandle, "EventName",
+TraceLoggingWrite(g_providerHandle,
+    "TestEvent", // Event name
     TraceLoggingValue(x, "xValue"));
 
 TraceLoggingUnregister(g_providerHandle);
@@ -57,7 +59,7 @@ To consume TraceLogging events sent through LTTNG, you will need the lttng-tools
 
 ```bash
 lttng create
-lttng enable-event -u Company.Organization.Team.ProviderName.*
+lttng enable-event -u Microsoft.Windows.Fundamentals.TestProvider.*
 lttng start
 
 read -p "Emit events here..."
