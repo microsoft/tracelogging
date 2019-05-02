@@ -2,7 +2,7 @@
 
 # TraceLogging for LTTNG
 
-The TraceLogging for LTTNG project enables structured event emission through LTTNG for Linux via the same set of macros that are supported by the publicly available TraceLogging for ETW project in the Windows SDK.
+The TraceLogging for LTTNG project enables structured event emission through LTTNG via the same set of macros that are supported by the publicly available TraceLogging for ETW project in the Windows SDK.
 
 ## Examples
 
