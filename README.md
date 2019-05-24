@@ -118,3 +118,11 @@ We also welcome [issues submitted on GitHub](https://github.com/Microsoft/TraceL
 ## Third Party Notices
 
 Please see our [Third Party Notices](NOTICE.md).
+
+## Project Status
+
+This project is currently in active development.
+
+## Contact
+
+The easiest way to contact us is via the [Issues](https://github.com/microsoft/TraceLogging/issues) page.
