@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.5)
 
 # Add source to this project's executable.
 add_executable(traceloggingTest CatchMain.cpp TestTraceLogging.cpp)
