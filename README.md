@@ -115,6 +115,10 @@ Want to contribute? The team encourages community feedback and contributions. Pl
 
 We also welcome [issues submitted on GitHub](https://github.com/Microsoft/TraceLogging/issues).
 
-## Third Party Notices
+## Project Status
 
-Please see our [Third Party Notices](NOTICE.md).
+This project is currently in active development.
+
+## Contact
+
+The easiest way to contact us is via the [Issues](https://github.com/microsoft/TraceLogging/issues) page.
