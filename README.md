@@ -1,4 +1,4 @@
-[![Build Status](https://mscodehub.visualstudio.com/Azile/_apis/build/status/github-TraceLogging-CI?branchName=master)](https://mscodehub.visualstudio.com/Azile/_build/latest?definitionId=920&branchName=master)
+[![Build Status](https://dev.azure.com/ms/TraceLogging/_apis/build/status/microsoft.TraceLogging?branchName=master)](https://dev.azure.com/ms/TraceLogging/_build/latest?definitionId=147&branchName=master)
 
 # TraceLogging for LTTNG
 
