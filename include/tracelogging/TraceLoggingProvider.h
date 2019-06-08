@@ -69,6 +69,7 @@ TraceLoggingProvider.h for LTTNG behaves differently from the ETW version:
 - Limited support for TraceLoggingKeyword. TraceLoggingKeyword adds a suffix
   to the event name for each enabled keyword so that you can filter events
   based on the suffix, e.g. keyword 0x5 will turn into suffix ";k0;k2;".
+  Events with no keyword will have suffix ";k;".
 - Limited support for TraceLoggingWriteActivity. TraceLoggingWriteActivity
   adds "_ms_ActivityId" and "_ms_RelatedActivityId" fields to the event.
 - Limited support for TraceLoggingOpcode. TraceLoggingOpcode adds an
@@ -186,16 +187,6 @@ extern "C"
 #define _tlg_EXTERN_C extern "C"
 #endif // __cplusplus
 
-#if (__WCHAR_MAX == 0x7fffffff) || (__WCHAR_MAX == 0xffffffff)
-#define _tlgWcharNN 32
-#define _tlgWcharNN_type char32_t
-#elif (__WCHAR_MAX == 0x7fff) || (__WCHAR_MAX == 0xffff)
-#define _tlgWcharNN 16
-#define _tlgWcharNN_type char16_t
-#else
-#error Unsupported wchar_t type.
-#endif // __WCHAR_MAX
-
 /*
 Do not use these directly. Use wrapper macros such as TraceLoggingInt32.
 These handler macros may be renamed or removed in future versions of this header.
@@ -224,14 +215,20 @@ These handler macros may be renamed or removed in future versions of this header
     (_tlg_FloatFixedArray, ctype, pValues, cValues, ndt)
 #define _tlg_ArgChar8(ctype, value, ndt) \
     (_tlg_Char8, ctype, value, ndt)
+#define _tlg_ArgCharW(ctype, value, ndt) \
+    (_tlg_CharW, ctype, value, ndt)
 #define _tlg_ArgCharNN(ctype, value, NN, ndt) \
     (_tlg_CharNN, ctype, value, NN, ndt)
 #define _tlg_ArgString8(ctype, pszValue, ndt) \
     (_tlg_String8, ctype, pszValue, ndt)
+#define _tlg_ArgStringW(ctype, pszValue, ndt) \
+    (_tlg_StringW, ctype, pszValue, ndt)
 #define _tlg_ArgStringNN(ctype, pszValue, NN, ndt) \
     (_tlg_StringNN, ctype, pszValue, NN, ndt)
 #define _tlg_ArgCountedString8(ctype, pchValue, cchValue, ndt) \
     (_tlg_CountedString8, ctype, pchValue, cchValue, ndt)
+#define _tlg_ArgCountedStringW(ctype, pchValue, cchValue, ndt) \
+    (_tlg_CountedStringW, ctype, pchValue, cchValue, ndt)
 #define _tlg_ArgCountedStringNN(ctype, pchValue, cchValue, NN, ndt) \
     (_tlg_CountedStringNN, ctype, pchValue, cchValue, NN, ndt)
 #define _tlg_ArgBinary(ctype, pValue, cbValue, ndt) \
@@ -251,7 +248,7 @@ These handler macros may be renamed or removed in future versions of this header
 #pragma region Public interface
 #endif
 
-    /*
+/*
 This structure is left undefined to ensure a compile error for any attempt to
 copy or dereference the provider symbol. The provider symbol is a token, not a
 variable or a handle.
@@ -314,16 +311,16 @@ to TraceLoggingWrite with an unregistered handle is a no-op. Call
 TraceLoggingRegister to register the handle.
 
 LTTNG-specific:
-- Total length of providerName + eventName must be less than 253.
+- Total length of providerName + eventName must be less than 250.
 - The providerName must not contain any double-quote characters.
 - Only one provider with a given name may be registered per process.
 - The providerId is currently ignored.
 */
 #define TRACELOGGING_DEFINE_PROVIDER(providerSymbol, providerName, providerId, ...)                 \
     TRACELOGGING_DECLARE_PROVIDER(providerSymbol);                                                  \
-    static_assert(sizeof("" providerName) <= LTTNG_UST_SYM_NAME_LEN - 3,                            \
-                  "TRACELOGGING_DEFINE_PROVIDER providerName must be no more than 253 characters"); \
-    _tlgParseProviderId(providerId) struct _tlg_Provider_t _tlgProv_##providerSymbol = {{("" providerName), NULL, 0, cds_list_head(), cds_list_head(), 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR, {}}, 0}
+    static_assert(sizeof("" providerName) <= LTTNG_UST_SYM_NAME_LEN - 6,                            \
+                  "TRACELOGGING_DEFINE_PROVIDER providerName must be no more than 250 characters"); \
+    _tlgParseProviderId(providerId) struct _tlg_Provider_t _tlgProv_##providerSymbol = {{("" providerName), NULL, 0, {NULL,NULL}, {NULL,NULL}, 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR, {}}, 0}
 
 /*
 Macro TraceLoggingOptionGroup(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11):
@@ -527,7 +524,8 @@ LTTNG-specific:
   For example, an event specified as "MyEventName" with keyword 0x5 (bits 0
   and 2 are set) would result in a final event name of "MyEventName;k0;k2;".
   That way, you can enable all events that belong to category 0x4 by enabling
-  all events with names containing the string ";k2;".
+  all events with names containing the string ";k2;". Events with no keyword
+  will have the suffix ";k;".
 */
 #define TraceLoggingKeyword(eventKeyword) _tlg_ArgKeyword(eventKeyword)
 
@@ -770,9 +768,9 @@ Examples:
 #define TraceLoggingBool(value, ...) _tlg_ArgEnum(int32_t, value, _tlgDecimal, 1, _tlg_NDT(TraceLoggingBool, value, __VA_ARGS__), lttngh_BoolEnumDesc)
 #define TraceLoggingBoolean(value, ...) _tlg_ArgEnum(uint8_t, value, _tlgDecimal, 0, _tlg_NDT(TraceLoggingBoolean, value, __VA_ARGS__), lttngh_BoolEnumDesc)
 #define TraceLoggingChar(value, ...) _tlg_ArgChar8(char, value, _tlg_NDT(TraceLoggingChar, value, __VA_ARGS__))
+#define TraceLoggingWChar(value, ...) _tlg_ArgCharW(wchar_t, value, _tlg_NDT(TraceLoggingWChar, value, __VA_ARGS__))
 #define TraceLoggingChar16(value, ...) _tlg_ArgCharNN(char16_t, value, 16, _tlg_NDT(TraceLoggingChar16, value, __VA_ARGS__))
 #define TraceLoggingChar32(value, ...) _tlg_ArgCharNN(char32_t, value, 32, _tlg_NDT(TraceLoggingChar32, value, __VA_ARGS__))
-#define TraceLoggingWChar(value, ...) _tlg_ArgCharNN(wchar_t, value, _tlgWcharNN, _tlg_NDT(TraceLoggingWChar, value, __VA_ARGS__))
 #define TraceLoggingPointer(value, ...) _tlg_ArgInt(void const *, value, _tlgHex, 0, _tlg_NDT(TraceLoggingPointer, value, __VA_ARGS__))
 #define TraceLoggingCodePointer(value, ...) _tlg_ArgInt(void const *, value, _tlgHex, 0, _tlg_NDT(TraceLoggingCodePointer, value, __VA_ARGS__))
 #define TraceLoggingPid(value, ...) _tlg_ArgInt(uint32_t, value, _tlgDecimal, 0, _tlg_NDT(TraceLoggingPid, value, __VA_ARGS__))
@@ -884,13 +882,13 @@ Examples:
 - TraceLoggingString(psz1, "name", "desc", 0x4) // field name = "name", description = "desc", tags = 0x4.
 */
 #define TraceLoggingString(pszValue, ...) _tlg_ArgString8(char, pszValue, _tlg_NDT(TraceLoggingString, pszValue, __VA_ARGS__))
+#define TraceLoggingWideString(pszValue, ...) _tlg_ArgStringW(wchar_t, pszValue, _tlg_NDT(TraceLoggingWideString, pszValue, __VA_ARGS__))
 #define TraceLoggingString16(pszValue, ...) _tlg_ArgStringNN(char16_t, pszValue, 16, _tlg_NDT(TraceLoggingString16, pszValue, __VA_ARGS__))
 #define TraceLoggingString32(pszValue, ...) _tlg_ArgStringNN(char32_t, pszValue, 32, _tlg_NDT(TraceLoggingString32, pszValue, __VA_ARGS__))
-#define TraceLoggingWideString(pszValue, ...) _tlg_ArgStringNN(wchar_t, pszValue, _tlgWcharNN, _tlg_NDT(TraceLoggingWideString, pszValue, __VA_ARGS__))
 #define TraceLoggingCountedString(pchValue, cchValue, ...) _tlg_ArgCountedString8(char, pchValue, cchValue, _tlg_NDT(TraceLoggingCountedString, pchValue, __VA_ARGS__))
+#define TraceLoggingCountedWideString(pchValue, cchValue, ...) _tlg_ArgCountedStringW(wchar_t, pchValue, cchValue, _tlg_NDT(TraceLoggingCountedWideString, pchValue, __VA_ARGS__))
 #define TraceLoggingCountedString16(pchValue, cchValue, ...) _tlg_ArgCountedStringNN(char16_t, pchValue, cchValue, 16, _tlg_NDT(TraceLoggingCountedString16, pchValue, __VA_ARGS__))
 #define TraceLoggingCountedString32(pchValue, cchValue, ...) _tlg_ArgCountedStringNN(char32_t, pchValue, cchValue, 32, _tlg_NDT(TraceLoggingCountedString32, pchValue, __VA_ARGS__))
-#define TraceLoggingCountedWideString(pchValue, cchValue, ...) _tlg_ArgCountedStringNN(wchar_t, pchValue, cchValue, _tlgWcharNN, _tlg_NDT(TraceLoggingCountedWideString, pchValue, __VA_ARGS__))
 
 /*
 Wrapper macro for raw binary data.
@@ -1116,9 +1114,9 @@ Examples:
 #define TraceLoggingBoolFixedArray(pValues, cValues, ...) _tlg_ArgIntFixedArray(int32_t, pValues, cValues, _tlgDecimal, 1, _tlg_NDT(TraceLoggingBoolFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingBooleanFixedArray(pValues, cValues, ...) _tlg_ArgIntFixedArray(uint8_t, pValues, cValues, _tlgDecimal, 0, _tlg_NDT(TraceLoggingBooleanFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingCharFixedArray(pValues, cValues, ...) _tlg_ArgCountedString8(char, pValues, cValues, _tlg_NDT(TraceLoggingCharFixedArray, pValues, __VA_ARGS__))
+#define TraceLoggingWCharFixedArray(pValues, cValues, ...) _tlg_ArgCountedStringW(wchar_t, pValues, cValues, _tlg_NDT(TraceLoggingWCharFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingChar16FixedArray(pValues, cValues, ...) _tlg_ArgCountedStringNN(char16_t, pValues, cValues, 16, _tlg_NDT(TraceLoggingChar16FixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingChar32FixedArray(pValues, cValues, ...) _tlg_ArgCountedStringNN(char32_t, pValues, cValues, 32, _tlg_NDT(TraceLoggingChar32FixedArray, pValues, __VA_ARGS__))
-#define TraceLoggingWCharFixedArray(pValues, cValues, ...) _tlg_ArgCountedStringNN(wchar_t, pValues, cValues, _tlgWcharNN, _tlg_NDT(TraceLoggingWCharFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingPointerFixedArray(pValues, cValues, ...) _tlg_ArgIntFixedArray(void const *, pValues, cValues, _tlgHex, 0, _tlg_NDT(TraceLoggingPointerFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingCodePointerFixedArray(pValues, cValues, ...) _tlg_ArgIntFixedArray(void const *, pValues, cValues, _tlgHex, 0, _tlg_NDT(TraceLoggingCodePointerFixedArray, pValues, __VA_ARGS__))
 #define TraceLoggingGuidFixedArray(pValues, cValues, ...) _tlg_ArgIntFixedArray(uint8_t, (uint8_t const *)(pValues), (cValues)*16u, _tlgDecimal, 0, _tlg_NDT(TraceLoggingGuidFixedArray, pValues, __VA_ARGS__))
@@ -1188,9 +1186,9 @@ Examples:
 #define TraceLoggingBoolArray(pValues, cValues, ...) _tlg_ArgIntArray(int32_t, pValues, cValues, _tlgDecimal, 1, _tlg_NDT(TraceLoggingBoolArray, pValues, __VA_ARGS__))
 #define TraceLoggingBooleanArray(pValues, cValues, ...) _tlg_ArgIntArray(uint8_t, pValues, cValues, _tlgDecimal, 0, _tlg_NDT(TraceLoggingBooleanArray, pValues, __VA_ARGS__))
 #define TraceLoggingCharArray(pValues, cValues, ...) _tlg_ArgCountedString8(char, pValues, cValues, _tlg_NDT(TraceLoggingCharArray, pValues, __VA_ARGS__))
+#define TraceLoggingWCharArray(pValues, cValues, ...) _tlg_ArgCountedStringW(wchar_t, pValues, cValues, _tlg_NDT(TraceLoggingWCharArray, pValues, __VA_ARGS__))
 #define TraceLoggingChar16Array(pValues, cValues, ...) _tlg_ArgCountedStringNN(char16_t, pValues, cValues, 16, _tlg_NDT(TraceLoggingChar16Array, pValues, __VA_ARGS__))
 #define TraceLoggingChar32Array(pValues, cValues, ...) _tlg_ArgCountedStringNN(char32_t, pValues, cValues, 32, _tlg_NDT(TraceLoggingChar32Array, pValues, __VA_ARGS__))
-#define TraceLoggingWCharArray(pValues, cValues, ...) _tlg_ArgCountedStringNN(wchar_t, pValues, cValues, _tlgWcharNN, _tlg_NDT(TraceLoggingWCharArray, pValues, __VA_ARGS__))
 #define TraceLoggingPointerArray(pValues, cValues, ...) _tlg_ArgIntArray(void const *, pValues, cValues, _tlgHex, 0, _tlg_NDT(TraceLoggingPointerArray, pValues, __VA_ARGS__))
 #define TraceLoggingCodePointerArray(pValues, cValues, ...) _tlg_ArgIntArray(void const *, pValues, cValues, _tlgHex, 0, _tlg_NDT(TraceLoggingCodePointerArray, pValues, __VA_ARGS__))
 #define TraceLoggingGuidArray(pValues, cValues, ...) _tlg_ArgIntArray(uint8_t, (uint8_t const *)(pValues), (cValues)*16u, _tlgDecimal, 0, _tlg_NDT(TraceLoggingGuidArray, pValues, __VA_ARGS__))
@@ -1442,47 +1440,50 @@ Examples:
         pOut = (char *)memcpy(pOut, pchEventName, cchEventName);
         pOut += cchEventName;
 
-        if (keyword != 0)
+        // ProviderName + ":" + EventName + KeywordSuffix must be less than 256 characters.
+        if (pOutEnd - pOut < 3)
         {
-            // ProviderName + ":" + EventName + KeywordSuffix must be less than 256 characters.
-            if (pOut == pOutEnd)
+            // If not, truncate KeywordSuffix.
+            _tlg_ASSERT(!"ProviderName+EventName too long");
+        }
+        else if (keyword == 0)
+        {
+            *pOut++ = ';';
+            *pOut++ = 'k';
+            *pOut++ = ';';
+        }
+        else
+        {
+            unsigned k = 0;
+            *pOut++ = ';';
+            do
             {
-                // If not, truncate KeywordSuffix.
-                _tlg_ASSERT(!"ProviderName+EventName too long");
-            }
-            else
-            {
-                unsigned k = 0;
-                *pOut++ = ';';
-                do
+                if (keyword & 1)
                 {
-                    if (keyword & 1)
+                    // ProviderName + ":" + EventName + KeywordSuffix must be less than 256 characters.
+                    if (pOutEnd - pOut < 4)
                     {
-                        // ProviderName + ":" + EventName + KeywordSuffix must be less than 256 characters.
-                        if (pOutEnd - pOut < 4)
-                        {
-                            // If not, truncate KeywordSuffix.
-                            _tlg_ASSERT(!"ProviderName+EventName too long");
-                            break;
-                        }
-
-                        *pOut++ = 'k';
-                        if (k < 10)
-                        {
-                            *pOut++ = (char)(k + '0');
-                        }
-                        else
-                        {
-                            *pOut++ = (char)(k / 10 + '0');
-                            *pOut++ = (char)(k % 10 + '0');
-                        }
-                        *pOut++ = ';';
+                        // If not, truncate KeywordSuffix.
+                        _tlg_ASSERT(!"ProviderName+EventName too long");
+                        break;
                     }
 
-                    keyword >>= 1;
-                    k += 1;
-                } while (keyword != 0);
-            }
+                    *pOut++ = 'k';
+                    if (k < 10)
+                    {
+                        *pOut++ = (char)(k + '0');
+                    }
+                    else
+                    {
+                        *pOut++ = (char)(k / 10 + '0');
+                        *pOut++ = (char)(k % 10 + '0');
+                    }
+                    *pOut++ = ';';
+                }
+
+                keyword >>= 1;
+                k += 1;
+            } while (keyword != 0);
         }
 
         *pOut = 0;
@@ -1797,6 +1798,15 @@ inline void _tlgCppInit1DescString8(struct lttngh_DataDesc &desc, ctype const *p
 }
 
 template <class ctype>
+inline void _tlgCppInit1DescStringW(struct lttngh_DataDesc &desc, ctype const *pszValue) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescStringW(struct lttngh_DataDesc &desc, ctype const *pszValue) _tlg_NOEXCEPT
+{
+    static_assert(sizeof(ctype) == sizeof(wchar_t), "Wrong char size");
+    desc = lttngh_DataDescCreateStringWchar(pszValue ? (wchar_t const *)pszValue : L"");
+}
+
+template <class ctype>
 inline void _tlgCppInit1DescString16(struct lttngh_DataDesc &desc, ctype const *pszValue) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
 inline void _tlgCppInit1DescString16(struct lttngh_DataDesc &desc, ctype const *pszValue) _tlg_NOEXCEPT
@@ -1812,6 +1822,15 @@ inline void _tlgCppInit1DescString32(struct lttngh_DataDesc &desc, ctype const *
 {
     static_assert(sizeof(ctype) == sizeof(char32_t), "Wrong char size");
     desc = lttngh_DataDescCreateStringUtf32(pszValue ? (char32_t const *)pszValue : U"");
+}
+
+template <class ctype>
+inline void _tlgCppInit1DescSeqWchar(struct lttngh_DataDesc &desc, ctype const *pchValue, uint16_t cchValue) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescSeqWchar(struct lttngh_DataDesc &desc, ctype const *pchValue, uint16_t cchValue) _tlg_NOEXCEPT
+{
+    static_assert(sizeof(ctype) == sizeof(wchar_t), "Wrong char size");
+    desc = lttngh_DataDescCreateSequenceWchar((wchar_t const *)pchValue, cchValue);
 }
 
 template <class ctype>
@@ -1833,18 +1852,27 @@ inline void _tlgCppInit1DescSeqUtf32(struct lttngh_DataDesc &desc, ctype const *
 }
 
 template <class ctype>
-inline void _tlgCppInit1DescCharUtf16(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
-inline void _tlgCppInit1DescCharUtf16(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT
+{
+    static_assert(sizeof(ctype) == sizeof(wchar_t), "Wrong char size");
+    desc = lttngh_DataDescCreateSequenceWchar((wchar_t const *)&value, 1);
+}
+
+template <class ctype>
+inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT
 {
     static_assert(sizeof(ctype) == sizeof(char16_t), "Wrong char size");
     desc = lttngh_DataDescCreateSequenceUtf16((char16_t const *)&value, 1);
 }
 
 template <class ctype>
-inline void _tlgCppInit1DescCharUtf32(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
-inline void _tlgCppInit1DescCharUtf32(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value) _tlg_NOEXCEPT
 {
     static_assert(sizeof(ctype) == sizeof(char32_t), "Wrong char size");
     desc = lttngh_DataDescCreateSequenceUtf32((char32_t const *)&value, 1);
@@ -2099,9 +2127,7 @@ struct _tlgTypeMapBase<wchar_t const *> : _tlgTypeMapUtf8String
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const *val) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const *val) _tlg_NOEXCEPT
 {
-    static_assert(sizeof(_tlgWcharNN_type) == sizeof(wchar_t), "Incorrectly-detected wchar_t size.");
-    desc = _tlg_PASTE(lttngh_DataDescCreateStringUtf, _tlgWcharNN)(
-        reinterpret_cast<_tlgWcharNN_type const *>(val ? val : L""));
+    desc = lttngh_DataDescCreateStringWchar(val ? val : L"");
 }
 
 template <>
@@ -2112,9 +2138,7 @@ struct _tlgTypeMapBase<wchar_t *> : _tlgTypeMapUtf8String
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t *val) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t *val) _tlg_NOEXCEPT
 {
-    static_assert(sizeof(_tlgWcharNN_type) == sizeof(wchar_t), "Incorrectly-detected wchar_t size.");
-    desc = _tlg_PASTE(lttngh_DataDescCreateStringUtf, _tlgWcharNN)(
-        reinterpret_cast<_tlgWcharNN_type const *>(val ? val : L""));
+    desc = lttngh_DataDescCreateStringWchar(val ? val : L"");
 }
 
 template <>
@@ -2166,9 +2190,7 @@ struct _tlgTypeMapBase<wchar_t> : _tlgTypeMapUtf8Sequence
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val) _tlg_NOEXCEPT
 {
-    static_assert(sizeof(_tlgWcharNN_type) == sizeof(wchar_t), "Incorrectly-detected wchar_t size.");
-    desc = _tlg_PASTE(lttngh_DataDescCreateSequenceUtf, _tlgWcharNN)(
-        reinterpret_cast<_tlgWcharNN_type const *>(&val), 1);
+    desc = lttngh_DataDescCreateSequenceWchar(&val, 1);
 }
 
 #define _tlgBeginCppEval (
@@ -2260,10 +2282,13 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_FieldCount_tlg_FloatArray(ctype, pValues, cValues, ndt) +1
 #define _tlg_FieldCount_tlg_FloatFixedArray(ctype, pValues, cValues, ndt) +1
 #define _tlg_FieldCount_tlg_Char8(ctype, value, ndt) +1
+#define _tlg_FieldCount_tlg_CharW(ctype, value, ndt) +1
 #define _tlg_FieldCount_tlg_CharNN(ctype, value, NN, ndt) +1
 #define _tlg_FieldCount_tlg_String8(ctype, pszValue, ndt) +1
+#define _tlg_FieldCount_tlg_StringW(ctype, pszValue, ndt) +1
 #define _tlg_FieldCount_tlg_StringNN(ctype, pszValue, NN, ndt) +1
 #define _tlg_FieldCount_tlg_CountedString8(ctype, pchValue, cchValue, ndt) +1
+#define _tlg_FieldCount_tlg_CountedStringW(ctype, pchValue, cchValue, ndt) +1
 #define _tlg_FieldCount_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt) +1
 #define _tlg_FieldCount_tlg_Binary(ctype, pValue, cbValue, ndt) +1
 #define _tlg_FieldCount_tlg_Sid(ctype, pValue, ndt) +1
@@ -2320,12 +2345,22 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
      {atype_array, {.array = {{atype_integer, {.basic = {.integer = {8u * sizeof(ctype), 8u * lttng_alignof(ctype), 0, _tlg_IntFieldType_tlgUTF8}}}}, 1}}}, \
      0,                                                                                                                                                     \
      {}},
+#define _tlg_FieldInfo_tlg_CharW(ctype, value, ndt)                                                                                                                                                                                                                                           \
+    {_tlg_NDT_Name(ndt),                                                                                                                                                                                                                                                                      \
+     {atype_sequence, {.sequence = {{atype_integer, {.basic = {.integer = {8u * sizeof(uint16_t), 8u * lttng_alignof(uint16_t), 0, _tlg_IntFieldType_tlgDecimal}}}}, {atype_integer, {.basic = {.integer = {8u * sizeof(char), 8u * lttng_alignof(char), 0, _tlg_IntFieldType_tlgUTF8}}}}}}}, \
+     0,                                                                                                                                                                                                                                                                                       \
+     {}},
 #define _tlg_FieldInfo_tlg_CharNN(ctype, value, NN, ndt)                                                                                                                                                                                                                                      \
     {_tlg_NDT_Name(ndt),                                                                                                                                                                                                                                                                      \
      {atype_sequence, {.sequence = {{atype_integer, {.basic = {.integer = {8u * sizeof(uint16_t), 8u * lttng_alignof(uint16_t), 0, _tlg_IntFieldType_tlgDecimal}}}}, {atype_integer, {.basic = {.integer = {8u * sizeof(char), 8u * lttng_alignof(char), 0, _tlg_IntFieldType_tlgUTF8}}}}}}}, \
      0,                                                                                                                                                                                                                                                                                       \
      {}},
 #define _tlg_FieldInfo_tlg_String8(ctype, pszValue, ndt)         \
+    {_tlg_NDT_Name(ndt),                                         \
+     {atype_string, {.basic = {.string = {lttng_encode_UTF8}}}}, \
+     0,                                                          \
+     {}},
+#define _tlg_FieldInfo_tlg_StringW(ctype, pszValue, ndt)         \
     {_tlg_NDT_Name(ndt),                                         \
      {atype_string, {.basic = {.string = {lttng_encode_UTF8}}}}, \
      0,                                                          \
@@ -2339,6 +2374,11 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
     {_tlg_NDT_Name(ndt),                                                                                                                                                                                                                                                                        \
      {atype_sequence, {.sequence = {{atype_integer, {.basic = {.integer = {8u * sizeof(uint16_t), 8u * lttng_alignof(uint16_t), 0, _tlg_IntFieldType_tlgDecimal}}}}, {atype_integer, {.basic = {.integer = {8u * sizeof(ctype), 8u * lttng_alignof(ctype), 0, _tlg_IntFieldType_tlgUTF8}}}}}}}, \
      0,                                                                                                                                                                                                                                                                                         \
+     {}},
+#define _tlg_FieldInfo_tlg_CountedStringW(ctype, pchValue, cchValue, ndt)                                                                                                                                                                                                                     \
+    {_tlg_NDT_Name(ndt),                                                                                                                                                                                                                                                                      \
+     {atype_sequence, {.sequence = {{atype_integer, {.basic = {.integer = {8u * sizeof(uint16_t), 8u * lttng_alignof(uint16_t), 0, _tlg_IntFieldType_tlgDecimal}}}}, {atype_integer, {.basic = {.integer = {8u * sizeof(char), 8u * lttng_alignof(char), 0, _tlg_IntFieldType_tlgUTF8}}}}}}}, \
+     0,                                                                                                                                                                                                                                                                                       \
      {}},
 #define _tlg_FieldInfo_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt)                                                                                                                                                                                                                \
     {_tlg_NDT_Name(ndt),                                                                                                                                                                                                                                                                      \
@@ -2381,10 +2421,13 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_LevelVal_tlg_FloatArray(ctype, pValues, cValues, ndt)
 #define _tlg_LevelVal_tlg_FloatFixedArray(ctype, pValues, cValues, ndt)
 #define _tlg_LevelVal_tlg_Char8(ctype, value, ndt)
+#define _tlg_LevelVal_tlg_CharW(ctype, value, ndt)
 #define _tlg_LevelVal_tlg_CharNN(ctype, value, NN, ndt)
 #define _tlg_LevelVal_tlg_String8(ctype, pszValue, ndt)
+#define _tlg_LevelVal_tlg_StringW(ctype, pszValue, ndt)
 #define _tlg_LevelVal_tlg_StringNN(ctype, pszValue, NN, ndt)
 #define _tlg_LevelVal_tlg_CountedString8(ctype, pchValue, cchValue, ndt)
+#define _tlg_LevelVal_tlg_CountedStringW(ctype, pchValue, cchValue, ndt)
 #define _tlg_LevelVal_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt)
 #define _tlg_LevelVal_tlg_Binary(ctype, pValue, cbValue, ndt)
 #define _tlg_LevelVal_tlg_Sid(ctype, pValue, ndt)
@@ -2405,10 +2448,13 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_KeywordVal_tlg_FloatArray(ctype, pValues, cValues, ndt)
 #define _tlg_KeywordVal_tlg_FloatFixedArray(ctype, pValues, cValues, ndt)
 #define _tlg_KeywordVal_tlg_Char8(ctype, value, ndt)
+#define _tlg_KeywordVal_tlg_CharW(ctype, value, ndt)
 #define _tlg_KeywordVal_tlg_CharNN(ctype, value, NN, ndt)
 #define _tlg_KeywordVal_tlg_String8(ctype, pszValue, ndt)
+#define _tlg_KeywordVal_tlg_StringW(ctype, pszValue, ndt)
 #define _tlg_KeywordVal_tlg_StringNN(ctype, pszValue, NN, ndt)
 #define _tlg_KeywordVal_tlg_CountedString8(ctype, pchValue, cchValue, ndt)
+#define _tlg_KeywordVal_tlg_CountedStringW(ctype, pchValue, cchValue, ndt)
 #define _tlg_KeywordVal_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt)
 #define _tlg_KeywordVal_tlg_Binary(ctype, pValue, cbValue, ndt)
 #define _tlg_KeywordVal_tlg_Sid(ctype, pValue, ndt)
@@ -2429,10 +2475,13 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_DataDescCount_tlg_FloatArray(ctype, pValues, cValues, ndt) +2 // sequence
 #define _tlg_DataDescCount_tlg_FloatFixedArray(ctype, pValues, cValues, ndt) +1
 #define _tlg_DataDescCount_tlg_Char8(ctype, value, ndt) +1
+#define _tlg_DataDescCount_tlg_CharW(ctype, value, ndt) +1      // sequence (transcoded)
 #define _tlg_DataDescCount_tlg_CharNN(ctype, value, NN, ndt) +1 // sequence (transcoded)
 #define _tlg_DataDescCount_tlg_String8(ctype, pszValue, ndt) +1
+#define _tlg_DataDescCount_tlg_StringW(ctype, pszValue, ndt) +1
 #define _tlg_DataDescCount_tlg_StringNN(ctype, pszValue, NN, ndt) +1
 #define _tlg_DataDescCount_tlg_CountedString8(ctype, pchValue, cchValue, ndt) +2      // sequence
+#define _tlg_DataDescCount_tlg_CountedStringW(ctype, pchValue, cchValue, ndt) +1      // sequence (transcoded)
 #define _tlg_DataDescCount_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt) +1 // sequence (transcoded)
 #define _tlg_DataDescCount_tlg_Binary(ctype, pValue, cbValue, ndt) +2                 // sequence
 #define _tlg_DataDescCount_tlg_Sid(ctype, pValue, ndt) +2                             // sequence
@@ -2488,41 +2537,47 @@ ctype const*)).
     _tlgCppInit1DescByRef<ctype, (cValues)>(_tlg_data[_tlg_idx++], (value)),
 #define _tlg_DataDescCreate_tlg_IntArray(ctype, pValues, cValues, intFieldType, isSigned, ndt) \
     _tlgCppInit2DescArray<ctype>(&_tlg_data[_tlg_idx], (pValues), (cValues)),                  \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_IntFixedArray(ctype, pValues, cValues, intFieldType, isSigned, ndt) \
     _tlgCppInit1DescFixedArray<ctype, (cValues)>(_tlg_data[_tlg_idx++], (pValues)),
 #define _tlg_DataDescCreate_tlg_Float(ctype, value, ndt) \
     _tlgCppInit1Desc<ctype>(_tlg_data[_tlg_idx++], (value), lttngh_DataType_Float),
 #define _tlg_DataDescCreate_tlg_FloatArray(ctype, pValues, cValues, ndt)      \
     _tlgCppInit2DescArray<ctype>(&_tlg_data[_tlg_idx], (pValues), (cValues)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_FloatFixedArray(ctype, pValues, cValues, ndt) \
     _tlgCppInit1DescFixedArray<ctype, (cValues)>(_tlg_data[_tlg_idx++], (pValues)),
 #define _tlg_DataDescCreate_tlg_Char8(ctype, value, ndt) \
     _tlgCppInit1DescByRef<ctype, 1, ctype>(_tlg_data[_tlg_idx++], (value)),
+#define _tlg_DataDescCreate_tlg_CharW(ctype, value, ndt) \
+    _tlgCppInit1DescWchar<ctype>(_tlg_data[_tlg_idx++], (value)),
 #define _tlg_DataDescCreate_tlg_CharNN(ctype, value, NN, ndt) \
-    _tlgCppInit1DescCharUtf##NN<ctype>(_tlg_data[_tlg_idx++], (value)),
+    _tlgCppInit1DescChar##NN<ctype>(_tlg_data[_tlg_idx++], (value)),
 #define _tlg_DataDescCreate_tlg_String8(ctype, pszValue, ndt) \
     _tlgCppInit1DescString8<ctype>(_tlg_data[_tlg_idx++], (pszValue)),
+#define _tlg_DataDescCreate_tlg_StringW(ctype, pszValue, ndt) \
+    _tlgCppInit1DescStringW<ctype>(_tlg_data[_tlg_idx++], (pszValue)),
 #define _tlg_DataDescCreate_tlg_StringNN(ctype, pszValue, NN, ndt) \
     _tlgCppInit1DescString##NN<ctype>(_tlg_data[_tlg_idx++], (pszValue)),
 #define _tlg_DataDescCreate_tlg_CountedString8(ctype, pchValue, cchValue, ndt)  \
     _tlgCppInit2DescArray<ctype>(&_tlg_data[_tlg_idx], (pchValue), (cchValue)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
+#define _tlg_DataDescCreate_tlg_CountedStringW(ctype, pchValue, cchValue, ndt) \
+    _tlgCppInit1DescSeqWchar<ctype>(_tlg_data[_tlg_idx++], (pchValue), (cchValue)),
 #define _tlg_DataDescCreate_tlg_CountedStringNN(ctype, pchValue, cchValue, NN, ndt) \
     _tlgCppInit1DescSeqUtf##NN<ctype>(_tlg_data[_tlg_idx++], (pchValue), (cchValue)),
 #define _tlg_DataDescCreate_tlg_Binary(ctype, pValue, cbValue, ndt)                                                   \
     _tlgCppInit2DescArray<ctype, sizeof(uint8_t), lttng_alignof(uint8_t)>(&_tlg_data[_tlg_idx], (pValue), (cbValue)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_Sid(ctype, pValue, ndt)         \
     _tlgCppInit2DescSid<ctype>(&_tlg_data[_tlg_idx], (pValue)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_GuidPtr(ctype, pValue, name)        \
     _tlgCppInit2DescGuidPtr<ctype>(&_tlg_data[_tlg_idx], (pValue)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_Buffer(ctype, pValue, ndt)         \
     _tlgCppInit2DescBuffer<ctype>(&_tlg_data[_tlg_idx], (pValue)), \
-        _tlg_idx += 2,
+    _tlg_idx += 2,
 #define _tlg_DataDescCreate_tlg_Value(value, ndt) \
     _tlgCppInit1DescAuto(_tlg_data[_tlg_idx++], (value)),
 #else // __cplusplus
@@ -2559,12 +2614,18 @@ ctype const*)).
 #define _tlg_DataDescCreate_tlg_Char8(n, ctype, value, ndt) \
     ctype const _tlg_temp##n = (value);                     \
     _tlg_data[_tlg_idx++] = lttngh_DataDescCreateCounted(&_tlg_temp##n, sizeof(ctype), lttng_alignof(ctype), 1);
+#define _tlg_DataDescCreate_tlg_CharW(n, ctype, value, ndt) \
+    ctype const _tlg_temp##n = (value);                          \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateSequenceWchar(&_tlg_temp##n, 1);
 #define _tlg_DataDescCreate_tlg_CharNN(n, ctype, value, NN, ndt) \
     ctype const _tlg_temp##n = (value);                          \
     _tlg_data[_tlg_idx++] = lttngh_DataDescCreateSequenceUtf##NN((char##NN##_t const *)&_tlg_temp##n, 1);
 #define _tlg_DataDescCreate_tlg_String8(n, ctype, pszValue, ndt) \
     ctype const *const _tlg_temp##n = (pszValue);                \
     _tlg_data[_tlg_idx++] = lttngh_DataDescCreateString8(_tlg_temp##n ? _tlg_temp##n : "");
+#define _tlg_DataDescCreate_tlg_StringW(n, ctype, pszValue, ndt) \
+    ctype const *const _tlg_temp##n = (pszValue);                     \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateStringWchar(_tlg_temp##n ? _tlg_temp##n : L"");
 #define _tlg_DataDescCreate_tlg_StringNN(n, ctype, pszValue, NN, ndt) \
     ctype const *const _tlg_temp##n = (pszValue);                     \
     _tlg_data[_tlg_idx++] = lttngh_DataDescCreateStringUtf##NN(_tlg_temp##n ? (char##NN##_t const *)_tlg_temp##n : (char##NN##_t const *)U"");
@@ -2572,6 +2633,9 @@ ctype const*)).
     ctype const *const _tlg_temp##n = (pchValue);                                                                  \
     _tlg_DataDescCreateArray(&_tlg_data[_tlg_idx], _tlg_temp##n, (cchValue), sizeof(ctype), lttng_alignof(ctype)); \
     _tlg_idx += 2;
+#define _tlg_DataDescCreate_tlg_CountedStringW(n, ctype, pchValue, cchValue, ndt) \
+    ctype const *const _tlg_temp##n = (pchValue);                                      \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateSequenceWchar(_tlg_temp##n, (cchValue));
 #define _tlg_DataDescCreate_tlg_CountedStringNN(n, ctype, pchValue, cchValue, NN, ndt) \
     ctype const *const _tlg_temp##n = (pchValue);                                      \
     _tlg_data[_tlg_idx++] = lttngh_DataDescCreateSequenceUtf##NN((char##NN##_t const *)_tlg_temp##n, (cchValue));
@@ -2616,8 +2680,8 @@ ctype const*)).
         __attribute__((section("__eventdesc_ptrs_" #providerSymbol), used)) = \
         &_tlg_event.Desc; \
     int _tlg_err = 0; \
-    static_assert(sizeof("" eventName) <= LTTNG_UST_SYM_NAME_LEN - 3, \
-        "TraceLoggingWrite eventName must be no more than 253 characters"); \
+    static_assert(sizeof("" eventName) <= LTTNG_UST_SYM_NAME_LEN - 6, \
+        "TraceLoggingWrite eventName must be no more than 250 characters"); \
     (void)&_tlgProv_##providerSymbol; /* Trigger a compile error for misspelled providerSymbol. */ \
     if (caa_unlikely(CMM_LOAD_SHARED(_tlg_tracepoint.state))) { \
         static unsigned const _tlg_idxMax = 0 _tlg_FOREACH(_tlg_DataDescCount, __VA_ARGS__); \
