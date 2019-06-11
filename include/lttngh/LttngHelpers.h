@@ -11,7 +11,6 @@
 #include <string.h>                 // strlen
 #include <uchar.h>                  // char16_t
 
-
 // Use lttngh_IP_PARAM to get the address of the caller.
 // (For use as the pCallerIp parameter of lttngh_EventProbe.)
 #undef lttngh_IP_PARAM
