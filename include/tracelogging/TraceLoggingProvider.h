@@ -51,7 +51,7 @@ TraceLoggingProvider.h for LTTNG behaves differently from the ETW version:
   TraceLoggingEventEnabled (new LTTNG-only function) when working with LTTNG.
 - No support for TraceLoggingHProvider. In the ETW implementation of
   TraceLoggingProvider.h, provider symbols are handles (pointers), and can be
-  passed around and stored as variables (though we�ve always recommended
+  passed around and stored as variables (though we've always recommended
   against doing this since it breaks static analysis). In the LTTNG
   implementation of TraceLoggingProvider.h, provider symbols are tokens, not
   handles or pointers. You cannot store a provider symbol in a variable, pass
@@ -1426,12 +1426,17 @@ Examples:
         char *pOut = pFullName;
         char const *const pOutEnd = pOut + (LTTNG_UST_SYM_NAME_LEN - 1);
 
-        // ProviderName + ":" + EventName must be less than 256 characters.
-        if (cchProviderName + 1 + cchEventName >= LTTNG_UST_SYM_NAME_LEN)
+        // ProviderName + ":" + EventName + ";k;" must be less than 256 characters.
+        if (cchProviderName + cchEventName > LTTNG_UST_SYM_NAME_LEN - 5)
         {
             // If not, truncate event name.
-            _tlg_ASSERT(!"ProviderName+EventName too long");
-            cchEventName = (LTTNG_UST_SYM_NAME_LEN - 2) - cchProviderName;
+            _tlg_ASSERT(!"ProviderName+EventName+KeywordSuffix too long");
+            // The macros check for this (static_assert), but just in case...
+            if (cchProviderName > LTTNG_UST_SYM_NAME_LEN - 5)
+            {
+                cchProviderName = LTTNG_UST_SYM_NAME_LEN - 5;
+            }
+            cchEventName = (LTTNG_UST_SYM_NAME_LEN - 5) - cchProviderName;
         }
 
         memcpy(pOut, pchProviderName, cchProviderName);
@@ -1440,13 +1445,7 @@ Examples:
         pOut = (char *)memcpy(pOut, pchEventName, cchEventName);
         pOut += cchEventName;
 
-        // ProviderName + ":" + EventName + KeywordSuffix must be less than 256 characters.
-        if (pOutEnd - pOut < 3)
-        {
-            // If not, truncate KeywordSuffix.
-            _tlg_ASSERT(!"ProviderName+EventName too long");
-        }
-        else if (keyword == 0)
+        if (keyword == 0)
         {
             *pOut++ = ';';
             *pOut++ = 'k';
@@ -1464,7 +1463,7 @@ Examples:
                     if (pOutEnd - pOut < 4)
                     {
                         // If not, truncate KeywordSuffix.
-                        _tlg_ASSERT(!"ProviderName+EventName too long");
+                        _tlg_ASSERT(!"ProviderName+EventName+KeywordSuffix too long");
                         break;
                     }
 
@@ -1486,7 +1485,7 @@ Examples:
             } while (keyword != 0);
         }
 
-        *pOut = 0;
+        *pOut = 0; // nul-termination (but not included in returned character count)
         return (unsigned)(pOut - pFullName);
     }
 
