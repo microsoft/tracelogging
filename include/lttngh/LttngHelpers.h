@@ -464,7 +464,7 @@ lttngh_DataDescCreateStringUtf16(const char16_t *str) {
   }
   struct lttngh_DataDesc dd = {
       str, (unsigned)(strEnd - str) * (unsigned)sizeof(char16_t),
-      lttng_alignof(char16_t), lttngh_DataType_StringUtf16Transcoded, 0};
+      lttng_alignof(char), lttngh_DataType_StringUtf16Transcoded, 0};
   return dd;
 }
 
@@ -480,7 +480,7 @@ static inline struct lttngh_DataDesc lttngh_DataDescCreateSequenceUtf16(
 static inline struct lttngh_DataDesc
 lttngh_DataDescCreateSequenceUtf16(const char16_t *str, uint16_t length) {
   struct lttngh_DataDesc dd = {str, length * (unsigned)sizeof(char16_t),
-                               lttng_alignof(char16_t),
+                               lttng_alignof(uint16_t),
                                lttngh_DataType_SequenceUtf16Transcoded, 0};
   return dd;
 }
@@ -499,7 +499,7 @@ lttngh_DataDescCreateStringUtf32(const char32_t *str) {
   }
   struct lttngh_DataDesc dd = {
       str, (unsigned)(strEnd - str) * (unsigned)sizeof(char32_t),
-      lttng_alignof(char32_t), lttngh_DataType_StringUtf32Transcoded, 0};
+      lttng_alignof(char), lttngh_DataType_StringUtf32Transcoded, 0};
   return dd;
 }
 
@@ -515,7 +515,7 @@ static inline struct lttngh_DataDesc lttngh_DataDescCreateSequenceUtf32(
 static inline struct lttngh_DataDesc
 lttngh_DataDescCreateSequenceUtf32(const char32_t *str, uint16_t length) {
   struct lttngh_DataDesc dd = {str, length * (unsigned)sizeof(char32_t),
-                               lttng_alignof(char32_t),
+                               lttng_alignof(uint16_t),
                                lttngh_DataType_SequenceUtf32Transcoded, 0};
   return dd;
 }
