@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(tracelogging)
+project(tracelogging VERSION 0.1)
 
 include(GNUInstallDirs)
 
