@@ -11,6 +11,7 @@ target_include_directories(lttngh PUBLIC $<INSTALL_INTERFACE:include> $<BUILD_IN
 target_link_libraries(lttngh PUBLIC LTTng::UST PRIVATE lttng-ust-tracepoint::lttng-ust-tracepoint)
 
 set_property(TARGET lttngh PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET lttngh PROPERTY SOVERSION 0)
 
 add_library(tracelogging INTERFACE)
 target_include_directories(tracelogging INTERFACE $<INSTALL_INTERFACE:include> $<BUILD_INTERFACE:${TLG_INCLUDEDIR}>)
