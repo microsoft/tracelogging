@@ -1040,7 +1040,7 @@ int lttngh_EventProbe(
 #ifndef USE_LTTNG_2_7
                 struct lttng_stack_ctx stackContext;
                 memset(&stackContext, 0, sizeof(stackContext));
-                
+
                 stackContext.event = pEvent;
                 stackContext.chan_ctx = lttngh_RCU_DEREFERENCE(pChannel->ctx);
                 stackContext.event_ctx = lttngh_RCU_DEREFERENCE(pEvent->ctx);
