@@ -882,10 +882,12 @@ Examples:
 - TraceLoggingString(psz1, "name", "desc", 0x4) // field name = "name", description = "desc", tags = 0x4.
 */
 #define TraceLoggingString(pszValue, ...) _tlg_ArgString8(char, pszValue, _tlg_NDT(TraceLoggingString, pszValue, __VA_ARGS__))
+#define TraceLoggingUtf8String(pszValue, ...) TraceLoggingString(pszValue, __VA_ARGS__)
 #define TraceLoggingWideString(pszValue, ...) _tlg_ArgStringW(wchar_t, pszValue, _tlg_NDT(TraceLoggingWideString, pszValue, __VA_ARGS__))
 #define TraceLoggingString16(pszValue, ...) _tlg_ArgStringNN(char16_t, pszValue, 16, _tlg_NDT(TraceLoggingString16, pszValue, __VA_ARGS__))
 #define TraceLoggingString32(pszValue, ...) _tlg_ArgStringNN(char32_t, pszValue, 32, _tlg_NDT(TraceLoggingString32, pszValue, __VA_ARGS__))
 #define TraceLoggingCountedString(pchValue, cchValue, ...) _tlg_ArgCountedString8(char, pchValue, cchValue, _tlg_NDT(TraceLoggingCountedString, pchValue, __VA_ARGS__))
+#define TraceLoggingCountedUtf8String(pchValue, cchValue, ...) TraceLoggingCountedString(pchValue, cchValue, __VA_ARGS__)
 #define TraceLoggingCountedWideString(pchValue, cchValue, ...) _tlg_ArgCountedStringW(wchar_t, pchValue, cchValue, _tlg_NDT(TraceLoggingCountedWideString, pchValue, __VA_ARGS__))
 #define TraceLoggingCountedString16(pchValue, cchValue, ...) _tlg_ArgCountedStringNN(char16_t, pchValue, cchValue, 16, _tlg_NDT(TraceLoggingCountedString16, pchValue, __VA_ARGS__))
 #define TraceLoggingCountedString32(pchValue, cchValue, ...) _tlg_ArgCountedStringNN(char32_t, pchValue, cchValue, 32, _tlg_NDT(TraceLoggingCountedString32, pchValue, __VA_ARGS__))
