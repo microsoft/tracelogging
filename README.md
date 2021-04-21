@@ -20,19 +20,19 @@ For example:
 ```cpp
 // Provider UUID: 22731e9c-e31a-4484-98d6-efa23d791456
 TRACELOGGING_DEFINE_PROVIDER(
-    g_providerHandle,
-    // By contention: "Company.Organization.Team.ProviderName"
-    "Microsoft.Windows.Fundamentals.TestProvider",
+    WidgetProvider,
+    // By convention: "Company.Organization.Team.Component"
+    "Microsoft.Windows.Fundamentals.Widget",
     (0x7ea733d9, 0xf4eb, 0x4593, 0x8a, 0x8a, 0x8f, 0x9e, 0x75, 0xb0, 0x80, 0x04));
 
-TraceLoggingRegister(g_providerHandle);
+TraceLoggingRegister(WidgetProvider);
 
 int x = 5;
-TraceLoggingWrite(g_providerHandle,
+TraceLoggingWrite(WidgetProvider,
     "TestEvent", // Event name
     TraceLoggingValue(x, "xValue"));
 
-TraceLoggingUnregister(g_providerHandle);
+TraceLoggingUnregister(WidgetProvider);
 ```
 
 ### Logging LTTNG events through TraceLogging API
@@ -44,7 +44,7 @@ Below is an example of logging a more complex event:
 
 ```cpp
 TraceLoggingWrite(
-    g_providerHandle,
+    WidgetProvider,
     "FinishUpload",
     TraceLoggingKeyword(KeywordEnum::Uploader),
     TraceLoggingLevel(WINEVENT_LEVEL_INFO),
@@ -59,10 +59,10 @@ To consume TraceLogging events sent through LTTNG, you will need the lttng-tools
 
 ```bash
 lttng create
-lttng enable-event -u Microsoft.Windows.Fundamentals.TestProvider.*
+lttng enable-event -u Microsoft.Windows.Fundamentals.TestProvider:*
 lttng start
 
-read -p "Emit events here..."
+read -p "Run your program here..."
 
 lttng stop
 lttng view
@@ -72,7 +72,16 @@ For more information, see the [LTTNG Documentation](https://lttng.org/docs/v2.10
 
 ## Dependencies
 
-This project carries a dependency on the lttng-ust library. To use this library, you will need liblttng-ust-dev >= 2.10. The library will compile with 2.7, but this is currently considered experimental. To get liblttng-ust-dev 2.10:
+This project depends on the lttng-ust library. To build this library, you will need liblttng-ust-dev version 2.10 or later.
+The library will compile with 2.7 or later, but some things might not work perfectly. The library has been tested up through
+version 2.13.)
+
+```bash
+sudo apt update
+sudo apt install liblttng-ust-dev
+```
+
+If your normal package repository uses an older version of LTTNG, consider using the ppa:lttng/stable-2.10 repository to get LTTNG 2.10:
 
 ```bash
 sudo apt-add-repository ppa:lttng/stable-2.10 -y
@@ -80,10 +89,11 @@ sudo apt -y update
 sudo apt install liblttng-ust-dev
 ```
 
-To listen to TraceLogging events, you will need lttng-tools. Note that this is not required to emit events.
+To listen to TraceLogging events, you will need lttng-tools. Note that the tools are required for event collection
+but are not required for your program to run.
 
 ```bash
-sudo apt-get install lttng-tools
+sudo apt install lttng-tools
 ```
 
 ## Integration

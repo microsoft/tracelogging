@@ -5,9 +5,24 @@
 #ifndef _lttnghelpers_h
 #define _lttnghelpers_h
 
+#include <lttng/ust-version.h>
+
+#if LTTNG_UST_MAJOR_VERSION != 2
+#error "Please use LTTNG 2.x (2.7+)"
+#elif LTTNG_UST_MINOR_VERSION >= 13
+#define lttngh_UST_VER 213
+#elif LTTNG_UST_MINOR_VERSION >= 8
+#define lttngh_UST_VER 208
+#elif LTTNG_UST_MINOR_VERSION >= 7
+#define lttngh_UST_VER 207
+#else
+#error "Please use LTTNG 2.x (2.7+)"
+#endif
+
 #include <lttng/tracepoint-types.h> // lttng_ust_tracepoint
 #include <lttng/ust-compiler.h>     // lttng_ust_notrace
 #include <lttng/ust-events.h>       // lttng_event, etc.
+#include <endian.h>                 // __BYTE_ORDER, __FLOAT_WORD_ORDER
 #include <string.h>                 // strlen
 #include <uchar.h>                  // char16_t
 
@@ -21,6 +36,383 @@
 #else
 #define lttngh_IP_PARAM __builtin_return_address(0)
 #endif
+
+#define lttngh_IS_SIGNED_TYPE(CTYPE) ((CTYPE)(-1) < (CTYPE)1)
+
+// Abstraction layer to reduce differences between LTTNG versions.
+#if lttngh_UST_VER >= 213
+
+typedef struct lttng_ust_probe_desc lttngh_ust_probe_desc;
+typedef struct lttng_ust_event_desc lttngh_ust_event_desc;
+typedef struct lttng_ust_event_field lttngh_ust_event_field;
+typedef struct lttng_ust_type_integer lttngh_ust_type_integer;
+typedef struct lttng_ust_enum_desc lttngh_ust_enum_desc;
+
+#define lttngh_ALIGNOF(type) (__alignof__(type) - __alignof__(type) + lttng_ust_rb_alignof(type)) // Flag error for invalid type even on x86/x64.
+#define lttngh_UST_SYM_NAME_LEN LTTNG_UST_ABI_SYM_NAME_LEN
+#define lttngh_PROVIDER_NAME(probeDesc) ((probeDesc).provider_name)
+
+#if defined(LTTNG_UST_RING_BUFFER_NATURAL_ALIGN)
+#define lttngh_UST_RING_BUFFER_NATURAL_ALIGN 1
+#else
+#define lttngh_UST_RING_BUFFER_NATURAL_ALIGN 0
+#endif
+
+// Initializer for lttng_ust_probe_desc (lttngh_ust_probe_desc)
+#define lttngh_INIT_PROBE_DESC(NAME) \
+    { sizeof(struct lttng_ust_probe_desc), NAME, NULL, 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR }
+
+// Initializer for lttng_ust_tracepoint
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TRACEPOINT(PROVIDER_NAME, EVENT_NAME) \
+    { sizeof(struct lttng_ust_tracepoint), PROVIDER_NAME, EVENT_NAME, 0, NULL, NULL, "" }
+
+// Initializer for lttng_ust_event_desc (lttngh_ust_event_desc)
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_EVENT_DESC(PROBE_DESC, EVENT_NAME, CALLBACK, FIELD_PTRS, FIELD_COUNT, LEVEL_PTR) \
+    { sizeof(struct lttng_ust_event_desc), EVENT_NAME, PROBE_DESC, CALLBACK, FIELD_PTRS, FIELD_COUNT, LEVEL_PTR, "", NULL }
+
+// Initializer for lttng_ust_event_field (lttngh_ust_event_field)
+#define lttngh_INIT_EVENT_FIELD(NAME, TYPE) \
+    { sizeof(struct lttng_ust_event_field), NAME, &((TYPE).parent), 0, 0 }
+
+// Initializer for lttng_ust_enum_desc (lttngh_ust_enum_desc)
+#define lttngh_INIT_ENUM_DESC(NAME, ENTRIES, ENTRY_COUNT) \
+    { sizeof(struct lttng_ust_enum_desc), NAME, ENTRIES, ENTRY_COUNT }
+
+// Initializer for lttng_ust_enum_entry with unsigned values
+#define lttngh_INIT_ENUM_ENTRY_UNSIGNED(NAME, START, END) \
+    { sizeof(struct lttng_ust_enum_entry), {START, 0}, {END, 0}, NAME, 0 }
+
+// Initializer for lttng_ust_type_integer
+#define lttngh_INIT_TYPE_INTEGER(CTYPE, RADIX, BYTESWAP) { \
+    { lttng_ust_type_integer }, sizeof(struct lttng_ust_type_integer), \
+    8u * sizeof(CTYPE), 8u * lttngh_ALIGNOF(CTYPE), lttngh_IS_SIGNED_TYPE(CTYPE), BYTESWAP, RADIX \
+    }
+
+// Initializer for lttng_ust_type_float
+#define lttngh_INIT_TYPE_FLOAT(CTYPE) { \
+    { lttng_ust_type_float }, sizeof(struct lttng_ust_type_float), \
+    sizeof(CTYPE) == 4 ? 8 : 11, sizeof(CTYPE) == 4 ? 24 : 53, 8u * lttngh_ALIGNOF(CTYPE), 0 \
+    }
+
+// Initializer for lttng_ust_type_sequence
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_SEQUENCE(ELEMENT_TYPE, COUNT_NAME, ALIGNMENT) { \
+    { lttng_ust_type_sequence }, sizeof(struct lttng_ust_type_sequence), \
+    COUNT_NAME, &((ELEMENT_TYPE).parent), ALIGNMENT, lttng_ust_string_encoding_none \
+    }
+
+// Initializer for lttng_ust_type_array
+#define lttngh_INIT_TYPE_ARRAY(ELEMENT_TYPE, COUNT, ALIGNMENT) { \
+    { lttng_ust_type_array }, sizeof(struct lttng_ust_type_array), \
+    &((ELEMENT_TYPE).parent), COUNT, ALIGNMENT, lttng_ust_string_encoding_none \
+    }
+
+// Initializer for lttng_ust_type_string of CHAR8 (nul-terminated string)
+#define lttngh_INIT_TYPE_CHAR8_STRING(ENCODE) { \
+    { lttng_ust_type_string }, sizeof(struct lttng_ust_type_string), \
+    lttng_ust_string_encoding_##ENCODE \
+    }
+
+// Initializer for lttng_ust_type_sequence of CHAR8 (counted string)
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_CHAR8_SEQUENCE(ENCODE, COUNT_NAME) { \
+    { lttng_ust_type_sequence }, sizeof(struct lttng_ust_type_sequence), \
+    COUNT_NAME, &lttngh_TypeUInt8.parent, lttngh_ALIGNOF(char), lttng_ust_string_encoding_##ENCODE \
+    }
+
+// Initializer for lttng_ust_type_array of CHAR8 (fixed-length string)
+#define lttngh_INIT_TYPE_CHAR8_ARRAY(ENCODE, COUNT) { \
+    { lttng_ust_type_array }, sizeof(struct lttng_ust_type_array), \
+    &lttngh_TypeUInt8.parent, COUNT, lttngh_ALIGNOF(char), lttng_ust_string_encoding_##ENCODE \
+    }
+
+// Initializer for lttng_ust_type_enum
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_ENUM(UNDERLYING_TYPE, ENUM_DESC) { \
+    { lttng_ust_type_enum }, sizeof(struct lttng_ust_type_enum), \
+    &ENUM_DESC, &((UNDERLYING_TYPE).parent) \
+    }
+
+// lttngh_Type definitions for use with lttngh_INIT_EVENT_FIELD:
+
+extern const struct lttng_ust_type_integer  lttngh_TypeInt8;
+extern const struct lttng_ust_type_integer  lttngh_TypeUInt8;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexInt8;
+
+extern const struct lttng_ust_type_integer  lttngh_TypeInt16;
+extern const struct lttng_ust_type_integer  lttngh_TypeUInt16;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexInt16;
+extern const struct lttng_ust_type_integer  lttngh_TypeUInt16BE; // IP PORT
+
+extern const struct lttng_ust_type_integer  lttngh_TypeInt32;
+extern const struct lttng_ust_type_integer  lttngh_TypeUInt32;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexInt32;
+
+extern const struct lttng_ust_type_integer  lttngh_TypeLong;
+extern const struct lttng_ust_type_integer  lttngh_TypeULong;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexLong;
+
+extern const struct lttng_ust_type_integer  lttngh_TypeIntPtr;
+extern const struct lttng_ust_type_integer  lttngh_TypeUIntPtr;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexIntPtr;
+
+extern const struct lttng_ust_type_integer  lttngh_TypeInt64;
+extern const struct lttng_ust_type_integer  lttngh_TypeUInt64;
+extern const struct lttng_ust_type_integer  lttngh_TypeHexInt64;
+
+extern const struct lttng_ust_type_float    lttngh_TypeFloat32;
+extern const struct lttng_ust_type_float    lttngh_TypeFloat64;
+
+extern const struct lttng_ust_type_enum     lttngh_TypeBool8;  // bool8 = enum : uint8_t
+extern const struct lttng_ust_type_enum     lttngh_TypeBool32; // bool32 = enum : int32_t
+#define lttngh_TypeBool8ForArray            lttngh_TypeUInt8   // LTTNG array of enum is broken. Using UInt8 instead.
+#define lttngh_TypeBool32ForArray           lttngh_TypeUInt32  // LTTNG array of enum is broken. Using Int32 instead.
+
+extern const struct lttng_ust_type_sequence lttngh_TypeInt8Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeUInt8Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexInt8Sequence;
+
+extern const struct lttng_ust_type_sequence lttngh_TypeInt16Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeUInt16Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexInt16Sequence;
+
+extern const struct lttng_ust_type_sequence lttngh_TypeInt32Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeUInt32Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexInt32Sequence;
+
+extern const struct lttng_ust_type_sequence lttngh_TypeLongSequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeULongSequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexLongSequence;
+
+extern const struct lttng_ust_type_sequence lttngh_TypeIntPtrSequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeUIntPtrSequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexIntPtrSequence;
+
+extern const struct lttng_ust_type_sequence lttngh_TypeInt64Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeUInt64Sequence;
+extern const struct lttng_ust_type_sequence lttngh_TypeHexInt64Sequence;
+
+//extern const struct lttng_ust_type_sequence lttngh_TypeFloat32Sequence; // LTTNG array of float is broken.
+//extern const struct lttng_ust_type_sequence lttngh_TypeFloat64Sequence; // LTTNG array of float is broken.
+
+extern const struct lttng_ust_type_sequence lttngh_TypeBool8Sequence;  // LTTNG sequence of enum is broken. Using UInt8[] instead.
+extern const struct lttng_ust_type_sequence lttngh_TypeBool32Sequence; // LTTNG sequence of enum is broken. Using Int32[] instead.
+
+extern const struct lttng_ust_type_string   lttngh_TypeUtf8String;
+extern const struct lttng_ust_type_sequence lttngh_TypeUtf8Sequence;
+
+extern const struct lttng_ust_type_array    lttngh_TypeUtf8Char;   // CHAR = utf8char[1]
+extern const struct lttng_ust_type_array    lttngh_TypeGuid;       // GUID = hexint8[16]
+extern const struct lttng_ust_type_array    lttngh_TypeSystemTime; // SYSTEMTIME = uint16[8]
+extern const struct lttng_ust_type_array    lttngh_TypeFileTime;   // FILETIME = uint64[1]
+extern const struct lttng_ust_type_sequence lttngh_TypeActivityId; // Nullable<GUID> = hexint8[N] (where N is uint8_t).
+
+typedef struct lttngh_registration
+{
+    struct lttng_ust_registered_probe* registered_probe;
+    struct lttng_ust_tracepoint* const* tracepoint_start;
+    volatile int is_registered;
+} lttngh_registration;
+#define lttngh_REGISTRATION_INIT { NULL, NULL, 0 }
+
+// Returns a pointer to volatile int with registration state.
+// 0 = unregistered.
+// 1 = registered.
+// other = unspecified.
+#define lttngh_REGISTRATION_STATE(registration) (&(registration).is_registered)
+
+#else // lttngh_UST_VER
+
+typedef struct lttng_probe_desc lttngh_ust_probe_desc;
+typedef struct lttng_event_desc lttngh_ust_event_desc;
+typedef struct lttng_event_field lttngh_ust_event_field;
+typedef struct lttng_type lttngh_ust_type_integer;
+#if lttngh_UST_VER >= 208
+typedef struct lttng_enum_desc lttngh_ust_enum_desc;
+#endif // lttngh_UST_VER
+
+#define lttngh_ALIGNOF(type) (__alignof__(type) - __alignof__(type) + lttng_alignof(type)) // Flag error for invalid type even on x86/x64.
+#define lttngh_UST_SYM_NAME_LEN LTTNG_UST_SYM_NAME_LEN
+#define lttngh_PROVIDER_NAME(probeDesc) ((probeDesc).provider)
+
+#if defined(RING_BUFFER_ALIGN)
+#define lttngh_UST_RING_BUFFER_NATURAL_ALIGN 1
+#else
+#define lttngh_UST_RING_BUFFER_NATURAL_ALIGN 0
+#endif
+
+// Initializer for lttng_probe_desc (lttngh_ust_probe_desc)
+#define lttngh_INIT_PROBE_DESC(NAME) \
+    { NAME, NULL, 0, {NULL,NULL}, {NULL,NULL}, 0, LTTNG_UST_PROVIDER_MAJOR, LTTNG_UST_PROVIDER_MINOR, {}}
+
+// Initializer for lttng_ust_tracepoint
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TRACEPOINT(FULL_NAME) \
+    { FULL_NAME, 0, NULL, NULL, "", {} }
+
+// Initializer for lttng_ust_event_desc (lttngh_ust_event_desc).
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_EVENT_DESC(PROBE_DESC_IGNORED, FULL_NAME, CALLBACK, FIELDS, FIELD_COUNT, LEVEL_PTR) \
+    { FULL_NAME, CALLBACK, NULL, FIELDS, FIELD_COUNT, LEVEL_PTR, "", {} }
+
+// Initializer for lttng_event_field (lttngh_ust_event_field)
+#define lttngh_INIT_EVENT_FIELD(NAME, TYPE) \
+    { .name = NAME, .type = TYPE, .nowrite = 0, .padding = {} }
+
+// Initializer for lttng_enum_desc (lttngh_ust_event_field)
+#define lttngh_INIT_ENUM_DESC(NAME, ENTRIES, ENTRY_COUNT) \
+    { NAME, ENTRIES, ENTRY_COUNT, {} }
+
+// Initializer for lttng_enum_entry with unsigned values
+#define lttngh_INIT_ENUM_ENTRY_UNSIGNED(NAME, START, END) \
+    { {START, 0}, {END, 0}, NAME, {} }
+
+// Initializer for lttng_type of integer
+#define lttngh_INIT_TYPE_INTEGER(CTYPE, RADIX, BYTESWAP) \
+    {atype_integer, {.basic = {.integer = { \
+    8u * sizeof(CTYPE), 8u * lttngh_ALIGNOF(CTYPE), lttngh_IS_SIGNED_TYPE(CTYPE), BYTESWAP, RADIX, lttng_encode_none, {} \
+    }}}}
+
+// Initializer for lttng_type of float
+#define lttngh_INIT_TYPE_FLOAT(CTYPE) \
+    {atype_float, {.basic = {._float = { \
+    sizeof(CTYPE) == 4 ? 8 : 11, sizeof(CTYPE) == 4 ? 24 : 53, 8u * lttngh_ALIGNOF(CTYPE), 0, {} \
+    }}}}
+
+// Initializer for lttng_type of sequence
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_SEQUENCE(ELEMENT_TYPE, COUNT_CTYPE) \
+    {atype_sequence, {.sequence = { {atype_integer, {.basic = {.integer = { \
+    8u * sizeof(COUNT_CTYPE), 8u * lttngh_ALIGNOF(COUNT_CTYPE), 0, 0, 10, lttng_encode_none, {} \
+    }}}}, ELEMENT_TYPE}}}
+
+// Initializer for lttng_type of array
+#define lttngh_INIT_TYPE_ARRAY(ELEMENT_TYPE, COUNT, ALIGNMENT_IGNORED) \
+    {atype_array, {.array = { \
+    ELEMENT_TYPE, COUNT \
+    }}}
+
+// Initializer for lttng_type of string of CHAR8 (nul-terminated string)
+#define lttngh_INIT_TYPE_CHAR8_STRING(ENCODE) \
+    {atype_string, {.basic = {.string = { \
+    lttng_encode_##ENCODE \
+    }}}}
+
+// Initializer for lttng_type of sequence of CHAR8 (counted string)
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_CHAR8_SEQUENCE(ENCODE, COUNT_CTYPE) \
+    {atype_sequence, {.sequence = { {atype_integer, {.basic = {.integer = { \
+    8u * sizeof(COUNT_CTYPE), 8u * lttngh_ALIGNOF(COUNT_CTYPE), 0, 0, 10, lttng_encode_none, {} \
+    }}}}, {atype_integer, {.basic = {.integer = { \
+    8u * sizeof(char), 8u * lttngh_ALIGNOF(char), 0, 0, 10, lttng_encode_##ENCODE, {} \
+    }}}} }}}
+
+// Initializer for lttng_type of array of CHAR8 (fixed-length string)
+#define lttngh_INIT_TYPE_CHAR8_ARRAY(ENCODE, COUNT) \
+    {atype_array, {.array = { {atype_integer, {.basic = {.integer = { \
+    8u * sizeof(char), 8u * lttngh_ALIGNOF(char), 0, 0, 10, lttng_encode_##ENCODE, {} \
+    }}}}, COUNT}}}
+
+#if lttngh_UST_VER >= 208
+// Initializer for lttng_type of enum of decimal integer
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_ENUM(CTYPE, ENUM_DESC) \
+    {atype_enum, {.basic = {.enumeration = {&ENUM_DESC, { \
+    8u * sizeof(CTYPE), 8u * lttngh_ALIGNOF(CTYPE), lttngh_IS_SIGNED_TYPE(CTYPE), 0, 10, lttng_encode_none, {} \
+    }}}}}
+#else // lttngh_UST_VER
+// Initializer for lttng_type of decimal integer
+// IMPORTANT: Parameters differ by version!
+#define lttngh_INIT_TYPE_ENUM(CTYPE, ENUM_DESC_IGNORED) \
+    lttngh_INIT_TYPE_INTEGER(CTYPE, 10, 0)
+#endif // lttngh_UST_VER
+
+// lttngh_Type definitions for use with lttngh_INIT_EVENT_FIELD:
+
+#define lttngh_TypeInt8             lttngh_INIT_TYPE_INTEGER(  int8_t, 10, 0)
+#define lttngh_TypeUInt8            lttngh_INIT_TYPE_INTEGER( uint8_t, 10, 0)
+#define lttngh_TypeHexInt8          lttngh_INIT_TYPE_INTEGER( uint8_t, 16, 0)
+
+#define lttngh_TypeInt16            lttngh_INIT_TYPE_INTEGER( int16_t, 10, 0)
+#define lttngh_TypeUInt16           lttngh_INIT_TYPE_INTEGER(uint16_t, 10, 0)
+#define lttngh_TypeHexInt16         lttngh_INIT_TYPE_INTEGER(uint16_t, 16, 0)
+#define lttngh_TypeUInt16BE         lttngh_INIT_TYPE_INTEGER(uint16_t, 10, __BYTE_ORDER == __LITTLE_ENDIAN) // IP PORT
+
+#define lttngh_TypeInt32            lttngh_INIT_TYPE_INTEGER( int32_t, 10, 0)
+#define lttngh_TypeUInt32           lttngh_INIT_TYPE_INTEGER(uint32_t, 10, 0)
+#define lttngh_TypeHexInt32         lttngh_INIT_TYPE_INTEGER(uint32_t, 16, 0)
+
+#define lttngh_TypeLong             lttngh_INIT_TYPE_INTEGER(  signed long, 10, 0)
+#define lttngh_TypeULong            lttngh_INIT_TYPE_INTEGER(unsigned long, 10, 0)
+#define lttngh_TypeHexLong          lttngh_INIT_TYPE_INTEGER(unsigned long, 16, 0)
+
+#define lttngh_TypeIntPtr           lttngh_INIT_TYPE_INTEGER( intptr_t, 10, 0)
+#define lttngh_TypeUIntPtr          lttngh_INIT_TYPE_INTEGER(uintptr_t, 10, 0)
+#define lttngh_TypeHexIntPtr        lttngh_INIT_TYPE_INTEGER(uintptr_t, 16, 0)
+
+#define lttngh_TypeInt64            lttngh_INIT_TYPE_INTEGER( int64_t, 10, 0)
+#define lttngh_TypeUInt64           lttngh_INIT_TYPE_INTEGER(uint64_t, 10, 0)
+#define lttngh_TypeHexInt64         lttngh_INIT_TYPE_INTEGER(uint64_t, 16, 0)
+
+#define lttngh_TypeFloat32          lttngh_INIT_TYPE_FLOAT(float)
+#define lttngh_TypeFloat64          lttngh_INIT_TYPE_FLOAT(double)
+
+#define lttngh_TypeBool8            lttngh_INIT_TYPE_ENUM(uint8_t, lttngh_BoolEnumDesc) // BOOL8 = enum : uint8_t
+#define lttngh_TypeBool32           lttngh_INIT_TYPE_ENUM(int32_t, lttngh_BoolEnumDesc) // BOOL32 = enum : int32_t
+#define lttngh_TypeBool8ForArray    lttngh_INIT_TYPE_INTEGER( uint8_t, 10, 0) // LTTNG array of enum is broken.
+#define lttngh_TypeBool32ForArray   lttngh_INIT_TYPE_INTEGER( int32_t, 10, 0) // LTTNG array of enum is broken.
+
+#define lttngh_TypeInt8Sequence     lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeInt8, uint16_t)
+#define lttngh_TypeUInt8Sequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUInt8, uint16_t)
+#define lttngh_TypeHexInt8Sequence  lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexInt8, uint16_t)
+
+#define lttngh_TypeInt16Sequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeInt16, uint16_t)
+#define lttngh_TypeUInt16Sequence   lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUInt16, uint16_t)
+#define lttngh_TypeHexInt16Sequence lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexInt16, uint16_t)
+
+#define lttngh_TypeInt32Sequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeInt32, uint16_t)
+#define lttngh_TypeUInt32Sequence   lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUInt32, uint16_t)
+#define lttngh_TypeHexInt32Sequence lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexInt32, uint16_t)
+
+#define lttngh_TypeLongSequence     lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeLong, uint16_t)
+#define lttngh_TypeULongSequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeULong, uint16_t)
+#define lttngh_TypeHexLongSequence  lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexLong, uint16_t)
+
+#define lttngh_TypeIntPtrSequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeIntPtr, uint16_t)
+#define lttngh_TypeUIntPtrSequence   lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUIntPtr, uint16_t)
+#define lttngh_TypeHexIntPtrSequence lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexIntPtr, uint16_t)
+
+#define lttngh_TypeInt64Sequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeInt64, uint16_t)
+#define lttngh_TypeUInt64Sequence   lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUInt64, uint16_t)
+#define lttngh_TypeHexInt64Sequence lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexInt64, uint16_t)
+
+//#define lttngh_TypeFloat32Sequence  lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeFloat32, uint16_t) // Array of float is broken.
+//#define lttngh_TypeFloat64Sequence  lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeFloat64, uint16_t) // Array of float is broken.
+
+#define lttngh_TypeBool8Sequence    lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeBool8ForArray, uint16_t)
+#define lttngh_TypeBool32Sequence   lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeBool32ForArray, uint16_t)
+
+#define lttngh_TypeUtf8String       lttngh_INIT_TYPE_CHAR8_STRING(UTF8)
+#define lttngh_TypeUtf8Sequence     lttngh_INIT_TYPE_CHAR8_SEQUENCE(UTF8, uint16_t)
+
+#define lttngh_TypeUtf8Char         lttngh_INIT_TYPE_CHAR8_ARRAY(UTF8, 1) // CHAR = utf8char[1]
+#define lttngh_TypeGuid             lttngh_INIT_TYPE_ARRAY(lttngh_TypeHexInt8, 16, lttngh_ALIGNOF(uint8_t)) // GUID = hexint8[16]
+#define lttngh_TypeSystemTime       lttngh_INIT_TYPE_ARRAY(lttngh_TypeUInt16, 8, lttngh_ALIGNOF(uint16_t))  // SYSTEMTIME = uint16[8]
+#define lttngh_TypeFileTime         lttngh_INIT_TYPE_ARRAY(lttngh_TypeUInt64, 1, lttngh_ALIGNOF(uint64_t))  // FILETIME = uint64[1]
+#define lttngh_TypeActivityId       lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeHexInt8, uint8_t) // Nullable<GUID> = hexint8[N] (where N is uint8_t).
+
+typedef volatile int lttngh_registration;
+#define lttngh_REGISTRATION_INIT 0
+
+// Returns a pointer to volatile int with registration state.
+// 0 = unregistered.
+// 1 = registered.
+// other = unspecified.
+#define lttngh_REGISTRATION_STATE(registration) (&(registration))
+
+#endif // lttngh_UST_VER
 
 enum lttngh_Level {
   lttngh_Level_EMERG = 0,
@@ -140,8 +532,8 @@ enum lttngh_DataType {
   //   in the field's lttng_type.u.array.length value and must also be
   //   provided in the DataDesc.Length value.
   // - For atype_sequence, a sequence is expressed by two DataDesc items.
-  //   The first DataDesc is created via DataDescCreate with Type = None and
-  //   contains the sequence's length (number of elements). The second
+  //   The first DataDesc is created via DataDescCreate with Type = Unsigned
+  //   and contains the sequence's length (number of elements). The second
   //   DataDesc is created via DataDescCreateCounted and contains the data.
   lttngh_DataType_Counted,
 
@@ -157,11 +549,15 @@ enum lttngh_DataType {
   // length is given in a DataDesc with Type = None and content is given in
   // a separate DataDesc with Type = Counted), this DataType requires a
   // single DataDesc, which will be transcoded into payload corresponding to
-  // a UTF-8 sequence (including both the length and content). The field's
-  // lttng_type must be defined as follows:
+  // a UTF-8 sequence (including both the length and content).
+  // In LTTNG-UST 2.12 and before, the field's lttng_type must be defined as
+  // follows:
   // - atype = sequence.
   // - u.sequence.length_type = uint16, host-endian.
   // - u.sequence.elem_type = uint8, UTF8 encoding.
+  // In LTTNG-UST 2.13 and later, this is encoded as a UINT16 length field
+  // followed by a sequence with element = uint8, length_name = NULL, and
+  // encoding = UTF8.
   // Note that when Type = SequenceUtf16Transcoded, lttngh_EventProbe will
   // use the DataDesc's Length field as scratch space during transcoding.
   lttngh_DataType_SequenceUtf16Transcoded,
@@ -178,27 +574,31 @@ enum lttngh_DataType {
   // length is given in a DataDesc with Type = None and content is given in
   // a separate DataDesc with Type = Counted), this DataType requires a
   // single DataDesc, which will be transcoded into payload corresponding to
-  // a UTF-8 sequence (including both the length and content). The field's
-  // lttng_type must be defined as follows:
+  // a UTF-8 sequence (including both the length and content).
+  // In LTTNG-UST 2.12 and before, the field's lttng_type must be defined as
+  // follows:
   // - atype = sequence.
   // - u.sequence.length_type = uint16, host-endian.
   // - u.sequence.elem_type = uint8, UTF8 encoding.
-  // Note that when Type = SequenceUtf32Transcoded, lttngh_EventProbe will
+  // In LTTNG-UST 2.13 and later, this is encoded as a UINT16 length field
+  // followed by a sequence with element = uint8, length_name = NULL, and
+  // encoding = UTF8.
+  // Note that when Type = SequenceUtf16Transcoded, lttngh_EventProbe will
   // use the DataDesc's Length field as scratch space during transcoding.
   lttngh_DataType_SequenceUtf32Transcoded,
 
   // Signed integer (host-endian): atype_integer, atype_enum.
-  lttngh_DataType_Signed = BYTE_ORDER == LITTLE_ENDIAN
+  lttngh_DataType_Signed = __BYTE_ORDER == __LITTLE_ENDIAN
                                ? lttngh_DataType_SignedLE
                                : lttngh_DataType_SignedBE,
 
   // Unsigned integer (host-endian): atype_integer, atype_enum.
-  lttngh_DataType_Unsigned = BYTE_ORDER == LITTLE_ENDIAN
+  lttngh_DataType_Unsigned = __BYTE_ORDER == __LITTLE_ENDIAN
                                  ? lttngh_DataType_UnsignedLE
                                  : lttngh_DataType_UnsignedBE,
 
   // Floating-point (host-endian): atype_float.
-  lttngh_DataType_Float = FLOAT_WORD_ORDER == LITTLE_ENDIAN
+  lttngh_DataType_Float = __FLOAT_WORD_ORDER == __LITTLE_ENDIAN
                               ? lttngh_DataType_FloatLE
                               : lttngh_DataType_FloatBE
 };
@@ -220,65 +620,60 @@ Length is only used by the bytecode filter.
 struct lttngh_DataDesc {
   void const *Data;
   uint32_t Size;     // = sizeof(element) * number of elements
-  uint8_t Alignment; // = lttng_alignof(element)
+  uint8_t Alignment; // = lttngh_ALIGNOF(element)
 
   // The following fields are mainly for bytecode filtering:
   uint8_t Type;    // Use values from enum lttngh_DataType.
   uint16_t Length; // = number of elements; only used if Type == Counted.
 };
 
-#if (LTTNG_UST_MAJOR_VERSION < 2 ||                                            \
-     (LTTNG_UST_MAJOR_VERSION == 2 && LTTNG_UST_MINOR_VERSION <= 6))
-#error "Please use LTTNG 2.7+"
-#elif (LTTNG_UST_MAJOR_VERSION == 2 && LTTNG_UST_MINOR_VERSION == 7)
-#define USE_LTTNG_2_7
-#endif
-
-#ifdef USE_LTTNG_2_7
-#define LTTNG_ENUM_TYPE lttng_enum
-#else
-#define LTTNG_ENUM_TYPE lttng_enum_desc
-#endif
-
 #ifdef __cplusplus
 extern "C" {
-#endif
+#endif // __cplusplus
 
+#if lttngh_UST_VER >= 208
 /*
 Predefined enumeration descriptor for use with bool/BOOL/BOOLEAN.
+Note: Generally not used directly. Instead, use lttngh_TypeBool*.
 */
-extern struct LTTNG_ENUM_TYPE const lttngh_BoolEnumDesc;
+extern const lttngh_ust_enum_desc lttngh_BoolEnumDesc;
+#endif // lttngh_UST_VER
 
 /*
-Registers a provider. The pIsRegistered pointer will be atomically updated
-with registration state.
+Registers a provider. The pRegistration pointer must be zero-filled at
+startup and will be atomically updated with registration state.
 
 LTTNG tracks providers by name, and does not support registering multiple
 providers with the same name within a process. If this is attempted,
 RegisterProvider will return an error code.
 
 It is an error to invoke RegisterProvider when the provider is already
-registered (as tracked by pIsRegistered). If this happens,
+registered (as tracked by pRegistration). If this happens,
 RegisterProvider will call abort().
 */
 int lttngh_RegisterProvider(
-    int volatile *pIsRegistered, struct lttng_probe_desc *pProbeDesc,
+    lttngh_registration *pRegistration,
+    lttngh_ust_probe_desc *pProbeDesc,
     struct lttng_ust_tracepoint **pTracepointStart,
     struct lttng_ust_tracepoint **pTracepointStop,
-    struct lttng_event_desc const **pEventDescStart,
-    struct lttng_event_desc const **pEventDescStop) lttng_ust_notrace;
+    lttngh_ust_event_desc const **pEventDescStart,
+    lttngh_ust_event_desc const **pEventDescStop) lttng_ust_notrace;
 
 /*
-Unregisters a provider. The pIsRegistered pointer will be atomically
-updated with registration state.
+Unregisters a provider. The pRegistration state will be atomically updated.
 
 It is not an error to invoke UnregisterProvider when the provider is already
-unregistered (as tracked by pIsRegistered). If this happens,
+unregistered (as tracked by pRegistration). If this happens,
 UnregisterProvider is a no-op and immediately returns.
 */
 int lttngh_UnregisterProvider(
-    int volatile *pIsRegistered, struct lttng_probe_desc *pProbeDesc,
-    struct lttng_ust_tracepoint *const *pTracepointStart) lttng_ust_notrace;
+    lttngh_registration *pRegistration
+#if lttngh_UST_VER < 213
+    ,
+    lttngh_ust_probe_desc* pProbeDesc,
+    struct lttng_ust_tracepoint* const* pTracepointStart
+#endif // lttngh_UST_VER
+    ) lttng_ust_notrace;
 
 /*
 Writes an event with the data from the array of DataDesc objects.
@@ -400,7 +795,7 @@ Use this for types other than array or sequence.
 static inline struct lttngh_DataDesc lttngh_DataDescCreate(
     const void *data,          // = &value
     unsigned size,             // = sizeof(value)
-    unsigned char alignment,   // = lttng_alignof(value)
+    unsigned char alignment,   // = lttngh_ALIGNOF(value)
     enum lttngh_DataType type) // = None, Signed, Unsigned, Float
     lttng_ust_notrace;
 static inline struct lttngh_DataDesc
@@ -425,7 +820,7 @@ lttngh_DataDescCreateString8(const char *str) lttng_ust_notrace;
 static inline struct lttngh_DataDesc
 lttngh_DataDescCreateString8(const char *str) {
   struct lttngh_DataDesc dd = {str, (unsigned)strlen(str) + 1,
-                               lttng_alignof(str[0]), lttngh_DataType_String8,
+                               lttngh_ALIGNOF(str[0]), lttngh_DataType_String8,
                                0};
   return dd;
 }
@@ -437,7 +832,7 @@ The returned DataDesc will have Type = Counted.
 static inline struct lttngh_DataDesc lttngh_DataDescCreateCounted(
     const void *data,        // = &value
     unsigned size,           // = sizeof(element) * length
-    unsigned char alignment, // = lttng_alignof(element)
+    unsigned char alignment, // = lttngh_ALIGNOF(element)
     unsigned length)         // = Number of elements in value
     lttng_ust_notrace;
 static inline struct lttngh_DataDesc
@@ -464,7 +859,7 @@ lttngh_DataDescCreateStringUtf16(const char16_t *str) {
   }
   struct lttngh_DataDesc dd = {
       str, (unsigned)(strEnd - str) * (unsigned)sizeof(char16_t),
-      lttng_alignof(char), lttngh_DataType_StringUtf16Transcoded, 0};
+      lttngh_ALIGNOF(char), lttngh_DataType_StringUtf16Transcoded, 0};
   return dd;
 }
 
@@ -480,7 +875,7 @@ static inline struct lttngh_DataDesc lttngh_DataDescCreateSequenceUtf16(
 static inline struct lttngh_DataDesc
 lttngh_DataDescCreateSequenceUtf16(const char16_t *str, uint16_t length) {
   struct lttngh_DataDesc dd = {str, length * (unsigned)sizeof(char16_t),
-                               lttng_alignof(uint16_t),
+                               lttngh_ALIGNOF(uint16_t),
                                lttngh_DataType_SequenceUtf16Transcoded, 0};
   return dd;
 }
@@ -499,7 +894,7 @@ lttngh_DataDescCreateStringUtf32(const char32_t *str) {
   }
   struct lttngh_DataDesc dd = {
       str, (unsigned)(strEnd - str) * (unsigned)sizeof(char32_t),
-      lttng_alignof(char), lttngh_DataType_StringUtf32Transcoded, 0};
+      lttngh_ALIGNOF(char), lttngh_DataType_StringUtf32Transcoded, 0};
   return dd;
 }
 
@@ -515,7 +910,7 @@ static inline struct lttngh_DataDesc lttngh_DataDescCreateSequenceUtf32(
 static inline struct lttngh_DataDesc
 lttngh_DataDescCreateSequenceUtf32(const char32_t *str, uint16_t length) {
   struct lttngh_DataDesc dd = {str, length * (unsigned)sizeof(char32_t),
-                               lttng_alignof(uint16_t),
+                               lttngh_ALIGNOF(uint16_t),
                                lttngh_DataType_SequenceUtf32Transcoded, 0};
   return dd;
 }
@@ -562,6 +957,65 @@ lttngh_DataDescCreateSequenceWchar(const wchar_t *str, uint16_t length) {
 
 #ifdef __cplusplus
 } // extern "C"
-#endif
+
+template<unsigned size, bool is_signed> struct lttngh_UstTypeInt;
+template<unsigned size> struct lttngh_UstTypeHexInt;
+template<unsigned size> struct lttngh_UstTypeFloat;
+template<unsigned size> struct lttngh_UstTypeBool;
+template<unsigned size> struct lttngh_UstTypeUtf8Char;
+
+#if lttngh_UST_VER >= 213
+
+template<> struct lttngh_UstTypeInt<1, true> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeInt8; };
+template<> struct lttngh_UstTypeInt<2, true> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeInt16; };
+template<> struct lttngh_UstTypeInt<4, true> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeInt32; };
+template<> struct lttngh_UstTypeInt<8, true> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeInt64; };
+
+template<> struct lttngh_UstTypeInt<1, false> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeUInt8; };
+template<> struct lttngh_UstTypeInt<2, false> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeUInt16; };
+template<> struct lttngh_UstTypeInt<4, false> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeUInt32; };
+template<> struct lttngh_UstTypeInt<8, false> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeUInt64; };
+
+template<> struct lttngh_UstTypeHexInt<1> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeHexInt8; };
+template<> struct lttngh_UstTypeHexInt<2> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeHexInt16; };
+template<> struct lttngh_UstTypeHexInt<4> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeHexInt32; };
+template<> struct lttngh_UstTypeHexInt<8> { static constexpr lttngh_ust_type_integer const& ust_type = lttngh_TypeHexInt64; };
+
+template<> struct lttngh_UstTypeFloat<4> { static constexpr struct lttng_ust_type_float const& ust_type = lttngh_TypeFloat32; };
+template<> struct lttngh_UstTypeFloat<8> { static constexpr struct lttng_ust_type_float const& ust_type = lttngh_TypeFloat64; };
+
+template<> struct lttngh_UstTypeBool<1> { static constexpr struct lttng_ust_type_enum const& ust_type = lttngh_TypeBool8; };
+template<> struct lttngh_UstTypeBool<4> { static constexpr struct lttng_ust_type_enum const& ust_type = lttngh_TypeBool32; };
+
+template<> struct lttngh_UstTypeUtf8Char<1> { static constexpr struct lttng_ust_type_array const& ust_type = lttngh_TypeUtf8Char; };
+
+#else // lttngh_UST_VER
+
+template<> struct lttngh_UstTypeInt<1, true> { static constexpr struct lttng_type ust_type = lttngh_TypeInt8; };
+template<> struct lttngh_UstTypeInt<2, true> { static constexpr struct lttng_type ust_type = lttngh_TypeInt16; };
+template<> struct lttngh_UstTypeInt<4, true> { static constexpr struct lttng_type ust_type = lttngh_TypeInt32; };
+template<> struct lttngh_UstTypeInt<8, true> { static constexpr struct lttng_type ust_type = lttngh_TypeInt64; };
+
+template<> struct lttngh_UstTypeInt<1, false> { static constexpr struct lttng_type ust_type = lttngh_TypeUInt8; };
+template<> struct lttngh_UstTypeInt<2, false> { static constexpr struct lttng_type ust_type = lttngh_TypeUInt16; };
+template<> struct lttngh_UstTypeInt<4, false> { static constexpr struct lttng_type ust_type = lttngh_TypeUInt32; };
+template<> struct lttngh_UstTypeInt<8, false> { static constexpr struct lttng_type ust_type = lttngh_TypeUInt64; };
+
+template<> struct lttngh_UstTypeHexInt<1> { static constexpr struct lttng_type ust_type = lttngh_TypeHexInt8; };
+template<> struct lttngh_UstTypeHexInt<2> { static constexpr struct lttng_type ust_type = lttngh_TypeHexInt16; };
+template<> struct lttngh_UstTypeHexInt<4> { static constexpr struct lttng_type ust_type = lttngh_TypeHexInt32; };
+template<> struct lttngh_UstTypeHexInt<8> { static constexpr struct lttng_type ust_type = lttngh_TypeHexInt64; };
+
+template<> struct lttngh_UstTypeFloat<4> { static constexpr struct lttng_type ust_type = lttngh_TypeFloat32; };
+template<> struct lttngh_UstTypeFloat<8> { static constexpr struct lttng_type ust_type = lttngh_TypeFloat64; };
+
+template<> struct lttngh_UstTypeBool<1> { static constexpr struct lttng_type ust_type = lttngh_TypeBool8; };
+template<> struct lttngh_UstTypeBool<4> { static constexpr struct lttng_type ust_type = lttngh_TypeBool32; };
+
+template<> struct lttngh_UstTypeUtf8Char<1> { static constexpr struct lttng_type ust_type = lttngh_TypeUtf8Char; };
+
+#endif // lttngh_UST_VER
+
+#endif // __cplusplus
 
 #endif // _lttnghelpers_h
