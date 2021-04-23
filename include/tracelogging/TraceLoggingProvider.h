@@ -1516,7 +1516,7 @@ Examples:
                 pchEventFullName,
                 pProvider->ProbeDesc.provider, (unsigned)strlen(pProvider->ProbeDesc.provider),
                 eventName, (unsigned)strlen(eventName),
-                0); // Don't add keyword suffix.
+                0) - 3; // Don't add keyword suffix.
 
             for (struct lttng_event_desc const **ppDesc = pEventDescStart; ppDesc != pEventDescStop; ppDesc += 1)
             {
