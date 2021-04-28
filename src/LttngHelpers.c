@@ -83,8 +83,8 @@ const struct lttng_ust_type_sequence lttngh_TypeHexInt64Sequence = lttngh_INIT_T
 //const struct lttng_ust_type_sequence lttngh_TypeFloat32Sequence = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeFloat32, NULL, lttngh_ALIGNOF(float));
 //const struct lttng_ust_type_sequence lttngh_TypeFloat64Sequence = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeFloat64, NULL, lttngh_ALIGNOF(double));
 
-const struct lttng_ust_type_sequence lttngh_TypeBool8Sequence  = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeUInt8, NULL, lttngh_ALIGNOF(int8_t));
-const struct lttng_ust_type_sequence lttngh_TypeBool32Sequence = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeInt32, NULL, lttngh_ALIGNOF(int32_t));
+//const struct lttng_ust_type_sequence lttngh_TypeBool8Sequence  = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeBool8ForArray, NULL, lttngh_ALIGNOF(int8_t));
+//const struct lttng_ust_type_sequence lttngh_TypeBool32Sequence = lttngh_INIT_TYPE_SEQUENCE(lttngh_TypeBool32ForArray, NULL, lttngh_ALIGNOF(int32_t));
 
 const struct lttng_ust_type_string   lttngh_TypeUtf8String   = lttngh_INIT_TYPE_CHAR8_STRING(UTF8);
 const struct lttng_ust_type_sequence lttngh_TypeUtf8Sequence = lttngh_INIT_TYPE_CHAR8_SEQUENCE(UTF8, NULL);
@@ -597,9 +597,14 @@ static int EventProbeFilter(
         case lttngh_DataType_String8:
         case lttngh_DataType_StringUtf16Transcoded:
         case lttngh_DataType_StringUtf32Transcoded:
+#if lttngh_UST_VER >= 213
+        case lttngh_DataType_Counted:
+#endif
             cbBuffer += (unsigned)sizeof(void *);
             break;
+#if lttngh_UST_VER < 213
         case lttngh_DataType_Counted:
+#endif
         case lttngh_DataType_SequenceUtf16Transcoded:
         case lttngh_DataType_SequenceUtf32Transcoded:
             cbBuffer += (unsigned)(sizeof(unsigned long) + sizeof(void *));
@@ -881,12 +886,16 @@ static int EventProbeFilter(
             case lttngh_DataType_String8:
             case lttngh_DataType_StringUtf16Transcoded:
             case lttngh_DataType_StringUtf32Transcoded:
+#if lttngh_UST_VER >= 213
+            case lttngh_DataType_Counted:
+#endif
             {
                 // TODO - convert to utf8 for filtering?
                 memcpy(pStackData, &pDataDesc[i].Data, sizeof(void *));
                 pStackData += sizeof(void *);
                 break;
             }
+#if lttngh_UST_VER < 213
             case lttngh_DataType_Counted:
             {
                 unsigned long len = pDataDesc[i].Length;
@@ -896,6 +905,7 @@ static int EventProbeFilter(
                 pStackData += sizeof(void *);
                 break;
             }
+#endif // lttngh_UST_VER
             case lttngh_DataType_SequenceUtf16Transcoded:
             case lttngh_DataType_SequenceUtf32Transcoded:
             {

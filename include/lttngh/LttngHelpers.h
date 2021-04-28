@@ -197,8 +197,8 @@ extern const struct lttng_ust_type_sequence lttngh_TypeHexInt64Sequence;
 //extern const struct lttng_ust_type_sequence lttngh_TypeFloat32Sequence; // LTTNG array of float is broken.
 //extern const struct lttng_ust_type_sequence lttngh_TypeFloat64Sequence; // LTTNG array of float is broken.
 
-extern const struct lttng_ust_type_sequence lttngh_TypeBool8Sequence;  // LTTNG sequence of enum is broken. Using UInt8[] instead.
-extern const struct lttng_ust_type_sequence lttngh_TypeBool32Sequence; // LTTNG sequence of enum is broken. Using Int32[] instead.
+#define lttngh_TypeBool8Sequence            lttngh_TypeUInt8Sequence   // LTTNG sequence of enum is broken. Using UInt8[] instead.
+#define lttngh_TypeBool32Sequence           lttngh_TypeInt32Sequence   // LTTNG sequence of enum is broken. Using Int32[] instead.
 
 extern const struct lttng_ust_type_string   lttngh_TypeUtf8String;
 extern const struct lttng_ust_type_sequence lttngh_TypeUtf8Sequence;
@@ -532,7 +532,7 @@ enum lttngh_DataType {
   //   in the field's lttng_type.u.array.length value and must also be
   //   provided in the DataDesc.Length value.
   // - For atype_sequence, a sequence is expressed by two DataDesc items.
-  //   The first DataDesc is created via DataDescCreate with Type = Unsigned
+  //   The first DataDesc is created via DataDescCreate with Type = SequenceLength
   //   and contains the sequence's length (number of elements). The second
   //   DataDesc is created via DataDescCreateCounted and contains the data.
   lttngh_DataType_Counted,
@@ -546,7 +546,7 @@ enum lttngh_DataType {
 
   // UTF-16 (host-endian) string data that will be transcoded into a UTF-8
   // sequence before storage into the log. Unlike a normal sequence (where
-  // length is given in a DataDesc with Type = None and content is given in
+  // length is given in a DataDesc with Type = SequenceLength and content is given in
   // a separate DataDesc with Type = Counted), this DataType requires a
   // single DataDesc, which will be transcoded into payload corresponding to
   // a UTF-8 sequence (including both the length and content).
@@ -571,7 +571,7 @@ enum lttngh_DataType {
 
   // UTF-32 (host-endian) string data that will be transcoded into a UTF-8
   // sequence before storage into the log. Unlike a normal sequence (where
-  // length is given in a DataDesc with Type = None and content is given in
+  // length is given in a DataDesc with Type = SequenceLength and content is given in
   // a separate DataDesc with Type = Counted), this DataType requires a
   // single DataDesc, which will be transcoded into payload corresponding to
   // a UTF-8 sequence (including both the length and content).
@@ -600,7 +600,12 @@ enum lttngh_DataType {
   // Floating-point (host-endian): atype_float.
   lttngh_DataType_Float = __FLOAT_WORD_ORDER == __LITTLE_ENDIAN
                               ? lttngh_DataType_FloatLE
-                              : lttngh_DataType_FloatBE
+                              : lttngh_DataType_FloatBE,
+
+  // Use for the length field of a sequence.
+  lttngh_DataType_SequenceLength = lttngh_UST_VER >= 213
+                                    ? lttngh_DataType_None
+                                    : lttngh_DataType_Unsigned
 };
 
 /*

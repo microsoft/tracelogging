@@ -74,7 +74,7 @@ For more information, see the [LTTNG Documentation](https://lttng.org/docs/v2.10
 
 This project depends on the lttng-ust library. To build this library, you will need liblttng-ust-dev version 2.10 or later.
 The library will compile with 2.7 or later, but some things might not work perfectly. The library has been tested up through
-version 2.13.)
+version 2.13.
 
 ```bash
 sudo apt update

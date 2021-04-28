@@ -199,9 +199,9 @@ These handler macros may be renamed or removed in future versions of this header
 #define _tlg_ArgChar8(ctype, value, ndt) \
          (_tlg_Char8, ctype, value, ndt) // Logged as utf8char[1].
 #define _tlg_ArgCharW(ctype, value, ndt) \
-         (_tlg_CharW, ctype, value, ndt) // Logged as utf8char[N] (transcoded).
+         (_tlg_CharW, ctype, value, ndt) // Logged as szUtf8 (transcoded).
 #define _tlg_ArgCharNN(ctype, value, NN, ndt) \
-         (_tlg_CharNN, ctype, value, NN, ndt) // Logged as utf8char[N] (transcoded).
+         (_tlg_CharNN, ctype, value, NN, ndt) // Logged as szUtf8 (transcoded).
 #define _tlg_ArgString8(ctype, pszValue, ndt) \
          (_tlg_String8, ctype, pszValue, ndt) // Logged as szUtf8.
 #define _tlg_ArgStringW(ctype, pszValue, ndt) \
@@ -1399,7 +1399,7 @@ Examples:
     // Before 2.13: Sets _tlg_fullName = ProviderName + ":" + EventName + ";" + KeywordSuffix
     // After 2.13: Sets _tlg_fullName = EventName + ";" + KeywordSuffix
     unsigned _tlg_EventFullName(
-        char *_tlg_fullName,
+        char *_tlg_fullName, // Assumed to be char[lttngh_UST_SYM_NAME_LEN].
 #if lttngh_UST_VER < 213
         char const *pchProviderName,
         unsigned cchProviderName,
@@ -1685,7 +1685,7 @@ Examples:
         _tlg_NOEXCEPT
     {
         uint16_t const *const pLength = &pDesc[1].Length;
-        pDesc[0] = lttngh_DataDescCreate(pLength, sizeof(uint16_t), lttngh_ALIGNOF(uint16_t), lttngh_DataType_None);
+        pDesc[0] = lttngh_DataDescCreate(pLength, sizeof(uint16_t), lttngh_ALIGNOF(uint16_t), lttngh_DataType_SequenceLength);
         pDesc[1] = lttngh_DataDescCreateCounted(pVals, cVals * cbVal, alignment, cVals);
     }
 
@@ -1705,7 +1705,7 @@ Examples:
         _tlg_NOEXCEPT
     {
         uint8_t const *const pLength = (uint8_t const *)&pDesc[1].Length + (__BYTE_ORDER == __BIG_ENDIAN);
-        pDesc[0] = lttngh_DataDescCreate(pLength, sizeof(uint8_t), lttngh_ALIGNOF(uint8_t), lttngh_DataType_None);
+        pDesc[0] = lttngh_DataDescCreate(pLength, sizeof(uint8_t), lttngh_ALIGNOF(uint8_t), lttngh_DataType_SequenceLength);
         pDesc[1] = lttngh_DataDescCreateCounted(pVals, cVals * cbVal, alignment, cVals);
     }
 
@@ -2623,7 +2623,7 @@ ctype const*)).
     static lttngh_ust_event_field const* const _tlg_eventFieldArray[eventFieldCount] = { \
         _tlg_FOREACH(_tlg_EventFieldRef, __VA_ARGS__) };
 #else // lttngh_UST_VER
-#define _tlg_InitTracepoint(nameBuffer) lttngh_INIT_TRACEPOINT(nameBuffer)
+#define _tlg_InitTracepoint(_tlg_fullName) lttngh_INIT_TRACEPOINT(_tlg_fullName)
 #define _tlg_EventFieldArray(eventFieldCount, ...) \
     static lttngh_ust_event_field const _tlg_eventFieldArray[eventFieldCount] = { \
         _tlg_FOREACH(_tlg_EventField, __VA_ARGS__) };
@@ -2634,7 +2634,7 @@ ctype const*)).
     enum { _tlg_eventFieldCount = 0 _tlg_FOREACH(_tlg_FieldCount, __VA_ARGS__) }; \
     _tlg_EventFieldArray(_tlg_eventFieldCount, __VA_ARGS__) \
     static struct lttng_ust_tracepoint _tlg_tracepoint \
-        __attribute__((section("__tracepoints"))) =  _tlg_InitTracepoint(_tlg_fullName); \
+        __attribute__((section("__tracepoints"))) = _tlg_InitTracepoint(_tlg_fullName); \
     static struct lttng_ust_tracepoint* _tlg_tracepointPtr \
         __attribute__((section("__tracepoints_ptrs_" _tlg_STRINGIZE(providerSymbol)), used)) = \
         &_tlg_tracepoint; \
