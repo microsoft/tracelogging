@@ -2621,33 +2621,53 @@ ctype const*)).
 #define _tlg_EventFieldArray(eventFieldCount, ...) \
     _tlg_FOREACH(_tlg_EventField, __VA_ARGS__) \
     static lttngh_ust_event_field const* const _tlg_eventFieldArray[eventFieldCount] = { \
-        _tlg_FOREACH(_tlg_EventFieldRef, __VA_ARGS__) };
+        _tlg_FOREACH(_tlg_EventFieldRef, __VA_ARGS__) }
+#define _tlg_EventDef(providerSymbol, eventName, levelValue, keywordValue) \
+    static struct lttng_ust_tracepoint_class const _tlg_tpClass = \
+        lttngh_INIT_TRACEPOINT_CLASS(&_tlg_PASTE(_tlgProv_, providerSymbol).ProbeDesc, \
+            (void(*)(void))&lttngh_EventProbe, \
+            _tlg_eventFieldArray, _tlg_eventFieldCount); \
+    static struct _tlg_Event_t const _tlg_event = { \
+        lttngh_INIT_EVENT_DESC(&_tlg_PASTE(_tlgProv_, providerSymbol).ProbeDesc, \
+            _tlg_fullName, \
+            &_tlg_tpClass, \
+            (const int**)&_tlg_event.LevelPtr), \
+        keywordValue, \
+        &_tlg_tracepoint, \
+        ("" eventName), \
+        &_tlg_event.Level, \
+        levelValue }
 #else // lttngh_UST_VER
 #define _tlg_InitTracepoint(_tlg_fullName) lttngh_INIT_TRACEPOINT(_tlg_fullName)
 #define _tlg_EventFieldArray(eventFieldCount, ...) \
     static lttngh_ust_event_field const _tlg_eventFieldArray[eventFieldCount] = { \
-        _tlg_FOREACH(_tlg_EventField, __VA_ARGS__) };
+        _tlg_FOREACH(_tlg_EventField, __VA_ARGS__) }
+#define _tlg_EventDef(providerSymbol, eventName, levelValue, keywordValue) \
+    static struct _tlg_Event_t const _tlg_event = { \
+        lttngh_INIT_EVENT_DESC( \
+            _tlg_fullName, \
+            (void(*)(void))&lttngh_EventProbe, \
+            _tlg_eventFieldArray, _tlg_eventFieldCount, \
+            (const int**)&_tlg_event.LevelPtr), \
+        keywordValue, \
+        &_tlg_tracepoint, \
+        ("" eventName), \
+        &_tlg_event.Level, \
+        levelValue }
 #endif // lttngh_UST_VER
 
 #define _tlg_Write_imp(eventProbeFunc, providerSymbol, eventName, ...) ({ \
     static char _tlg_fullName[lttngh_UST_SYM_NAME_LEN]; /* Filled-in during TraceLoggingRegister. */ \
     enum { _tlg_eventFieldCount = 0 _tlg_FOREACH(_tlg_FieldCount, __VA_ARGS__) }; \
-    _tlg_EventFieldArray(_tlg_eventFieldCount, __VA_ARGS__) \
+    _tlg_EventFieldArray(_tlg_eventFieldCount, __VA_ARGS__); \
     static struct lttng_ust_tracepoint _tlg_tracepoint \
         __attribute__((section("__tracepoints"))) = _tlg_InitTracepoint(_tlg_fullName); \
     static struct lttng_ust_tracepoint* _tlg_tracepointPtr \
         __attribute__((section("__tracepoints_ptrs_" _tlg_STRINGIZE(providerSymbol)), used)) = \
         &_tlg_tracepoint; \
-    static struct _tlg_Event_t const _tlg_event = { \
-        lttngh_INIT_EVENT_DESC(&_tlg_PASTE(_tlgProv_, providerSymbol).ProbeDesc, \
-            _tlg_fullName, (void(*)(void))&lttngh_EventProbe, \
-            _tlg_eventFieldArray, _tlg_eventFieldCount, \
-            (const int**)&_tlg_event.LevelPtr), \
-        (0 _tlg_FOREACH(_tlg_KeywordVal, __VA_ARGS__)), \
-        &_tlg_tracepoint, \
-        ("" eventName), \
-        &_tlg_event.Level, \
-        (lttngh_Level_DEBUG _tlg_FOREACH(_tlg_LevelVal, __VA_ARGS__)) }; \
+    _tlg_EventDef(providerSymbol, eventName, \
+        (lttngh_Level_DEBUG _tlg_FOREACH(_tlg_LevelVal, __VA_ARGS__)), \
+        (0 _tlg_FOREACH(_tlg_KeywordVal, __VA_ARGS__))); \
     static lttngh_ust_event_desc const* _tlg_eventDescPtr \
         __attribute__((section("__eventdesc_ptrs_" _tlg_STRINGIZE(providerSymbol)), used)) = \
         &_tlg_event.Desc; \
