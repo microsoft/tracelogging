@@ -67,18 +67,23 @@ typedef struct lttng_ust_enum_desc lttngh_ust_enum_desc;
 #define lttngh_INIT_TRACEPOINT(PROVIDER_NAME, EVENT_NAME) \
     { sizeof(struct lttng_ust_tracepoint), PROVIDER_NAME, EVENT_NAME, 0, NULL, NULL, "" }
 
+// Initializer for lttng_ust_tracepoint_class
+// (Only for 2.13+)
+#define lttngh_INIT_TRACEPOINT_CLASS(PROBE_DESC, CALLBACK, FIELD_PTRS, FIELD_COUNT) \
+    { sizeof(struct lttng_ust_tracepoint_class), FIELD_PTRS, FIELD_COUNT, CALLBACK, "", PROBE_DESC }
+
 // Initializer for lttng_ust_event_desc (lttngh_ust_event_desc)
 // IMPORTANT: Parameters differ by version!
-#define lttngh_INIT_EVENT_DESC(PROBE_DESC, EVENT_NAME, CALLBACK, FIELD_PTRS, FIELD_COUNT, LEVEL_PTR) \
-    { sizeof(struct lttng_ust_event_desc), EVENT_NAME, PROBE_DESC, CALLBACK, FIELD_PTRS, FIELD_COUNT, LEVEL_PTR, "", NULL }
+#define lttngh_INIT_EVENT_DESC(PROBE_DESC, EVENT_NAME, TRACEPOINT_CLASS, LEVEL_PTR) \
+    { sizeof(struct lttng_ust_event_desc), EVENT_NAME, PROBE_DESC, TRACEPOINT_CLASS, LEVEL_PTR, NULL }
 
 // Initializer for lttng_ust_event_field (lttngh_ust_event_field)
 #define lttngh_INIT_EVENT_FIELD(NAME, TYPE) \
     { sizeof(struct lttng_ust_event_field), NAME, &((TYPE).parent), 0, 0 }
 
 // Initializer for lttng_ust_enum_desc (lttngh_ust_enum_desc)
-#define lttngh_INIT_ENUM_DESC(NAME, ENTRIES, ENTRY_COUNT) \
-    { sizeof(struct lttng_ust_enum_desc), NAME, ENTRIES, ENTRY_COUNT }
+#define lttngh_INIT_ENUM_DESC(PROBE_DESC, NAME, ENTRIES, ENTRY_COUNT) \
+    { sizeof(struct lttng_ust_enum_desc), NAME, ENTRIES, ENTRY_COUNT, PROBE_DESC }
 
 // Initializer for lttng_ust_enum_entry with unsigned values
 #define lttngh_INIT_ENUM_ENTRY_UNSIGNED(NAME, START, END) \
@@ -254,7 +259,7 @@ typedef struct lttng_enum_desc lttngh_ust_enum_desc;
 
 // Initializer for lttng_ust_event_desc (lttngh_ust_event_desc).
 // IMPORTANT: Parameters differ by version!
-#define lttngh_INIT_EVENT_DESC(PROBE_DESC_IGNORED, FULL_NAME, CALLBACK, FIELDS, FIELD_COUNT, LEVEL_PTR) \
+#define lttngh_INIT_EVENT_DESC(FULL_NAME, CALLBACK, FIELDS, FIELD_COUNT, LEVEL_PTR) \
     { FULL_NAME, CALLBACK, NULL, FIELDS, FIELD_COUNT, LEVEL_PTR, "", {} }
 
 // Initializer for lttng_event_field (lttngh_ust_event_field)
@@ -262,7 +267,7 @@ typedef struct lttng_enum_desc lttngh_ust_enum_desc;
     { .name = NAME, .type = TYPE, .nowrite = 0, .padding = {} }
 
 // Initializer for lttng_enum_desc (lttngh_ust_event_field)
-#define lttngh_INIT_ENUM_DESC(NAME, ENTRIES, ENTRY_COUNT) \
+#define lttngh_INIT_ENUM_DESC(PROBE_DESC_IGNORED, NAME, ENTRIES, ENTRY_COUNT) \
     { NAME, ENTRIES, ENTRY_COUNT, {} }
 
 // Initializer for lttng_enum_entry with unsigned values

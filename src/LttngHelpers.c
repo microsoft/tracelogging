@@ -17,13 +17,15 @@
 
 typedef struct lttng_ust_event_common lttngh_ust_event_common;
 
+static const lttngh_ust_probe_desc DummyProbeDesc = lttngh_INIT_PROBE_DESC("");
+
 typedef struct lttng_ust_enum_entry lttngh_ust_enum_entry;
 static const lttngh_ust_enum_entry BoolEnumEntry0 = lttngh_INIT_ENUM_ENTRY_UNSIGNED("false", 0, 0);
 static const lttngh_ust_enum_entry BoolEnumEntry1 = lttngh_INIT_ENUM_ENTRY_UNSIGNED("true", 1, 1);
 static const lttngh_ust_enum_entry* BoolEnumEntries[] = {
     &BoolEnumEntry0,
     &BoolEnumEntry1 };
-const lttngh_ust_enum_desc lttngh_BoolEnumDesc = lttngh_INIT_ENUM_DESC("bool", BoolEnumEntries, 2);
+const lttngh_ust_enum_desc lttngh_BoolEnumDesc = lttngh_INIT_ENUM_DESC(&DummyProbeDesc, "bool", BoolEnumEntries, 2);
 
 const struct lttng_ust_type_integer  lttngh_TypeInt8     = lttngh_INIT_TYPE_INTEGER( int8_t, 10, 0);
 const struct lttng_ust_type_integer  lttngh_TypeUInt8    = lttngh_INIT_TYPE_INTEGER(uint8_t, 10, 0);
@@ -111,7 +113,7 @@ typedef struct lttng_enum_entry lttngh_ust_enum_entry;
 static const lttngh_ust_enum_entry BoolEnumEntries[] = {
     lttngh_INIT_ENUM_ENTRY_UNSIGNED("false", 0, 0),
     lttngh_INIT_ENUM_ENTRY_UNSIGNED("true", 1, 1) };
-const lttngh_ust_enum_desc lttngh_BoolEnumDesc = lttngh_INIT_ENUM_DESC("bool", BoolEnumEntries, 2);
+const lttngh_ust_enum_desc lttngh_BoolEnumDesc = lttngh_INIT_ENUM_DESC(NULL, "bool", BoolEnumEntries, 2);
 #endif // lttngh_UST_VER
 
 extern void tp_rcu_read_lock_bp(void);
