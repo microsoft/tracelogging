@@ -156,6 +156,8 @@ static bool TestCommon(void)
     TraceLoggingWrite(TestProvider, "ipV6", TraceLoggingIPv6(&ipv6, "ipv6"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "saV4", TraceLoggingSocketAddress(&saIPv4, sizeof(saIPv4), "saV4"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "saV6", TraceLoggingSocketAddress(&saIPv6, sizeof(saIPv6), "saV6"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saEmpty", TraceLoggingSocketAddress("", 0, "empty"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saGarbage", TraceLoggingSocketAddress("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 36, "garbage"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "winerror", TraceLoggingWinError(u32));
     TraceLoggingWrite(TestProvider, "ntstatus", TraceLoggingNTStatus(u32));
     TraceLoggingWrite(TestProvider, "hresult", TraceLoggingHResult(u32));

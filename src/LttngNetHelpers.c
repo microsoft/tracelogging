@@ -26,9 +26,10 @@ void lttngh_FormatIPv6(const void* pIPv6, char* buf46)
 void lttngh_FormatSockaddr(const void* pSockaddr, unsigned cbSockaddr,
                            char* buf65)
 {
-    unsigned const SizeOfInet4ThroughAddr = offsetof(struct sockaddr_in, sin_zero);
-    unsigned const SizeOfInet6ThroughAddr = offsetof(struct sockaddr_in6, sin6_scope_id);
-    unsigned const SizeOfInet6ThroughScope = SizeOfInet6ThroughAddr + 4;
+    static unsigned const SizeOfInet4ThroughAddr = offsetof(struct sockaddr_in, sin_zero);
+    static unsigned const SizeOfInet6ThroughAddr = offsetof(struct sockaddr_in6, sin6_scope_id);
+    static unsigned const SizeOfInet6ThroughScope = SizeOfInet6ThroughAddr + 4;
+    static unsigned const MaxHexDigits = LTTNGH_FORMAT_SOCKADDR_LEN - sizeof("0x");
     char* pOut = buf65;
     unsigned i, cb;
 
@@ -90,7 +91,9 @@ void lttngh_FormatSockaddr(const void* pSockaddr, unsigned cbSockaddr,
 
     *pOut++ = '0';
     *pOut++ = 'x';
-    cb = cbSockaddr < 31 ? cbSockaddr : 31;
+    *pOut = 0;
+
+    cb = cbSockaddr < (MaxHexDigits / 2) ? cbSockaddr : (MaxHexDigits / 2);
     for (i = 0; i != cb; i += 1)
     {
         sprintf(pOut, "%02X", ((unsigned char const*)pSockaddr)[i]);
