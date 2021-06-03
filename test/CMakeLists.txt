@@ -6,11 +6,11 @@ add_executable(
     TestTraceLogging.cpp
     TestTraceLogging.c)
 
-# FIXME: For LTTNG 2.13+, also needs lttng-ust-common
 target_link_libraries(
     traceloggingTest
     PRIVATE
     tracelogging
+    # lttng-ust-common # Needed for LTTNG 2.13+
     Catch2::Catch2)
 
 include(CTest)

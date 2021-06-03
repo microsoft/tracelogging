@@ -91,8 +91,10 @@ TraceLoggingProvider.h for LTTNG behaves differently from the ETW version:
     (uint16*)&V as an array of 8 UInt16 values.
   - TraceLoggingFileTime will accept any value V, and will format *(uint64*)&V
     as a single UInt64 value.
-  - TraceLoggingBinary, TraceLoggingSocketAddress, and TraceLoggingSid will
+  - TraceLoggingBinary and TraceLoggingSid will
     format the data as an array of HexInt8 values.
+  - TraceLoggingIPv4, TraceLoggingIPv6, and TraceLoggingSocketAddress will log
+    a formatted string, not the original data.
 - Field descriptions and field tags will be ignored.
 - TraceLoggingDescription will be ignored.
 - TraceLoggingCustomAttribute will be ignored.
@@ -222,6 +224,12 @@ These handler macros may be renamed or removed in future versions of this header
          (_tlg_ActivityId, ctype, pValue, name) // Logged as hexint8[N]. Accepts NULL. Supports RelatedActivityId.
 #define _tlg_ArgBuffer(ctype, pValue, ndt) \
          (_tlg_Buffer, ctype, pValue, ndt) // Logged as hexint8[N]. Data = pValue->Buffer, N = pValue->Length.
+#define _tlg_ArgIPv4(ctype, value, ndt) \
+         (_tlg_IPv4, ctype, value, ndt) // Logged as szUtf8.
+#define _tlg_ArgIPv6(ctype, pValue, ndt) \
+         (_tlg_IPv6, ctype, pValue, ndt) // Logged as szUtf8.
+#define _tlg_ArgSockAddr(ctype, pValue, cbValue, ndt) \
+         (_tlg_SockAddr, ctype, pValue, cbValue, ndt) // Logged as szUtf8.
 
 #ifdef __EDG__
 #pragma endregion
@@ -915,10 +923,10 @@ Examples:
 #define TraceLoggingBinary(pValue, cbValue, ...) _tlg_ArgBinary(void, pValue, cbValue, _tlg_NDT(TraceLoggingBinary, pValue, __VA_ARGS__))
 
 /*
-Wrapper macros for event fields with PSOCKADDR, PSOCKADDR_IN, etc. values.
+Wrapper macro for event fields with PSOCKADDR, PSOCKADDR_IN, etc. values.
 Usage: TraceLoggingSocketAddress(pSockAddr, cbSockAddr, "name", "description", tags).
 
-LTTNG semantics: logged as an array of hexadecimal bytes.
+LTTNG semantics: logged as a formatted string (AF_INET and AF_INET6 supported).
 
 Note that the amount of data needed for a SOCKADDR field varies depending on
 the type of address. If the data is stored in a union variable, be sure to
@@ -950,7 +958,65 @@ If provided, the tags parameter must be an integer value.
 - TraceLoggingSocketAddress(pSock, sizeof(*pSock), "name", "desc")      // field name = "name", description = "desc", tags = 0.
 - TraceLoggingSocketAddress(pSock, sizeof(*pSock), "name", "desc", 0x4) // field name = "name", description = "desc", tags = 0x4.
 */
-#define TraceLoggingSocketAddress(pValue, cbValue, ...) _tlg_ArgBinary(void, pValue, cbValue, _tlg_NDT(TraceLoggingSocketAddress, pValue, __VA_ARGS__))
+#define TraceLoggingSocketAddress(pValue, cbValue, ...) _tlg_ArgSockAddr(void, pValue, cbValue, _tlg_NDT(TraceLoggingSocketAddress, pValue, __VA_ARGS__))
+
+/*
+Wrapper macro for event fields with an IPv4 address (in_addr_t).
+Usage: TraceLoggingIPv4(value, "name", "description", tags).
+
+LTTNG semantics: logged as a formatted string.
+
+Note that the IPv4 address must be provided as an in_addr_t (i.e. uint32_t).
+
+The name, description, and tags parameters are optional.
+
+LTTNG-specific:
+- Field name must contain only letters, numbers, and '_'.
+- Field name must be unique within the event.
+- Violations of these rules cannot be detected by TraceLoggingProvider.h, but
+  will likely cause problems when you try to decode the trace.
+- Be especially careful with automatically-generated field names, as they
+  often contain spaces or other problematic symbols.
+
+If provided, the description parameter must be a string literal.
+(Field description is ignored for LTTNG.)
+
+If provided, the tags parameter must be an integer value.
+(Field tags are ignored for LTTNG.)
+
+  Example:
+- TraceLoggingIPv4(pSockAddr->sin_addr.s_addr, "name").
+*/
+#define TraceLoggingIPv4(value, ...) _tlg_ArgIPv4(uint32_t, value, _tlg_NDT(TraceLoggingIPv4, value, __VA_ARGS__))
+
+/*
+Wrapper macro for event fields with an IPv6 address (void*).
+Usage: TraceLoggingIPv6(pValue, "name", "description", tags).
+
+LTTNG semantics: logged as a formatted string.
+
+Note that the IPv6 address must be provided as a pointer to a 16-byte buffer.
+
+The name, description, and tags parameters are optional.
+
+LTTNG-specific:
+- Field name must contain only letters, numbers, and '_'.
+- Field name must be unique within the event.
+- Violations of these rules cannot be detected by TraceLoggingProvider.h, but
+  will likely cause problems when you try to decode the trace.
+- Be especially careful with automatically-generated field names, as they
+  often contain spaces or other problematic symbols.
+
+If provided, the description parameter must be a string literal.
+(Field description is ignored for LTTNG.)
+
+If provided, the tags parameter must be an integer value.
+(Field tags are ignored for LTTNG.)
+
+  Example:
+- TraceLoggingIPv6(&pSockAddr->sin6_addr, "name").
+*/
+#define TraceLoggingIPv6(pValue, ...) _tlg_ArgIPv6(void, pValue, _tlg_NDT(TraceLoggingIPv6, pValue, __VA_ARGS__))
 
 /*
 Wrapper macros for event fields with PSID values.
@@ -1786,11 +1852,11 @@ struct _tlgDecay
     typedef typename _tlgDecay_impl<typename _tlgRemoveReference<T>::type>::type type;
 };
 
-// Temporary storage for a nul-terminated character string of length 1.
-template<class ctype>
+// Temporary storage for a nul-terminated character string.
+template<class ctype, unsigned cch>
 struct _tlgCharBuf
 {
-    ctype _tlgBuf[2];
+    ctype _tlgBuf[cch];
 };
 
 // Data descriptor creation (general):
@@ -1883,9 +1949,9 @@ inline void _tlgCppInit1DescSeqUtf32(struct lttngh_DataDesc &desc, ctype const *
 }
 
 template <class ctype>
-inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<wchar_t>&& buf = _tlgCharBuf<wchar_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<wchar_t, 2>&& buf = _tlgCharBuf<wchar_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
-inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<wchar_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<wchar_t, 2>&& buf) _tlg_NOEXCEPT
 {
     static_assert(sizeof(ctype) == sizeof(wchar_t), "Wrong char size");
     buf._tlgBuf[0] = (wchar_t)value;
@@ -1894,9 +1960,9 @@ inline void _tlgCppInit1DescWchar(struct lttngh_DataDesc &desc, ctype const &val
 }
 
 template <class ctype>
-inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char16_t>&& buf = _tlgCharBuf<char16_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char16_t, 2>&& buf = _tlgCharBuf<char16_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
-inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char16_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char16_t, 2>&& buf) _tlg_NOEXCEPT
 {
     static_assert(sizeof(ctype) == sizeof(char16_t), "Wrong char size");
     buf._tlgBuf[0] = (char16_t)value;
@@ -1905,14 +1971,42 @@ inline void _tlgCppInit1DescChar16(struct lttngh_DataDesc &desc, ctype const &va
 }
 
 template <class ctype>
-inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char32_t>&& buf = _tlgCharBuf<char32_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char32_t, 2>&& buf = _tlgCharBuf<char32_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
 template <class ctype>
-inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char32_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescChar32(struct lttngh_DataDesc &desc, ctype const &value, _tlgCharBuf<char32_t, 2>&& buf) _tlg_NOEXCEPT
 {
     static_assert(sizeof(ctype) == sizeof(char32_t), "Wrong char size");
     buf._tlgBuf[0] = (char32_t)value;
     buf._tlgBuf[1] = U'\0';
     desc = lttngh_DataDescCreateStringUtf32(buf._tlgBuf);
+}
+
+template <class ctype>
+inline void _tlgCppInit1DescIPv4(struct lttngh_DataDesc& desc, ctype const& value, _tlgCharBuf<char, LTTNGH_FORMAT_IPV4_LEN>&& buf) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescIPv4(struct lttngh_DataDesc& desc, ctype const& value, _tlgCharBuf<char, LTTNGH_FORMAT_IPV4_LEN>&& buf) _tlg_NOEXCEPT
+{
+    static_assert(sizeof(ctype) == 4, "Wrong in_addr_t size");
+    lttngh_FormatIPv4(&value, buf._tlgBuf);
+    desc = lttngh_DataDescCreateString8(buf._tlgBuf);
+}
+
+template <class ctype>
+inline void _tlgCppInit1DescIPv6(struct lttngh_DataDesc& desc, ctype const* pValue, _tlgCharBuf<char, LTTNGH_FORMAT_IPV6_LEN>&& buf) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescIPv6(struct lttngh_DataDesc& desc, ctype const* pValue, _tlgCharBuf<char, LTTNGH_FORMAT_IPV6_LEN>&& buf) _tlg_NOEXCEPT
+{
+    lttngh_FormatIPv6(pValue, buf._tlgBuf);
+    desc = lttngh_DataDescCreateString8(buf._tlgBuf);
+}
+
+template <class ctype>
+inline void _tlgCppInit1DescSockAddr(struct lttngh_DataDesc& desc, ctype const* pValue, unsigned cbValue, _tlgCharBuf<char, LTTNGH_FORMAT_SOCKADDR_LEN>&& buf) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+template <class ctype>
+inline void _tlgCppInit1DescSockAddr(struct lttngh_DataDesc& desc, ctype const* pValue, unsigned cbValue, _tlgCharBuf<char, LTTNGH_FORMAT_SOCKADDR_LEN>&& buf) _tlg_NOEXCEPT
+{
+    lttngh_FormatSockaddr(pValue, cbValue, buf._tlgBuf);
+    desc = lttngh_DataDescCreateString8(buf._tlgBuf);
 }
 
 template <class ctype, unsigned cbValue = sizeof(ctype), unsigned char alignment = lttngh_ALIGNOF(ctype)>
@@ -2165,8 +2259,8 @@ struct _tlgTypeMapBase<char16_t> : _tlgTypeMapUtf8String
 {
 };
 
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char16_t const &val, _tlgCharBuf<char16_t>&& buf = _tlgCharBuf<char16_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char16_t const &val, _tlgCharBuf<char16_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char16_t const &val, _tlgCharBuf<char16_t, 2>&& buf = _tlgCharBuf<char16_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char16_t const &val, _tlgCharBuf<char16_t, 2>&& buf) _tlg_NOEXCEPT
 {
     buf._tlgBuf[0] = val;
     buf._tlgBuf[1] = u'\0';
@@ -2178,8 +2272,8 @@ struct _tlgTypeMapBase<char32_t> : _tlgTypeMapUtf8String
 {
 };
 
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char32_t const &val, _tlgCharBuf<char32_t>&& buf = _tlgCharBuf<char32_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char32_t const &val, _tlgCharBuf<char32_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char32_t const &val, _tlgCharBuf<char32_t, 2>&& buf = _tlgCharBuf<char32_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, char32_t const &val, _tlgCharBuf<char32_t, 2>&& buf) _tlg_NOEXCEPT
 {
     buf._tlgBuf[0] = val;
     buf._tlgBuf[1] = U'\0';
@@ -2191,8 +2285,8 @@ struct _tlgTypeMapBase<wchar_t> : _tlgTypeMapUtf8String
 {
 };
 
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val, _tlgCharBuf<wchar_t>&& buf = _tlgCharBuf<wchar_t>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
-inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val, _tlgCharBuf<wchar_t>&& buf) _tlg_NOEXCEPT
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val, _tlgCharBuf<wchar_t, 2>&& buf = _tlgCharBuf<wchar_t, 2>()) _tlg_NOEXCEPT _tlg_INLINE_ATTRIBUTES;
+inline void _tlgCppInit1DescAuto(struct lttngh_DataDesc &desc, wchar_t const &val, _tlgCharBuf<wchar_t, 2>&& buf) _tlg_NOEXCEPT
 {
     buf._tlgBuf[0] = val;
     buf._tlgBuf[1] = L'\0';
@@ -2301,6 +2395,9 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_FieldCount_tlg_Sid(ctype, pValue, ndt) +_tlg_SequenceFieldCount
 #define _tlg_FieldCount_tlg_ActivityId(ctype, pValue, name) +_tlg_SequenceFieldCount
 #define _tlg_FieldCount_tlg_Buffer(ctype, pValue, ndt) +_tlg_SequenceFieldCount
+#define _tlg_FieldCount_tlg_IPv4(ctype, value, ndt) +1
+#define _tlg_FieldCount_tlg_IPv6(ctype, pValue, ndt) +1
+#define _tlg_FieldCount_tlg_SockAddr(ctype, pValue, cbValue, ndt) +1
 #define _tlg_FieldCount_tlg_Value(value, ndt) +1
 
 #define _tlg_EventField(n, args) _tlg_ApplyArgsN(_tlg_EventField, n, args)
@@ -2368,6 +2465,12 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
     _tlg_INIT_SEQUENCE_FIELDS(n, name, (lttngh_TypeUInt8), (lttngh_TypeActivityId)) // NOTE: length field is 8-bit.
 #define _tlg_EventField_tlg_Buffer(n, ctype, pValue, ndt) \
     _tlg_INIT_SEQUENCE_FIELDS(n, _tlg_NDT_Name(ndt), (lttngh_TypeUInt16), (lttngh_TypeHexInt8Sequence))
+#define _tlg_EventField_tlg_IPv4(n, ctype, value, ndt) \
+    _tlg_INIT_SCALAR_FIELD(n, _tlg_NDT_Name(ndt), (lttngh_TypeUtf8String))
+#define _tlg_EventField_tlg_IPv6(n, ctype, pValue, ndt) \
+    _tlg_INIT_SCALAR_FIELD(n, _tlg_NDT_Name(ndt), (lttngh_TypeUtf8String))
+#define _tlg_EventField_tlg_SockAddr(n, ctype, pValue, cbValue, ndt) \
+    _tlg_INIT_SCALAR_FIELD(n, _tlg_NDT_Name(ndt), (lttngh_TypeUtf8String))
 #define _tlg_EventField_tlg_Value(n, value, ndt) \
     _tlg_INIT_VALUE_FIELD(n, _tlg_NDT_Name(ndt), value)
 
@@ -2395,6 +2498,9 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_EventFieldRef_tlg_Sid(n, ctype, pValue, ndt)                                   _tlg_EventFieldRefSequence(n)
 #define _tlg_EventFieldRef_tlg_ActivityId(n, ctype, pValue, name)                           _tlg_EventFieldRefSequence(n)
 #define _tlg_EventFieldRef_tlg_Buffer(n, ctype, pValue, ndt)                                _tlg_EventFieldRefSequence(n)
+#define _tlg_EventFieldRef_tlg_IPv4(n, ctype, value, ndt)                                   _tlg_EventFieldRefNormal(n)
+#define _tlg_EventFieldRef_tlg_IPv6(n, ctype, pValue, ndt)                                  _tlg_EventFieldRefNormal(n)
+#define _tlg_EventFieldRef_tlg_SockAddr(n, ctype, pValue, cbValue, ndt)                     _tlg_EventFieldRefNormal(n)
 #define _tlg_EventFieldRef_tlg_Value(n, value, ndt)                                         _tlg_EventFieldRefNormal(n)
 #endif // lttngh_UST_VER
 
@@ -2419,6 +2525,9 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_LevelVal_tlg_Sid(ctype, pValue, ndt)
 #define _tlg_LevelVal_tlg_ActivityId(ctype, pValue, name)
 #define _tlg_LevelVal_tlg_Buffer(ctype, pValue, ndt)
+#define _tlg_LevelVal_tlg_IPv4(ctype, value, ndt)
+#define _tlg_LevelVal_tlg_IPv6(ctype, pValue, ndt)
+#define _tlg_LevelVal_tlg_SockAddr(ctype, pValue, cbValue, ndt)
 #define _tlg_LevelVal_tlg_Value(value, ndt)
 
 #define _tlg_KeywordVal(n, args) _tlg_ApplyArgs(_tlg_KeywordVal, args)
@@ -2442,6 +2551,9 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_KeywordVal_tlg_Sid(ctype, pValue, ndt)
 #define _tlg_KeywordVal_tlg_ActivityId(ctype, pValue, name)
 #define _tlg_KeywordVal_tlg_Buffer(ctype, pValue, ndt)
+#define _tlg_KeywordVal_tlg_IPv4(ctype, value, ndt)
+#define _tlg_KeywordVal_tlg_IPv6(ctype, pValue, ndt)
+#define _tlg_KeywordVal_tlg_SockAddr(ctype, pValue, cbValue, ndt)
 #define _tlg_KeywordVal_tlg_Value(value, ndt)
 
 #define _tlg_DataDescCount(n, args) _tlg_ApplyArgs(_tlg_DataDescCount, args)
@@ -2465,6 +2577,9 @@ struct _tlgIntegralEventTag : _tlgIntegralConstant<uint32_t, n>
 #define _tlg_DataDescCount_tlg_Sid(ctype, pValue, ndt) +2                             // sequence
 #define _tlg_DataDescCount_tlg_ActivityId(ctype, pValue, name) +2                     // sequence
 #define _tlg_DataDescCount_tlg_Buffer(ctype, pValue, ndt) +2                          // sequence
+#define _tlg_DataDescCount_tlg_IPv4(ctype, value, ndt) +1
+#define _tlg_DataDescCount_tlg_IPv6(ctype, pValue, ndt) +1
+#define _tlg_DataDescCount_tlg_SockAddr(ctype, pValue, cbValue, ndt) +1
 #define _tlg_DataDescCount_tlg_Value(value, ndt) +1
 
 #ifdef __cplusplus
@@ -2547,6 +2662,12 @@ ctype const*)).
 #define _tlg_DataDescCreate_tlg_Buffer(ctype, pValue, ndt)         \
     _tlgCppInit2DescBuffer<ctype>(&_tlg_data[_tlg_idx], (pValue)), \
     _tlg_idx += 2,
+#define _tlg_DataDescCreate_tlg_IPv4(ctype, value, ndt) \
+    _tlgCppInit1DescIPv4<ctype>(_tlg_data[_tlg_idx++], (value), _tlgCharBuf<char, LTTNGH_FORMAT_IPV4_LEN>()),
+#define _tlg_DataDescCreate_tlg_IPv6(ctype, pValue, ndt) \
+    _tlgCppInit1DescIPv6<ctype>(_tlg_data[_tlg_idx++], (pValue), _tlgCharBuf<char, LTTNGH_FORMAT_IPV6_LEN>()),
+#define _tlg_DataDescCreate_tlg_SockAddr(ctype, pValue, cbValue, ndt) \
+    _tlgCppInit1DescSockAddr<ctype>(_tlg_data[_tlg_idx++], (pValue), (cbValue), _tlgCharBuf<char, LTTNGH_FORMAT_SOCKADDR_LEN>()),
 #define _tlg_DataDescCreate_tlg_Value(value, ndt) \
     _tlgCppInit1DescAuto(_tlg_data[_tlg_idx++], (value)),
 
@@ -2613,6 +2734,21 @@ ctype const*)).
     ctype const *const _tlg_temp##n = (pValue);                                                                                          \
     _tlg_DataDescCreateArray(&_tlg_data[_tlg_idx], _tlg_temp##n->Buffer, _tlg_temp##n->Length, sizeof(uint8_t), lttngh_ALIGNOF(uint8_t)); \
     _tlg_idx += 2;
+#define _tlg_DataDescCreate_tlg_IPv4(n, ctype, value, ndt) \
+    ctype const _tlg_tempV##n = (value); \
+    char _tlg_temp##n[LTTNGH_FORMAT_IPV4_LEN]; \
+    lttngh_FormatIPv4(&_tlg_tempV##n, _tlg_temp##n); \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateString8(_tlg_temp##n);
+#define _tlg_DataDescCreate_tlg_IPv6(n, ctype, pValue, ndt) \
+    ctype const *const _tlg_tempV##n = (pValue); \
+    char _tlg_temp##n[LTTNGH_FORMAT_IPV6_LEN]; \
+    lttngh_FormatIPv6(_tlg_tempV##n, _tlg_temp##n); \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateString8(_tlg_temp##n);
+#define _tlg_DataDescCreate_tlg_SockAddr(n, ctype, pValue, cbValue, ndt) \
+    ctype const *const _tlg_tempV##n = (pValue); \
+    char _tlg_temp##n[LTTNGH_FORMAT_SOCKADDR_LEN]; \
+    lttngh_FormatSockaddr(_tlg_tempV##n, (cbValue), _tlg_temp##n); \
+    _tlg_data[_tlg_idx++] = lttngh_DataDescCreateString8(_tlg_temp##n);
 
 #endif // _cplusplus
 
