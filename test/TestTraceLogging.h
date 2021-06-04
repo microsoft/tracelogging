@@ -1,3 +1,5 @@
+#include <arpa/inet.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -50,6 +52,30 @@ static bool TestCommon(void)
     Buffer buf = { ch10, 4 };
     unsigned short n1 = 1;
     unsigned short n5 = 5;
+    const uint16_t port80 = htons(80);
+
+    const uint8_t ipv4data[] = { 127, 0, 0, 1 };
+    in_addr_t ipv4;
+    memcpy(&ipv4, ipv4data, sizeof(ipv4));
+
+    const uint8_t ipv6data[] = { 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 };
+    struct in6_addr ipv6;
+    memcpy(&ipv6, ipv6data, sizeof(ipv6));
+
+    const struct sockaddr_in saIPv4 = {
+        .sin_family = AF_INET,
+        .sin_port = port80,
+        .sin_addr = { ipv4 },
+        .sin_zero = { 0 }
+    };
+
+    const struct sockaddr_in6 saIPv6 = {
+        .sin6_family = AF_INET6,
+        .sin6_port = port80,
+        .sin6_flowinfo = 5,
+        .sin6_addr = ipv6,
+        .sin6_scope_id = htonl(1234)
+    };
 
     TraceLoggingWrite(TestProvider, "CScalars1");
     TraceLoggingWrite(
@@ -125,7 +151,13 @@ static bool TestCommon(void)
     TraceLoggingWrite(TestProvider, "cptr", TraceLoggingCodePointer(pSamplePtr));
     TraceLoggingWrite(TestProvider, "pid", TraceLoggingPid(u32));
     TraceLoggingWrite(TestProvider, "tid", TraceLoggingTid(u32));
-    TraceLoggingWrite(TestProvider, "port", TraceLoggingPort(80));
+    TraceLoggingWrite(TestProvider, "port", TraceLoggingPort(port80));
+    TraceLoggingWrite(TestProvider, "ipV4", TraceLoggingIPv4(ipv4), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "ipV6", TraceLoggingIPv6(&ipv6, "ipv6"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saV4", TraceLoggingSocketAddress(&saIPv4, sizeof(saIPv4), "saV4"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saV6", TraceLoggingSocketAddress(&saIPv6, sizeof(saIPv6), "saV6"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saEmpty", TraceLoggingSocketAddress("", 0, "empty"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "saGarbage", TraceLoggingSocketAddress("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", 36, "garbage"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "winerror", TraceLoggingWinError(u32));
     TraceLoggingWrite(TestProvider, "ntstatus", TraceLoggingNTStatus(u32));
     TraceLoggingWrite(TestProvider, "hresult", TraceLoggingHResult(u32));

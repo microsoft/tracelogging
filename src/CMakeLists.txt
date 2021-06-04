@@ -3,7 +3,10 @@ cmake_minimum_required(VERSION 3.5)
 set(TLG_INCLUDEDIR ${PROJECT_SOURCE_DIR}/include/)
 
 # Add source to this project's executable.
-add_library(lttngh LttngActivityHelpers.c LttngHelpers.c)
+add_library(lttngh
+    LttngActivityHelpers.c
+    LttngHelpers.c
+    LttngNetHelpers.c)
 
 target_compile_features(lttngh PRIVATE c_std_99)
 

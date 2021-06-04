@@ -5,8 +5,8 @@
 #define _POSIX_C_SOURCE 199309L
 #endif
 
-#include <byteswap.h> // bswap_32, BYTE_ORDER
 #include <lttngh/LttngHelpers.h>
+#include <byteswap.h> // bswap_32, BYTE_ORDER
 #include <time.h>   // clock_gettime
 #include <unistd.h> // getpid
 

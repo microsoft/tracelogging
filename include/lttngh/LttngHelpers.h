@@ -697,6 +697,28 @@ int lttngh_EventProbe(struct lttng_ust_tracepoint *pTracepoint,
     __attribute__((noinline)) lttng_ust_notrace;
 
 /*
+Formats a 4-byte IPv4 address as a nul-terminated string.
+Output buffer is assumed to be at least 16 chars.
+*/
+void lttngh_FormatIPv4(const void* pIPv4, char* buf16) lttng_ust_notrace;
+#define LTTNGH_FORMAT_IPV4_LEN 16u // Buffer length for lttngh_FormatIPv4.
+
+/*
+Formats a 16-byte IPv6 address as a nul-terminated string.
+Output buffer is assumed to be at least 46 chars.
+*/
+void lttngh_FormatIPv6(const void* pIPv6, char* buf46) lttng_ust_notrace;
+#define LTTNGH_FORMAT_IPV6_LEN 46u // Buffer length for lttngh_FormatIPv6.
+
+/*
+Formats a sockaddr as a nul-terminated string.
+Output buffer is assumed to be at least 65 chars.
+*/
+void lttngh_FormatSockaddr(const void* pSockaddr, unsigned cbSockaddr,
+                           char* buf65) lttng_ust_notrace;
+#define LTTNGH_FORMAT_SOCKADDR_LEN 65u // Buffer length for lttngh_FormatSockaddr.
+
+/*
 For use by code that is starting an activity.
 Generates a new 16-byte activity ID and copies it to pActivityId.
 Note that while the generated ID has the structure of a GUID, it is not
