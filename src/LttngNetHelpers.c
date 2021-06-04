@@ -28,7 +28,7 @@ void lttngh_FormatSockaddr(const void* pSockaddr, unsigned cbSockaddr,
 {
     static unsigned const SizeOfInet4ThroughAddr = offsetof(struct sockaddr_in, sin_zero);
     static unsigned const SizeOfInet6ThroughAddr = offsetof(struct sockaddr_in6, sin6_scope_id);
-    static unsigned const SizeOfInet6ThroughScope = SizeOfInet6ThroughAddr + 4;
+    static unsigned const SizeOfInet6ThroughScope = offsetof(struct sockaddr_in6, sin6_scope_id) + sizeof(uint32_t);
     static unsigned const MaxHexDigits = LTTNGH_FORMAT_SOCKADDR_LEN - sizeof("0x");
     char* pOut = buf65;
     unsigned i, cb;
