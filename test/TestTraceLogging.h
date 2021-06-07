@@ -152,8 +152,8 @@ static bool TestCommon(void)
     TraceLoggingWrite(TestProvider, "pid", TraceLoggingPid(u32));
     TraceLoggingWrite(TestProvider, "tid", TraceLoggingTid(u32));
     TraceLoggingWrite(TestProvider, "port", TraceLoggingPort(port80));
-    TraceLoggingWrite(TestProvider, "ipV4", TraceLoggingIPv4(ipv4), TraceLoggingChar(ch));
-    TraceLoggingWrite(TestProvider, "ipV6", TraceLoggingIPv6(&ipv6, "ipv6"), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "ipV4", TraceLoggingIPv4Address(ipv4), TraceLoggingChar(ch));
+    TraceLoggingWrite(TestProvider, "ipV6", TraceLoggingIPv6Address(&ipv6, "ipv6"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "saV4", TraceLoggingSocketAddress(&saIPv4, sizeof(saIPv4), "saV4"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "saV6", TraceLoggingSocketAddress(&saIPv6, sizeof(saIPv6), "saV6"), TraceLoggingChar(ch));
     TraceLoggingWrite(TestProvider, "saEmpty", TraceLoggingSocketAddress("", 0, "empty"), TraceLoggingChar(ch));
