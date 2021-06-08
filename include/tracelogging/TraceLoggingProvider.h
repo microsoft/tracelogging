@@ -93,8 +93,9 @@ TraceLoggingProvider.h for LTTNG behaves differently from the ETW version:
     as a single UInt64 value.
   - TraceLoggingBinary and TraceLoggingSid will
     format the data as an array of HexInt8 values.
-  - TraceLoggingIPv4, TraceLoggingIPv6, and TraceLoggingSocketAddress will log
-    a formatted string, not the original data.
+  - TraceLoggingIPv4Address, TraceLoggingIPv6Address, and
+    TraceLoggingSocketAddress will log a formatted string, not the original
+    data.
 - Field descriptions and field tags will be ignored.
 - TraceLoggingDescription will be ignored.
 - TraceLoggingCustomAttribute will be ignored.
@@ -961,12 +962,13 @@ If provided, the tags parameter must be an integer value.
 #define TraceLoggingSocketAddress(pValue, cbValue, ...) _tlg_ArgSockAddr(void, pValue, cbValue, _tlg_NDT(TraceLoggingSocketAddress, pValue, __VA_ARGS__))
 
 /*
-Wrapper macro for event fields with an IPv4 address (in_addr_t).
-Usage: TraceLoggingIPv4(value, "name", "description", tags).
+Wrapper macro for event fields with IPv4 address values.
+Usage: TraceLoggingIPv4Address(value, "name", "description", tags).
 
 LTTNG semantics: logged as a formatted string.
 
-Note that the IPv4 address must be provided as an in_addr_t (i.e. uint32_t).
+The value parameter must be a UINT32-encoded IPv4 address
+(e.g. pSock->sin_addr.s_addr).
 
 The name, description, and tags parameters are optional.
 
@@ -985,17 +987,18 @@ If provided, the tags parameter must be an integer value.
 (Field tags are ignored for LTTNG.)
 
   Example:
-- TraceLoggingIPv4(pSockAddr->sin_addr.s_addr, "name").
+- TraceLoggingIPv4Address(pSockAddr->sin_addr.s_addr, "name").
 */
-#define TraceLoggingIPv4(value, ...) _tlg_ArgIPv4(uint32_t, value, _tlg_NDT(TraceLoggingIPv4, value, __VA_ARGS__))
+#define TraceLoggingIPv4Address(value, ...) _tlg_ArgIPv4(uint32_t, value, _tlg_NDT(TraceLoggingIPv4Address, value, __VA_ARGS__))
 
 /*
-Wrapper macro for event fields with an IPv6 address (void*).
-Usage: TraceLoggingIPv6(pValue, "name", "description", tags).
+Wrapper macro for event fields with IPv6 address values.
+Usage: TraceLoggingIPv6Address(pValue, "name", "description", tags).
 
 LTTNG semantics: logged as a formatted string.
 
-Note that the IPv6 address must be provided as a pointer to a 16-byte buffer.
+The pValue parameter must not be NULL and must point at a 16-byte buffer
+(e.g. &pSock->sin6_addr).
 
 The name, description, and tags parameters are optional.
 
@@ -1014,9 +1017,9 @@ If provided, the tags parameter must be an integer value.
 (Field tags are ignored for LTTNG.)
 
   Example:
-- TraceLoggingIPv6(&pSockAddr->sin6_addr, "name").
+- TraceLoggingIPv6Address(&pSockAddr->sin6_addr, "name").
 */
-#define TraceLoggingIPv6(pValue, ...) _tlg_ArgIPv6(void, pValue, _tlg_NDT(TraceLoggingIPv6, pValue, __VA_ARGS__))
+#define TraceLoggingIPv6Address(pValue, ...) _tlg_ArgIPv6(void, pValue, _tlg_NDT(TraceLoggingIPv6Address, pValue, __VA_ARGS__))
 
 /*
 Wrapper macros for event fields with PSID values.
