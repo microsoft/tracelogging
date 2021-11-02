@@ -866,7 +866,7 @@ static int EventProbeFilter(
                         double val;
                         long double tempVal;
                         char tempValSwap[sizeof(long double)];
-                        char const *p = pDataDesc[i].Data;
+                        char const *p = (char const*)pDataDesc[i].Data;
                         unsigned iSwap = sizeof(long double);
                         do
                         {
@@ -1000,7 +1000,7 @@ static int EventProbeComputeSizes(
 
             if (pDataDesc[i].Type == lttngh_DataType_StringUtf16Transcoded)
             {
-                unsigned cch16 = pDataDesc[i].Size / sizeof(char16_t);
+                unsigned cch16 = (unsigned)(pDataDesc[i].Size / sizeof(char16_t));
                 assert(cch16 != 0); // Error in caller - Size should have included NUL.
                 cch16 -= 1;         // Do not count NUL.
 
@@ -1016,11 +1016,11 @@ static int EventProbeComputeSizes(
                     }
                 }
 
-                cbUtf8 = Utf16ToUtf8Size(pDataDesc[i].Data, cch16);
+                cbUtf8 = Utf16ToUtf8Size((char16_t const*)pDataDesc[i].Data, cch16);
             }
             else
             {
-                unsigned cch32 = pDataDesc[i].Size / sizeof(char32_t);
+                unsigned cch32 = (unsigned)(pDataDesc[i].Size / sizeof(char32_t));
                 assert(cch32 != 0); // Error in caller - Size should have included NUL.
                 cch32 -= 1;         // Do not count NUL.
 
@@ -1036,7 +1036,7 @@ static int EventProbeComputeSizes(
                     }
                 }
 
-                cbUtf8 = Utf32ToUtf8Size(pDataDesc[i].Data, cch32);
+                cbUtf8 = Utf32ToUtf8Size((char32_t const*)pDataDesc[i].Data, cch32);
             }
 
             if (caa_unlikely(cbUtf8 > 65535))
@@ -1082,23 +1082,23 @@ static int EventProbeComputeSizes(
 
             if (pDataDesc[i].Type == lttngh_DataType_SequenceUtf16Transcoded)
             {
-                unsigned cch16 = pDataDesc[i].Size / sizeof(char16_t);
+                unsigned cch16 = (unsigned)(pDataDesc[i].Size / sizeof(char16_t));
                 if (caa_unlikely(cch16 > 65535))
                 {
                     cch16 = 65535;
                 }
 
-                cbUtf8 = Utf16ToUtf8Size(pDataDesc[i].Data, cch16);
+                cbUtf8 = Utf16ToUtf8Size((char16_t const*)pDataDesc[i].Data, cch16);
             }
             else
             {
-                unsigned cch32 = pDataDesc[i].Size / sizeof(char32_t);
+                unsigned cch32 = (unsigned)(pDataDesc[i].Size / sizeof(char32_t));
                 if (caa_unlikely(cch32 > 65535))
                 {
                     cch32 = 65535;
                 }
 
-                cbUtf8 = Utf32ToUtf8Size(pDataDesc[i].Data, cch32);
+                cbUtf8 = Utf32ToUtf8Size((char32_t const*)pDataDesc[i].Data, cch32);
             }
 
             if (caa_unlikely(cbUtf8 > 65535))
@@ -1179,13 +1179,13 @@ static uint16_t EventProbeTranscodeString(
     if (pDataDesc->Type == lttngh_DataType_StringUtf16Transcoded)
     {
         cbUtf8Written = (uint16_t)Utf16ToUtf8(
-            pDataDesc->Data, pDataDesc->Size / sizeof(char16_t),
+            (char16_t const*)pDataDesc->Data, (unsigned)(pDataDesc->Size / sizeof(char16_t)),
             pContext->pbTranscodeScratch, pDataDesc->Length);
     }
     else
     {
         cbUtf8Written = (uint16_t)Utf32ToUtf8(
-            pDataDesc->Data, pDataDesc->Size / sizeof(char32_t),
+            (char32_t const*)pDataDesc->Data, (unsigned)(pDataDesc->Size / sizeof(char32_t)),
             pContext->pbTranscodeScratch, pDataDesc->Length);
     }
 
@@ -1218,13 +1218,13 @@ static uint16_t EventProbeTranscodeSequence(
     if (pDataDesc->Type == lttngh_DataType_SequenceUtf16Transcoded)
     {
         cbUtf8Written = (uint16_t)Utf16ToUtf8(
-            pDataDesc->Data, pDataDesc->Size / sizeof(char16_t),
+            (char16_t const*)pDataDesc->Data, (unsigned)(pDataDesc->Size / sizeof(char16_t)),
             pContext->pbTranscodeScratch + sizeof(uint16_t), pDataDesc->Length);
     }
     else
     {
         cbUtf8Written = (uint16_t)Utf32ToUtf8(
-            pDataDesc->Data, pDataDesc->Size / sizeof(char32_t),
+            (char32_t const*)pDataDesc->Data, (unsigned)(pDataDesc->Size / sizeof(char32_t)),
             pContext->pbTranscodeScratch + sizeof(uint16_t), pDataDesc->Length);
     }
 
@@ -1421,7 +1421,7 @@ int lttngh_EventProbe(
                         case lttngh_DataType_String8:
                             if (pChannel->ops->u.has_strcpy)
                             {
-                                pChannel->ops->event_strcpy(&bufferContext, pDataDesc[i].Data, pDataDesc[i].Size);
+                                pChannel->ops->event_strcpy(&bufferContext, (char const*)pDataDesc[i].Data, pDataDesc[i].Size);
                             }
                             else
                             {
