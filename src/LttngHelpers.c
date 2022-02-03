@@ -1070,7 +1070,7 @@ static int EventProbeComputeSizes(
             }
 
             unsigned const alignAdjust =
-                lib_ring_buffer_align(pContext->cbData, __alignof__(uint16_t));
+                lttng_ust_ring_buffer_align(pContext->cbData, __alignof__(uint16_t));
             pContext->cbData += alignAdjust;
             if (caa_unlikely(pContext->cbData < alignAdjust))
             {
@@ -1131,7 +1131,7 @@ static int EventProbeComputeSizes(
             }
 
             unsigned const alignAdjust =
-                lib_ring_buffer_align(pContext->cbData, pDataDesc[i].Alignment);
+                lttng_ust_ring_buffer_align(pContext->cbData, pDataDesc[i].Alignment);
             pContext->cbData += alignAdjust;
             if (caa_unlikely(pContext->cbData < alignAdjust))
             {
@@ -1414,7 +1414,7 @@ int lttngh_EventProbe(
                     {
                         uint16_t cbUtf8Written;
 #if lttngh_UST_RING_BUFFER_NATURAL_ALIGN
-                        lib_ring_buffer_align_ctx(&bufferContext, pDataDesc[i].Alignment);
+                        lttng_ust_ring_buffer_align_ctx(&bufferContext, pDataDesc[i].Alignment);
 #endif // lttngh_UST_RING_BUFFER_NATURAL_ALIGN
                         switch (pDataDesc[i].Type)
                         {
