@@ -102,6 +102,11 @@ extern int lttng_ust_tracepoint_module_unregister(struct lttng_ust_tracepoint* c
 #define lttngh_ust_tracepoint_module_register   lttng_ust_tracepoint_module_register
 #define lttngh_ust_tracepoint_module_unregister lttng_ust_tracepoint_module_unregister
 
+extern unsigned int lttng_ust_ring_buffer_align(size_t align_drift, size_t size_of_type);
+extern void lttng_ust_ring_buffer_align_ctx(struct lttng_ust_ring_buffer_ctx *ctx, size_t alignment);
+#define lttng_ust_ring_buffer_align lttng_ust_ring_buffer_align
+#define lttng_ust_ring_buffer_align_ctx lttng_ust_ring_buffer_align_ctx
+
 #else // lttngh_UST_VER
 
 #include <lttng/ringbuffer-config.h> // lttng_ust_lib_ring_buffer_ctx
@@ -129,6 +134,11 @@ extern int tracepoint_register_lib(struct lttng_ust_tracepoint* const* tracepoin
 extern int tracepoint_unregister_lib(struct lttng_ust_tracepoint* const* tracepoints_start);
 #define lttngh_ust_tracepoint_module_register   tracepoint_register_lib
 #define lttngh_ust_tracepoint_module_unregister tracepoint_unregister_lib
+
+extern unsigned int lib_ring_buffer_align(size_t align_drift, size_t size_of_type);
+extern void lib_ring_buffer_align_ctx(struct lttng_ust_lib_ring_buffer_ctx *ctx, size_t alignment);
+#define lttng_ust_ring_buffer_align lib_ring_buffer_align
+#define lttng_ust_ring_buffer_align_ctx lib_ring_buffer_align_ctx
 
 #endif // lttngh_UST_VER
 
