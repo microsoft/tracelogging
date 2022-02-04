@@ -102,6 +102,8 @@ extern int lttng_ust_tracepoint_module_unregister(struct lttng_ust_tracepoint* c
 #define lttngh_ust_tracepoint_module_register   lttng_ust_tracepoint_module_register
 #define lttngh_ust_tracepoint_module_unregister lttng_ust_tracepoint_module_unregister
 
+#define lttngh_ust_ring_buffer_align lttng_ust_ring_buffer_align
+
 #else // lttngh_UST_VER
 
 #include <lttng/ringbuffer-config.h> // lttng_ust_lib_ring_buffer_ctx
@@ -129,6 +131,9 @@ extern int tracepoint_register_lib(struct lttng_ust_tracepoint* const* tracepoin
 extern int tracepoint_unregister_lib(struct lttng_ust_tracepoint* const* tracepoints_start);
 #define lttngh_ust_tracepoint_module_register   tracepoint_register_lib
 #define lttngh_ust_tracepoint_module_unregister tracepoint_unregister_lib
+
+#define lttngh_ust_ring_buffer_align lib_ring_buffer_align
+#define lttngh_ust_ring_buffer_align_ctx lib_ring_buffer_align_ctx
 
 #endif // lttngh_UST_VER
 
@@ -1070,7 +1075,7 @@ static int EventProbeComputeSizes(
             }
 
             unsigned const alignAdjust =
-                lib_ring_buffer_align(pContext->cbData, __alignof__(uint16_t));
+                lttngh_ust_ring_buffer_align(pContext->cbData, __alignof__(uint16_t));
             pContext->cbData += alignAdjust;
             if (caa_unlikely(pContext->cbData < alignAdjust))
             {
@@ -1131,7 +1136,7 @@ static int EventProbeComputeSizes(
             }
 
             unsigned const alignAdjust =
-                lib_ring_buffer_align(pContext->cbData, pDataDesc[i].Alignment);
+                lttngh_ust_ring_buffer_align(pContext->cbData, pDataDesc[i].Alignment);
             pContext->cbData += alignAdjust;
             if (caa_unlikely(pContext->cbData < alignAdjust))
             {
@@ -1414,7 +1419,7 @@ int lttngh_EventProbe(
                     {
                         uint16_t cbUtf8Written;
 #if lttngh_UST_RING_BUFFER_NATURAL_ALIGN
-                        lib_ring_buffer_align_ctx(&bufferContext, pDataDesc[i].Alignment);
+                        lttngh_ust_ring_buffer_align_ctx(&bufferContext, pDataDesc[i].Alignment);
 #endif // lttngh_UST_RING_BUFFER_NATURAL_ALIGN
                         switch (pDataDesc[i].Type)
                         {
