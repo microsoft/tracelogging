@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(TLG_INCLUDEDIR ${PROJECT_SOURCE_DIR}/include/)
+set(TLG_INCLUDEDIR ../include/)
 
 # Add source to this project's executable.
 add_library(lttngh
@@ -41,5 +41,5 @@ install(
     NAMESPACE tracelogging::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tracelogging)
 
-install(FILES ${PROJECT_SOURCE_DIR}/cmake/modules/traceloggingConfig.cmake
+install(FILES ../cmake/modules/traceloggingConfig.cmake
     DESTINATION ${TRACELOGGING_CMAKE_DIR})
