@@ -1,5 +1,3 @@
-[![Build Status](https://dev.azure.com/ms/TraceLogging/_apis/build/status/microsoft.TraceLogging?branchName=master)](https://dev.azure.com/ms/TraceLogging/_build/latest?definitionId=147&branchName=master)
-
 # TraceLogging for LTTNG
 
 The TraceLogging for LTTNG project enables structured event emission through LTTNG via the same set of macros that are supported by the publicly available TraceLogging for ETW project in the Windows SDK.
@@ -121,7 +119,7 @@ For more information see the [Code of Conduct FAQ](https://opensource.microsoft.
 
 ## Contributing
 
-Want to contribute? The team encourages community feedback and contributions. Please follow our [contributing guidelines](CONTRIBUTING.md).
+Want to contribute? The team encourages community feedback and contributions. Please follow our [contributing guidelines](../CONTRIBUTING.md).
 
 We also welcome [issues submitted on GitHub](https://github.com/Microsoft/TraceLogging/issues).
 

@@ -11,24 +11,21 @@ jobs:
     - task: CMake@1
       displayName: 'CMake Configure+Generate'
       inputs:
-        workingDirectory: 'LTTng'
-        cmakeArgs: '..'
+        cmakeArgs: '../LTTng'
 
     - task: CMake@1
       displayName: 'CMake Build'
       inputs:
-        workingDirectory: 'LTTng/build'
         cmakeArgs: '--build . -- -j2'
 
     - bash: |
         mkdir testResults
         ./traceloggingTest -o testResults/TEST-TraceLoggingTest.xml -r junit
-      workingDirectory: 'LTTng/build/test'
+      workingDirectory: 'build/test'
       displayName: 'Run test binary'
       continueOnError: true
 
     - task: PublishTestResults@2
       displayName: 'Publish test results'
       inputs:
-        workingDirectory: 'LTTng/build'
         testResultsFiles: '**/TEST-*.xml'
