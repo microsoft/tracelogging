@@ -11,7 +11,7 @@ jobs:
     - task: CMake@1
       displayName: 'CMake Configure+Generate'
       inputs:
-        cmakeArgs: '..'
+        cmakeArgs: '../LTTng'
 
     - task: CMake@1
       displayName: 'CMake Build'
@@ -19,9 +19,9 @@ jobs:
         cmakeArgs: '--build . -- -j2'
 
     - bash: |
-        cd build/test
         mkdir testResults
         ./traceloggingTest -o testResults/TEST-TraceLoggingTest.xml -r junit
+      workingDirectory: 'build/test'
       displayName: 'Run test binary'
       continueOnError: true
 
