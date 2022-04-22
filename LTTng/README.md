@@ -83,7 +83,7 @@ sudo apt update
 sudo apt install liblttng-ust-dev
 ```
 
-If your normal package repository uses an older version of lttng, consider using the ppa:lttng/stable-2.10 repository to get lttng 2.10:
+If your normal package repository uses an older version of LTTng, consider using the ppa:lttng/stable-2.10 repository to get LTTng 2.10:
 
 ```bash
 sudo apt-add-repository ppa:lttng/stable-2.10 -y
