@@ -57,7 +57,7 @@ TraceLoggingWrite(
 
 ### Consuming LTTng events logged through TraceLogging API
 
-To consume TraceLogging events sent through lttng, you will need the lttng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
+To consume TraceLogging events sent through LTTng, you will need the lttng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
 
 ```bash
 lttng create
