@@ -24,4 +24,6 @@ included with the Windows OS and the Windows SDK. The technology includes:
 This project provides additional support for TraceLogging developers:
 
 - [TraceLoggingDynamic for C++](TraceLoggingDynamic_CPP/README.md) provides support for generating
-  runtime-dynamic events.
+  runtime-dynamic events from C++ code.
+- [TraceLoggingDynamic for Python](TraceLoggingDynamic_Python/README.md) provides support for generating
+  runtime-dynamic events from Python3 code.
