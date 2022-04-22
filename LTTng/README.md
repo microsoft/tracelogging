@@ -57,45 +57,45 @@ TraceLoggingWrite(
 
 ### Consuming LTTng events logged through TraceLogging API
 
-To consume TraceLogging events sent through LTTng, you will need the LTTng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
+To consume TraceLogging events sent through lttng, you will need the lttng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
 
 ```bash
-LTTng create
-LTTng enable-event -u Microsoft.Windows.Fundamentals.TestProvider:*
-LTTng start
+lttng create
+lttng enable-event -u Microsoft.Windows.Fundamentals.TestProvider:*
+lttng start
 
 read -p "Run your program here..."
 
-LTTng stop
-LTTng view
+lttng stop
+lttng view
 ```
 
-For more information, see the [LTTng Documentation](https://LTTng.org/docs/v2.10/).
+For more information, see the [LTTng Documentation](https://lttng.org/docs/v2.10/).
 
 ## Dependencies
 
-This project depends on the LTTng-ust library. To build this library, you will need libLTTng-ust-dev version 2.10 or later.
+This project depends on the lttng-ust library. To build this library, you will need liblttng-ust-dev version 2.10 or later.
 The library will compile with 2.7 or later, but some things might not work perfectly. The library has been tested up through
 version 2.13.
 
 ```bash
 sudo apt update
-sudo apt install libLTTng-ust-dev
+sudo apt install liblttng-ust-dev
 ```
 
-If your normal package repository uses an older version of LTTng, consider using the ppa:LTTng/stable-2.10 repository to get LTTng 2.10:
+If your normal package repository uses an older version of lttng, consider using the ppa:lttng/stable-2.10 repository to get lttng 2.10:
 
 ```bash
-sudo apt-add-repository ppa:LTTng/stable-2.10 -y
+sudo apt-add-repository ppa:lttng/stable-2.10 -y
 sudo apt -y update
-sudo apt install libLTTng-ust-dev
+sudo apt install liblttng-ust-dev
 ```
 
-To listen to TraceLogging events, you will need LTTng-tools. Note that the tools are required for event collection
+To listen to TraceLogging events, you will need lttng-tools. Note that the tools are required for event collection
 but are not required for your program to run.
 
 ```bash
-sudo apt install LTTng-tools
+sudo apt install lttng-tools
 ```
 
 ## Integration
