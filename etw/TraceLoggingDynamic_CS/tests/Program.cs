@@ -116,7 +116,7 @@ namespace TraceLoggingDynamicTest
                 for (int i = 0; i < N; i++)
                 {
                     eb.Reset("Benchmark");
-                    eb.AddAnsiString("f1", val);
+                    eb.AddCountedAnsiString("f1", val);
                     eb.AddInt32("f2", i);
                     p.Write(eb);
                 }

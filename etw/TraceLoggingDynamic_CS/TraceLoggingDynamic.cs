@@ -3,16 +3,14 @@ Dynamic ETW TraceLogging Provider API for .NET.
 
 GENERAL:
 
-- This implementation of manifest-free ETW is more flexible than the
-  implementation in System.Diagnostics.Tracing.EventSource, but it also
-  has higher runtime costs and is not as easy to use (more verbose).
-  This implementation is intended for use only when the set of events is
-  not known at compile-time. For example, TraceLoggingDynamic might be used
-  to implement an ETW back-end to a high-level logging API that does not
-  support compile-time event definitions.
-- This library is not optimized for direct use by developers adding events
-  to their code. This is intended for use in the implementation of another
-  library that is directly-used by developers.
+This implementation of manifest-free ETW supports
+more functionality than the implementation in
+System.Diagnostics.Tracing.EventSource,
+but it also has higher runtime costs. This implementation is intended for use only when
+the set of events is not known at compile-time. For example,
+TraceLoggingDynamic.cs might be used to implement a library providing
+manifest-free ETW to a higher-level API that does not enforce compile-time
+event layout.
 
 USAGE:
 
@@ -833,6 +831,7 @@ namespace Microsoft.TraceLoggingDynamic
 
         /// <summary>
         /// Adds a UnicodeString field (nul-terminated utf-16le).
+        /// NOTE: Prefer AddCountedString. Use AddUnicodeString only if the decoder requires nul-terminated strings.
         /// Meaningful outTypes: Default (String), Xml, Json.
         /// </summary>
         public void AddUnicodeString(string name, String value, EventOutType outType = EventOutType.Default, int tag = 0)
@@ -843,6 +842,7 @@ namespace Microsoft.TraceLoggingDynamic
 
         /// <summary>
         /// Adds a UnicodeString array field (nul-terminated utf-16le).
+        /// NOTE: Prefer AddCountedString. Use AddUnicodeString only if the decoder requires nul-terminated strings.
         /// Meaningful outTypes: Default (String), Xml, Json.
         /// </summary>
         public void AddUnicodeStringArray(string name, String[] values, EventOutType outType = EventOutType.Default, int tag = 0)
@@ -857,6 +857,7 @@ namespace Microsoft.TraceLoggingDynamic
 
         /// <summary>
         /// Adds an AnsiString field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
         /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
         /// </summary>
         public void AddAnsiString(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
@@ -867,6 +868,7 @@ namespace Microsoft.TraceLoggingDynamic
 
         /// <summary>
         /// Adds an AnsiString array field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
         /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
         /// </summary>
         public void AddAnsiStringArray(string name, Byte[][] values, EventOutType outType = EventOutType.Default, int tag = 0)

@@ -9,19 +9,6 @@ TraceLoggingDynamic.cs might be used to implement a library providing
 manifest-free ETW to a higher-level API that does not enforce compile-time
 event layout.
 
-[This implementation](TraceLoggingDynamic.cs) of manifest-free ETW is
-more flexible than the implementation in
-[System.Diagnostics.Tracing.EventSource](https://docs.microsoft.com/dotnet/api/system.diagnostics.tracing.eventsource),
-but it also has higher runtime costs and is not as easy to use (more verbose).
-This implementation is intended for use only when the set of events is
-not known at compile-time. For example, TraceLoggingDynamic might be used
-to implement an ETW back-end to a high-level logging API that does not
-support compile-time event definitions.
-
-This library is not optimized for direct use by developers adding events
-to their code. This is intended for use in the implementation of another
-library that is directly-used by developers.
-
 ```cs
 // At start of program:
 static readonly EventProvider p = new EventProvider("MyProviderName");
