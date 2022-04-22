@@ -1,7 +1,9 @@
-# TraceLogging for LTTNG
+# TraceLogging for LTTng
 
-The TraceLogging for LTTNG project enables structured event emission through LTTNG via the same set of macros that are
-supported by the publicly available [TraceLogging for ETW](https://docs.microsoft.com/windows/win32/tracelogging/trace-logging-about)
+The TraceLogging for LTTng project enables structured event emission through
+[LTTng](https://lttng.org/) via the same set of macros that are supported by the
+publicly available [TraceLogging for
+ETW](https://docs.microsoft.com/windows/win32/tracelogging/trace-logging-about)
 in the Windows SDK.
 
 ## Examples
@@ -35,7 +37,7 @@ TraceLoggingWrite(WidgetProvider,
 TraceLoggingUnregister(WidgetProvider);
 ```
 
-### Logging LTTNG events through TraceLogging API
+### Logging LTTng events through TraceLogging API
 
 In C++, TraceLoggingValue will attempt to deduce the logging type for you. There are specific per-type macro variants for C or for cases
 where you wish to explicitly pick the logged type yourself. The TraceLogging header contains extensive comments on the type system.
@@ -53,47 +55,47 @@ TraceLoggingWrite(
     TraceLoggingValue(headers.c_str(), "ResponseHeaders"));
 ```
 
-### Consuming LTTNG events logged through TraceLogging API
+### Consuming LTTng events logged through TraceLogging API
 
-To consume TraceLogging events sent through LTTNG, you will need the lttng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
+To consume TraceLogging events sent through LTTng, you will need the LTTng-tools package (see [Dependencies](#Dependencies)). You can collect trace points using event wildcards:
 
 ```bash
-lttng create
-lttng enable-event -u Microsoft.Windows.Fundamentals.TestProvider:*
-lttng start
+LTTng create
+LTTng enable-event -u Microsoft.Windows.Fundamentals.TestProvider:*
+LTTng start
 
 read -p "Run your program here..."
 
-lttng stop
-lttng view
+LTTng stop
+LTTng view
 ```
 
-For more information, see the [LTTNG Documentation](https://lttng.org/docs/v2.10/).
+For more information, see the [LTTng Documentation](https://LTTng.org/docs/v2.10/).
 
 ## Dependencies
 
-This project depends on the lttng-ust library. To build this library, you will need liblttng-ust-dev version 2.10 or later.
+This project depends on the LTTng-ust library. To build this library, you will need libLTTng-ust-dev version 2.10 or later.
 The library will compile with 2.7 or later, but some things might not work perfectly. The library has been tested up through
 version 2.13.
 
 ```bash
 sudo apt update
-sudo apt install liblttng-ust-dev
+sudo apt install libLTTng-ust-dev
 ```
 
-If your normal package repository uses an older version of LTTNG, consider using the ppa:lttng/stable-2.10 repository to get LTTNG 2.10:
+If your normal package repository uses an older version of LTTng, consider using the ppa:LTTng/stable-2.10 repository to get LTTng 2.10:
 
 ```bash
-sudo apt-add-repository ppa:lttng/stable-2.10 -y
+sudo apt-add-repository ppa:LTTng/stable-2.10 -y
 sudo apt -y update
-sudo apt install liblttng-ust-dev
+sudo apt install libLTTng-ust-dev
 ```
 
-To listen to TraceLogging events, you will need lttng-tools. Note that the tools are required for event collection
+To listen to TraceLogging events, you will need LTTng-tools. Note that the tools are required for event collection
 but are not required for your program to run.
 
 ```bash
-sudo apt install lttng-tools
+sudo apt install LTTng-tools
 ```
 
 ## Integration
@@ -103,32 +105,3 @@ TraceLogging builds as an interface library with a dependency on a static librar
 1. Add this project as a subdirectory in your project, either as a git submodule or copying the code directly.
 2. Add that directory to your top-level CMakeLists.txt with 'add_subdirectory'. This will make the target 'tracelogging' available.  
 3. Add the 'tracelogging' target to the target_link_libraries of any target that will use TraceLogging.
-
-## Reporting Security Issues
-
-Security issues and bugs should be reported privately, via email, to the
-Microsoft Security Response Center (MSRC) at <[secure@microsoft.com](mailto:secure@microsoft.com)>.
-You should receive a response within 24 hours. If for some reason you do not, please follow up via
-email to ensure we received your original message. Further information, including the
-[MSRC PGP](https://technet.microsoft.com/en-us/security/dn606155) key, can be found in the
-[Security TechCenter](https://technet.microsoft.com/en-us/security/default).
-
-## Code of Conduct
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-## Contributing
-
-Want to contribute? The team encourages community feedback and contributions. Please follow our [contributing guidelines](../CONTRIBUTING.md).
-
-We also welcome [issues submitted on GitHub](https://github.com/Microsoft/TraceLogging/issues).
-
-## Project Status
-
-This project is currently in active development.
-
-## Contact
-
-The easiest way to contact us is via the [Issues](https://github.com/microsoft/TraceLogging/issues) page.
