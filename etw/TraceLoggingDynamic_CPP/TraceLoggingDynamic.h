@@ -674,7 +674,7 @@ namespace tld
             }
 
             void AddBytes(
-                _In_bytecount_(cb) void const* p,
+                _In_reads_bytes_(cb) void const* p,
                 unsigned cb)
             {
                 auto pb = static_cast<UINT8 const*>(p);
@@ -2047,7 +2047,7 @@ namespace tld
 
         void AddTrait(
             ProviderTraitType type,
-            _In_bytecount_(cbData) void const* pData,
+            _In_reads_bytes_(cbData) void const* pData,
             unsigned cbData)
         {
             this->AddU16(static_cast<UINT16>(cbData + 3));
@@ -2389,7 +2389,7 @@ namespace tld
         Note: should only be used for blittable POD types with no padding.
         */
         template<class T>
-        void AddValues(_In_count_(cValues) T const* pValues, unsigned cValues)
+        void AddValues(_In_reads_(cValues) T const* pValues, unsigned cValues)
         {
             AddBytes(pValues, sizeof(T) * cValues);
         }
@@ -3055,7 +3055,7 @@ namespace tld
         e.g. INT32, FILETIME, GUID, not for strings or structs.
         */
         template<class T>
-        void AddValues(_In_count_(cValues) T const* pValues, unsigned cValues)
+        void AddValues(_In_reads_(cValues) T const* pValues, unsigned cValues)
         {
             m_dataBuilder.AddValues(pValues, cValues);
         }
