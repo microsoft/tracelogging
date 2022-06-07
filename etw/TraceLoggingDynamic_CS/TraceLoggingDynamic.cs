@@ -837,7 +837,18 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUnicodeString(string name, String value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.UnicodeString, outType, tag);
-            this.AddScalarDataNulTerminatedString(value);
+            this.AddScalarDataNulTerminatedString(value, 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a UnicodeString field (nul-terminated utf-16le).
+        /// NOTE: Prefer AddCountedString. Use AddUnicodeString only if the decoder requires nul-terminated strings.
+        /// Meaningful outTypes: Default (String), Xml, Json.
+        /// </summary>
+        public void AddUnicodeString(string name, String value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.UnicodeString, outType, tag);
+            this.AddScalarDataNulTerminatedString(value, startIndex, count);
         }
 
         /// <summary>
@@ -851,7 +862,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.AddArrayBegin(values.Length, 0);
             foreach (string value in values)
             {
-                this.AddScalarDataNulTerminatedString(value);
+                this.AddScalarDataNulTerminatedString(value, 0, value.Length);
             }
         }
 
@@ -863,7 +874,18 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddAnsiString(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.AnsiString, outType, tag);
-            this.AddScalarDataNulTerminatedByteString(value);
+            this.AddScalarDataNulTerminatedByteString(value, 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds an AnsiString field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.AnsiString, outType, tag);
+            this.AddScalarDataNulTerminatedByteString(value, startIndex, count);
         }
 
         /// <summary>
@@ -877,7 +899,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
-                this.AddScalarDataNulTerminatedByteString(value);
+                this.AddScalarDataNulTerminatedByteString(value, 0, value.Length);
             }
         }
 
@@ -898,7 +920,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddInt8Array(string name, SByte[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Int8, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(SByte));
+            this.AddArrayDataBlockCopy(values, sizeof(SByte), 0, values.Length);
         }
 
         /// <summary>
@@ -918,7 +940,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUInt8Array(string name, Byte[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.UInt8, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Byte));
+            this.AddArrayDataBlockCopy(values, sizeof(Byte), 0, values.Length);
         }
 
         /// <summary>
@@ -938,7 +960,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddInt16Array(string name, Int16[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Int16, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int16));
+            this.AddArrayDataBlockCopy(values, sizeof(Int16), 0, values.Length);
         }
 
         /// <summary>
@@ -960,7 +982,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUInt16Array(string name, UInt16[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.UInt16, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(UInt16));
+            this.AddArrayDataBlockCopy(values, sizeof(UInt16), 0, values.Length);
         }
 
         /// <summary>
@@ -980,7 +1002,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddInt32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Int32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int32));
+            this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
         /// <summary>
@@ -1000,7 +1022,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUInt32Array(string name, UInt32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.UInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(UInt32));
+            this.AddArrayDataBlockCopy(values, sizeof(UInt32), 0, values.Length);
         }
 
         /// <summary>
@@ -1020,7 +1042,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddInt64Array(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Int64, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int64));
+            this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
         /// <summary>
@@ -1040,7 +1062,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUInt64Array(string name, UInt64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.UInt64, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(UInt64));
+            this.AddArrayDataBlockCopy(values, sizeof(UInt64), 0, values.Length);
         }
 
         /// <summary>
@@ -1068,7 +1090,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddIntPtrArray(string name, IntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, IntPtr.Size == 8 ? InType.Int64 : InType.Int32, outType, tag);
-            this.AddArrayDataBlockCopy(values, IntPtr.Size);
+            this.AddArrayDataBlockCopy(values, IntPtr.Size, 0, values.Length);
         }
 
         /// <summary>
@@ -1096,7 +1118,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddUIntPtrArray(string name, UIntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, UIntPtr.Size == 8 ? InType.UInt64 : InType.UInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, UIntPtr.Size);
+            this.AddArrayDataBlockCopy(values, UIntPtr.Size, 0, values.Length);
         }
 
         /// <summary>
@@ -1116,7 +1138,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddFloat32Array(string name, Single[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Float32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Single));
+            this.AddArrayDataBlockCopy(values, sizeof(Single), 0, values.Length);
         }
 
         /// <summary>
@@ -1136,7 +1158,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddFloat64Array(string name, Double[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Float64, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Double));
+            this.AddArrayDataBlockCopy(values, sizeof(Double), 0, values.Length);
         }
 
         /// <summary>
@@ -1156,7 +1178,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddBool32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.Bool32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int32));
+            this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
         /// <summary>
@@ -1166,7 +1188,17 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddBinary(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.Binary, outType, tag);
-            this.AddArrayDataBlockCopy(value, sizeof(Byte));
+            this.AddArrayDataBlockCopy(value, sizeof(Byte), 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a Binary field.
+        /// Meaningful outTypes: Default (Hex), IPv6, SocketAddress, Pkcs7WithTypeInfo.
+        /// </summary>
+        public void AddBinary(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.Binary, outType, tag);
+            this.AddArrayDataBlockCopy(value, sizeof(Byte), startIndex, count);
         }
 
         /// <summary>
@@ -1217,7 +1249,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddFileTimeArray(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.FileTime, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int64));
+            this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
         /// <summary>
@@ -1321,7 +1353,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexInt32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.HexInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int32));
+            this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
         /// <summary>
@@ -1341,7 +1373,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexInt32Array(string name, UInt32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.HexInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(UInt32));
+            this.AddArrayDataBlockCopy(values, sizeof(UInt32), 0, values.Length);
         }
 
         /// <summary>
@@ -1361,7 +1393,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexInt64Array(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.HexInt64, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(Int64));
+            this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
         /// <summary>
@@ -1381,7 +1413,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexInt64Array(string name, UInt64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, InType.HexInt64, outType, tag);
-            this.AddArrayDataBlockCopy(values, sizeof(UInt64));
+            this.AddArrayDataBlockCopy(values, sizeof(UInt64), 0, values.Length);
         }
 
         /// <summary>
@@ -1409,7 +1441,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexIntPtrArray(string name, IntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, IntPtr.Size == 8 ? InType.HexInt64 : InType.HexInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, IntPtr.Size);
+            this.AddArrayDataBlockCopy(values, IntPtr.Size, 0, values.Length);
         }
 
         /// <summary>
@@ -1437,7 +1469,7 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddHexIntPtrArray(string name, UIntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddArrayMetadata(name, UIntPtr.Size == 8 ? InType.HexInt64 : InType.HexInt32, outType, tag);
-            this.AddArrayDataBlockCopy(values, UIntPtr.Size);
+            this.AddArrayDataBlockCopy(values, UIntPtr.Size, 0, values.Length);
         }
 
         /// <summary>
@@ -1447,7 +1479,17 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddCountedString(string name, String value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.CountedString, outType, tag);
-            this.AddScalarDataCountedString(value);
+            this.AddScalarDataCountedString(value, 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a CountedString field (utf-16le).
+        /// Meaningful outTypes: Default (String), Xml, Json.
+        /// </summary>
+        public void AddCountedString(string name, String value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.CountedString, outType, tag);
+            this.AddScalarDataCountedString(value, startIndex, count);
         }
 
         /// <summary>
@@ -1460,7 +1502,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.AddArrayBegin(values.Length, 0);
             foreach (string value in values)
             {
-                this.AddScalarDataCountedString(value);
+                this.AddScalarDataCountedString(value, 0, value.Length);
             }
         }
 
@@ -1471,7 +1513,17 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddCountedAnsiString(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.CountedAnsiString, outType, tag);
-            this.AddArrayDataBlockCopy(value, sizeof(byte));
+            this.AddArrayDataBlockCopy(value, sizeof(byte), 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a CountedAnsiString field.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddCountedAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddArrayDataBlockCopy(value, sizeof(byte), startIndex, count);
         }
 
         /// <summary>
@@ -1484,7 +1536,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
-                this.AddArrayDataBlockCopy(value, sizeof(byte));
+                this.AddArrayDataBlockCopy(value, sizeof(byte), 0, value.Length);
             }
         }
 
@@ -1495,7 +1547,17 @@ namespace Microsoft.TraceLoggingDynamic
         public void AddCountedBinary(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddScalarMetadata(name, InType.CountedBinary, outType, tag);
-            this.AddArrayDataBlockCopy(value, sizeof(Byte));
+            this.AddArrayDataBlockCopy(value, sizeof(Byte), 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a CountedBinary field. (Decoding requires Windows 2018 Fall Update or later.)
+        /// Meaningful outTypes: Default (Hex), IPv6, SocketAddress, Pkcs7WithTypeInfo.
+        /// </summary>
+        public void AddCountedBinary(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddScalarMetadata(name, InType.CountedBinary, outType, tag);
+            this.AddArrayDataBlockCopy(value, sizeof(Byte), startIndex, count);
         }
 
         /// <summary>
@@ -1508,7 +1570,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
-                this.AddArrayDataBlockCopy(value, sizeof(Byte));
+                this.AddArrayDataBlockCopy(value, sizeof(Byte), 0, value.Length);
             }
         }
 
@@ -1665,41 +1727,46 @@ namespace Microsoft.TraceLoggingDynamic
             this.data.SetUInt64(pos, *(UInt64*)&value);
         }
 
-        private void AddScalarDataNulTerminatedByteString(byte[] value)
+        private void AddScalarDataNulTerminatedByteString(byte[] value, int startIndex, int count)
         {
-            int valueSize = Array.IndexOf(value, (byte)0);
-            if (valueSize < 0)
-            {
-                valueSize = value.Length;
-            }
+            Debug.Assert(count >= 0);
+            Debug.Assert(count <= value.Length - startIndex);
 
-            int pos = this.data.ReserveSpaceFor(valueSize + sizeof(byte));
-            Buffer.BlockCopy(value, 0, this.data.data, pos, valueSize);
-            this.data.SetUInt8(pos + valueSize, 0);
+            int endIndex = Array.IndexOf(value, (byte)0, startIndex, count);
+            int copyLength = endIndex < 0
+                ? count
+                : endIndex - startIndex;
+            int pos = this.data.ReserveSpaceFor(copyLength + sizeof(byte));
+            Buffer.BlockCopy(value, startIndex, this.data.data, pos, copyLength);
+            this.data.SetUInt8(pos + copyLength, 0);
         }
 
-        private void AddScalarDataNulTerminatedString(String value)
+        private void AddScalarDataNulTerminatedString(String value, int startIndex, int count)
         {
-            int valueLength = value.IndexOf('\0');
-            if (valueLength < 0)
-            {
-                valueLength = value.Length;
-            }
+            Debug.Assert(count >= 0);
+            Debug.Assert(count <= value.Length - startIndex);
 
+            int endIndex = value.IndexOf('\0', startIndex, count);
+            int copyLength = endIndex < 0
+                ? count
+                : endIndex - startIndex;
             var encodingUtf16 = Encoding.Unicode;
-            int valueMaxSize = encodingUtf16.GetMaxByteCount(valueLength + 1);
+            int valueMaxSize = encodingUtf16.GetMaxByteCount(copyLength + 1);
             int pos = this.data.ReserveSpaceFor(valueMaxSize);
-            pos += encodingUtf16.GetBytes(value, 0, valueLength, this.data.data, pos);
+            pos += encodingUtf16.GetBytes(value, startIndex, copyLength, this.data.data, pos);
             pos += this.data.SetUInt16(pos, 0);
             this.data.SetSize(pos);
         }
 
-        private void AddScalarDataCountedString(String value)
+        private void AddScalarDataCountedString(String value, int startIndex, int count)
         {
+            Debug.Assert(count >= 0);
+            Debug.Assert(count <= value.Length - startIndex);
+
             var encodingUtf16 = Encoding.Unicode;
-            int valueMax = encodingUtf16.GetMaxByteCount(value.Length);
+            int valueMax = encodingUtf16.GetMaxByteCount(count);
             int pos = this.data.ReserveSpaceFor(sizeof(UInt16) + valueMax);
-            int valueSize = encodingUtf16.GetBytes(value, 0, value.Length, this.data.data, pos + sizeof(UInt16));
+            int valueSize = encodingUtf16.GetBytes(value, startIndex, count, this.data.data, pos + sizeof(UInt16));
             this.data.SetUInt16(pos, (UInt16)valueSize);
             this.data.SetSize(pos + sizeof(UInt16) + valueSize);
         }
@@ -1708,11 +1775,14 @@ namespace Microsoft.TraceLoggingDynamic
         /// Usage: AddArrayDataBlockCopy(values, sizeof(ValueType)).
         /// For primitives only. Do not use if sizeof(ValueType) does not compile.
         /// </summary>
-        private void AddArrayDataBlockCopy(Array values, int elementSize)
+        private void AddArrayDataBlockCopy(Array values, int elementSize, int startIndex, int count)
         {
-            int valuesSize = values.Length * elementSize;
-            int pos = this.AddArrayBegin(values.Length, valuesSize);
-            Buffer.BlockCopy(values, 0, this.data.data, pos, valuesSize);
+            Debug.Assert(count >= 0);
+            Debug.Assert(count <= values.Length - startIndex);
+
+            int valuesSize = count * elementSize;
+            int pos = this.AddArrayBegin(count, valuesSize);
+            Buffer.BlockCopy(values, startIndex * elementSize, this.data.data, pos, valuesSize);
         }
 
         /// <summary>
