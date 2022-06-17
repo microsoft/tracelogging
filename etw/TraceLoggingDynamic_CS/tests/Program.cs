@@ -78,8 +78,8 @@ namespace TraceLoggingDynamicTest
                 eb.AddUInt8("A", 65, EventOutType.String);
                 p.Write(eb);
 
-                Validate(p, eb, "UnicodeString", eb.AddUnicodeString, eb.AddUnicodeStringArray, "zutf16");
-                Validate(p, eb, "AnsiString", eb.AddAnsiString, eb.AddAnsiStringArray, utf8.GetBytes("zutf8"));
+                ValidateBeginCount(p, eb, "UnicodeString", eb.AddUnicodeString, eb.AddUnicodeString, eb.AddUnicodeStringArray, "zutf16");
+                ValidateBeginCount(p, eb, "AnsiString", eb.AddAnsiString, eb.AddAnsiString, eb.AddAnsiStringArray, utf8.GetBytes("zutf8"));
                 Validate<sbyte>(p, eb, "Int8", eb.AddInt8, eb.AddInt8Array, -8);
                 Validate<byte>(p, eb, "UInt8", eb.AddUInt8, eb.AddUInt8Array, 8);
                 Validate<short>(p, eb, "Int16", eb.AddInt16, eb.AddInt16Array, -16);
@@ -94,7 +94,7 @@ namespace TraceLoggingDynamicTest
                 Validate(p, eb, "Float64", eb.AddFloat64, eb.AddFloat64Array, 6.4);
                 Validate(p, eb, "Bool32", eb.AddBool32, eb.AddBool32Array, 0);
                 Validate(p, eb, "Bool32", eb.AddBool32, eb.AddBool32Array, 1);
-                Validate(p, eb, "Binary", eb.AddBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
+                ValidateBeginCount(p, eb, "Binary", eb.AddBinary, eb.AddBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
                 Validate(p, eb, "Guid", eb.AddGuid, eb.AddGuidArray, EventProvider.GetGuidForName("sample"));
                 Validate(p, eb, "FileTime", eb.AddFileTime, eb.AddFileTimeArray, 0x01d7ace794497cb5);
                 Validate(p, eb, "FileTime", eb.AddFileTime, eb.AddFileTimeArray, new DateTime(2022, 12, 25, 1, 2, 3, DateTimeKind.Utc));
@@ -106,9 +106,9 @@ namespace TraceLoggingDynamicTest
                 Validate(p, eb, "HexInt64", eb.AddHexInt64, eb.AddHexInt64Array, 0xdeadbeeffeeef000);
                 Validate(p, eb, "HexIntPtr", eb.AddHexIntPtr, eb.AddHexIntPtrArray, (IntPtr)0x1234);
                 Validate(p, eb, "HexIntPtr", eb.AddHexIntPtr, eb.AddHexIntPtrArray, (UIntPtr)0x1234);
-                Validate(p, eb, "CountedString", eb.AddCountedString, eb.AddCountedStringArray, "utf16");
-                Validate(p, eb, "CountedAnsiString", eb.AddCountedAnsiString, eb.AddCountedAnsiStringArray, utf8.GetBytes("utf8"));
-                Validate(p, eb, "CountedBinary", eb.AddCountedBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
+                ValidateBeginCount(p, eb, "CountedString", eb.AddCountedString, eb.AddCountedString, eb.AddCountedStringArray, "utf16");
+                ValidateBeginCount(p, eb, "CountedAnsiString", eb.AddCountedAnsiString, eb.AddCountedAnsiString, eb.AddCountedAnsiStringArray, utf8.GetBytes("utf8"));
+                ValidateBeginCount(p, eb, "CountedBinary", eb.AddCountedBinary, eb.AddCountedBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
 
                 var val = utf8.GetBytes("val");
                 var N = p.IsEnabled() ? 10000 : 1000000;
@@ -139,6 +139,25 @@ namespace TraceLoggingDynamicTest
             array("a0", new T[0], EventOutType.Default, 0);
             array("a1", new T[1] { value }, EventOutType.Default, 0);
             array("a2", new T[2] { value, value }, EventOutType.Default, 0);
+            eb.AddUInt8("A", 65, EventOutType.String);
+            p.Write(eb);
+        }
+
+        private static void ValidateBeginCount<T>(EventProvider p, EventBuilder eb, string name,
+            Action<string, T, EventOutType, int> scalar,
+            Action<string, T, int, int, EventOutType, int> scalarBeginCount,
+            Action<string, T[], EventOutType, int> array,
+            T value)
+        {
+            eb.Reset(name);
+            eb.AddUInt8("A", 65, EventOutType.String);
+            scalar("scalar", value, EventOutType.Default, 0);
+            array("a0", new T[0], EventOutType.Default, 0);
+            array("a1", new T[1] { value }, EventOutType.Default, 0);
+            array("a2", new T[2] { value, value }, EventOutType.Default, 0);
+            scalarBeginCount("scalar1-0", value, 1, 0, EventOutType.Default, 0);
+            scalarBeginCount("scalar0-2", value, 0, 2, EventOutType.Default, 0);
+            scalarBeginCount("scalar1-2", value, 1, 2, EventOutType.Default, 0);
             eb.AddUInt8("A", 65, EventOutType.String);
             p.Write(eb);
         }
