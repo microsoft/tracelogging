@@ -81,10 +81,7 @@ functions.
 Because of this, you should avoid calling TraceLoggingWrite from within an inline function. This includes any function
 or method definition which appears _inside_ of a C++ class/struct definition (as these are implicitly inlined).
 
-For additional background regarding this problem, see [this Stack Overflow answer] as well as [this issue on the GCC Bugzilla].
-
-[this Stack Overflow Answer]: https://stackoverflow.com/questions/35091862/inline-static-data-causes-a-section-type-conflict/35441900#35441900
-[this issue on the GCC Bugzilla]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41091
+For additional background regarding this problem, see [this Stack Overflow answer](https://stackoverflow.com/questions/35091862/inline-static-data-causes-a-section-type-conflict/35441900#35441900) as well as [this issue on the GCC Bugzilla](https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41091).
 
 ## Dependencies
 
