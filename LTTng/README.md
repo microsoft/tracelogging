@@ -72,6 +72,20 @@ lttng view
 
 For more information, see the [LTTng Documentation](https://lttng.org/docs/v2.10/).
 
+### Avoid Logging from Inline Functions
+
+This library uses a custom linker section to aid in the event registration process. Unfortunately, this technique can
+lead to issues such as compilation failure or unexpected runtime behavior when used in combination with inline
+functions.
+
+Because of this, you should avoid calling TraceLoggingWrite from within an inline function. This includes any function
+or method definition which appears _inside_ of a C++ class/struct definition (as these are implicitly inlined).
+
+For additional background regarding this problem, see [this Stack Overflow answer] as well as [this issue on the GCC Bugzilla].
+
+[this Stack Overflow Answer]: https://stackoverflow.com/questions/35091862/inline-static-data-causes-a-section-type-conflict/35441900#35441900
+[this issue on the GCC Bugzilla]: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=41091
+
 ## Dependencies
 
 This project depends on the lttng-ust library. To build this library, you will need liblttng-ust-dev version 2.10 or later.

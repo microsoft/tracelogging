@@ -60,6 +60,8 @@ TraceLoggingProvider.h for LTTNG behaves differently from the ETW version:
   in TRACELOGGING_DEFINE_PROVIDER.
   - As a consequence of this, wil\TraceLogging.h will not work (no way to
     implement TRACELOGGING_DEFINE_PROVIDER_STORAGE).
+- TraceLoggingWrite and TraceLoggingWriteActivity should not be called from
+  within inline functions.
 - Limited support for TraceLoggingLevel.
   - You must use LTTNG level values, not ETW level values. For example,
     TraceLoggingLevel(4) means level="info" under ETW, but is level="warning"
@@ -420,6 +422,9 @@ Supports up to 99 args (subject to compiler limitations). Each arg must be a
 wrapper macro such as TraceLoggingLevel, TraceLoggingKeyword, TraceLoggingInt32,
 TraceLoggingString, etc.
 
+Should not be called from inside an inline function due to the way static variables
+and linker sections are manipulated.
+
 LTTNG-specific:
 - Total length of providerName + eventName must be less than 253.
 - The eventName must not contain any double-quote characters.
@@ -452,6 +457,9 @@ any '"' or '\0' characters.
 Supports up to 99 args (subject to compiler limitations). Each arg must be a
 wrapper macro such as TraceLoggingLevel, TraceLoggingKeyword, TraceLoggingInt32,
 TraceLoggingString, etc.
+
+Should not be called from inside an inline function due to the way static variables
+and linker sections are manipulated.
 
 LTTNG-specific:
 - Total length of providerName + eventName must be less than 253.
