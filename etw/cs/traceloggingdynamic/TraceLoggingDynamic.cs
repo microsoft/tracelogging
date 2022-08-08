@@ -2277,7 +2277,7 @@ namespace Microsoft.TraceLoggingDynamic
     /// <summary>
     /// Used in EventDescriptor. Indicates special semantics of an event that might be
     /// used by the event decoder when organizing events. For example, the Start opcode
-    /// indicates the beginning of an activity, and the End opcode indicates the end of
+    /// indicates the beginning of an activity and the Stop opcode indicates the end of
     /// an activity. Most events default to Info (0).
     /// </summary>
     public enum EventOpcode : byte
