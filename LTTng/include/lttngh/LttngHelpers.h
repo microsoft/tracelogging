@@ -705,10 +705,10 @@ void lttngh_FormatIPv4(const void* pIPv4, char* buf16) lttng_ust_notrace;
 
 /*
 Formats a 16-byte IPv6 address as a nul-terminated string.
-Output buffer is assumed to be at least 46 chars.
+Output buffer is assumed to be at least LTTNGH_FORMAT_IPV6_LEN chars.
 */
-void lttngh_FormatIPv6(const void* pIPv6, char* buf46) lttng_ust_notrace;
-#define LTTNGH_FORMAT_IPV6_LEN 46u // Buffer length for lttngh_FormatIPv6.
+void lttngh_FormatIPv6(const void* pIPv6, char* buf48) lttng_ust_notrace;
+#define LTTNGH_FORMAT_IPV6_LEN 48u // Buffer length for lttngh_FormatIPv6.
 
 /*
 Formats a sockaddr as a nul-terminated string.
