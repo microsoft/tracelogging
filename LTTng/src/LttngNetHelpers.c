@@ -11,16 +11,18 @@
 
 void lttngh_FormatIPv4(const void* pIPv4, char* buf16)
 {
+    buf16[0] = 0;
     inet_ntop(AF_INET, pIPv4, buf16, LTTNGH_FORMAT_IPV4_LEN);
     assert(strlen(buf16) < LTTNGH_FORMAT_IPV4_LEN);
     buf16[LTTNGH_FORMAT_IPV4_LEN - 1] = 0;
 }
 
-void lttngh_FormatIPv6(const void* pIPv6, char* buf46)
+void lttngh_FormatIPv6(const void* pIPv6, char* buf48)
 {
-    inet_ntop(AF_INET6, pIPv6, buf46, LTTNGH_FORMAT_IPV6_LEN);
-    assert(strlen(buf46) < LTTNGH_FORMAT_IPV6_LEN);
-    buf46[LTTNGH_FORMAT_IPV6_LEN - 1] = 0;
+    buf48[0] = 0;
+    inet_ntop(AF_INET6, pIPv6, buf48, LTTNGH_FORMAT_IPV6_LEN);
+    assert(strlen(buf48) < LTTNGH_FORMAT_IPV6_LEN);
+    buf48[LTTNGH_FORMAT_IPV6_LEN - 1] = 0;
 }
 
 void lttngh_FormatSockaddr(const void* pSockaddr, unsigned cbSockaddr,
