@@ -186,7 +186,11 @@ namespace Microsoft.TraceLoggingDynamic
 
             Debug.Assert(totalByteCount == pos, "Provider traits size out-of-sync.");
 
-            this.eventRegisterResult = NativeMethods.EventRegister(guid, this.enableCallback, IntPtr.Zero, out this.regHandle);
+            this.eventRegisterResult = NativeMethods.EventRegister(
+                guid,
+                this.enableCallback,
+                IntPtr.Zero,
+                out this.regHandle);
             if (this.regHandle == 0)
             {
                 GC.SuppressFinalize(this);
@@ -939,10 +943,32 @@ namespace Microsoft.TraceLoggingDynamic
         /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
         /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
         /// </summary>
+        public void AddAnsiString(string name, String value, Encoding encoding, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.AnsiString, outType, tag);
+            this.AddScalarDataNulTerminatedAnsiString(value, encoding, 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds an AnsiString field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
         public void AddAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddMetadata(name, InType.AnsiString, outType, tag);
             this.AddScalarDataNulTerminatedByteString(value, startIndex, count);
+        }
+
+        /// <summary>
+        /// Adds an AnsiString field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddAnsiString(string name, String value, Encoding encoding, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.AnsiString, outType, tag);
+            this.AddScalarDataNulTerminatedAnsiString(value, encoding, startIndex, count);
         }
 
         /// <summary>
@@ -957,6 +983,21 @@ namespace Microsoft.TraceLoggingDynamic
             foreach (var value in values)
             {
                 this.AddScalarDataNulTerminatedByteString(value, 0, value.Length);
+            }
+        }
+
+        /// <summary>
+        /// Adds an AnsiString array field (nul-terminated MBCS).
+        /// NOTE: Prefer AddCountedAnsiString. Use AddAnsiString only if the decoder requires nul-terminated strings.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddAnsiStringArray(string name, String[] values, Encoding encoding, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.AnsiStringArray, outType, tag);
+            this.AddArrayBegin(values.Length, 0);
+            foreach (var value in values)
+            {
+                this.AddScalarDataNulTerminatedAnsiString(value, encoding, 0, value.Length);
             }
         }
 
@@ -1577,10 +1618,30 @@ namespace Microsoft.TraceLoggingDynamic
         /// Adds a CountedAnsiString field.
         /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
         /// </summary>
+        public void AddCountedAnsiString(string name, String value, Encoding encoding, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddScalarDataCountedAnsiString(value, encoding, 0, value.Length);
+        }
+
+        /// <summary>
+        /// Adds a CountedAnsiString field.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
         public void AddCountedAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
             this.AddMetadata(name, InType.CountedAnsiString, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(byte), startIndex, count);
+        }
+
+        /// <summary>
+        /// Adds a CountedAnsiString field.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddCountedAnsiString(string name, String value, Encoding encoding, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddScalarDataCountedAnsiString(value, encoding, startIndex, count);
         }
 
         /// <summary>
@@ -1594,6 +1655,20 @@ namespace Microsoft.TraceLoggingDynamic
             foreach (var value in values)
             {
                 this.AddArrayDataBlockCopy(value, sizeof(byte), 0, value.Length);
+            }
+        }
+
+        /// <summary>
+        /// Adds a CountedAnsiString array field.
+        /// Meaningful outTypes: Default (String), Utf8, Xml, Json.
+        /// </summary>
+        public void AddCountedAnsiStringArray(string name, String[] values, Encoding encoding, EventOutType outType = EventOutType.Default, int tag = 0)
+        {
+            this.AddMetadata(name, InType.CountedAnsiStringArray, outType, tag);
+            this.AddArrayBegin(values.Length, 0);
+            foreach (var value in values)
+            {
+                this.AddScalarDataCountedAnsiString(value, encoding, 0, value.Length);
             }
         }
 
@@ -1816,9 +1891,6 @@ namespace Microsoft.TraceLoggingDynamic
 
         private void AddScalarDataNulTerminatedByteString(byte[] value, int startIndex, int count)
         {
-            Debug.Assert(count >= 0);
-            Debug.Assert(count <= value.Length - startIndex);
-
             int endIndex = Array.IndexOf(value, (byte)0, startIndex, count);
             int copyLength = endIndex < 0
                 ? count
@@ -1830,9 +1902,6 @@ namespace Microsoft.TraceLoggingDynamic
 
         private unsafe void AddScalarDataNulTerminatedString(String value, int startIndex, int count)
         {
-            Debug.Assert(count >= 0);
-            Debug.Assert(count <= value.Length - startIndex);
-
             int endIndex = value.IndexOf('\0', startIndex, count);
             int copyLength = endIndex < 0
                 ? count
@@ -1844,6 +1913,7 @@ namespace Microsoft.TraceLoggingDynamic
             {
                 fixed (byte* pData = this.data.data)
                 {
+                    // Safety: startIndex and count were validated by IndexOf.
                     Buffer.MemoryCopy(pValue + startIndex, pData + pos, valueSize, valueSize);
                     pos += valueSize;
                     pData[pos++] = 0;
@@ -1854,8 +1924,16 @@ namespace Microsoft.TraceLoggingDynamic
 
         private unsafe void AddScalarDataCountedString(String value, int startIndex, int count)
         {
-            Debug.Assert(count >= 0);
-            Debug.Assert(count <= value.Length - startIndex);
+            int valueLength = value.Length;
+            if (startIndex < 0 || startIndex > valueLength)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startIndex));
+            }
+
+            if (count < 0 || count > valueLength - startIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
 
             int valueSize = count * sizeof(UInt16);
             int pos = this.data.ReserveSpaceFor(sizeof(UInt16) + valueSize);
@@ -1865,9 +1943,75 @@ namespace Microsoft.TraceLoggingDynamic
                 {
                     pData[pos++] = (byte)valueSize;
                     pData[pos++] = (byte)(valueSize >> 8);
+
+                    // Safety: startIndex and count validated above.
                     Buffer.MemoryCopy(pValue + startIndex, pData + pos, valueSize, valueSize);
                 }
             }
+        }
+
+        private unsafe void AddScalarDataNulTerminatedAnsiString(
+            String value,
+            Encoding encoding,
+            int startIndex,
+            int count)
+        {
+            int endIndex = value.IndexOf('\0', startIndex, count);
+            int copyLength = endIndex < 0
+                ? count
+                : endIndex - startIndex;
+
+            int maxValueSize = encoding.GetMaxByteCount(copyLength);
+            int pos = this.data.ReserveSpaceFor(maxValueSize + 1);
+            fixed (char* pValue = value)
+            {
+                fixed (byte* pData = this.data.data)
+                {
+                    // Safety: startIndex and count were validated by IndexOf.
+                    pos += encoding.GetBytes(
+                        pValue + startIndex,
+                        copyLength,
+                        pData + pos,
+                        maxValueSize);
+                    pData[pos++] = 0;
+                }
+            }
+
+            this.data.SetSize(pos);
+        }
+
+        private unsafe void AddScalarDataCountedAnsiString(String value, Encoding encoding, int startIndex, int count)
+        {
+            int valueLength = value.Length;
+            if (startIndex < 0 || startIndex > valueLength)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startIndex));
+            }
+
+            if (count < 0 || count > valueLength - startIndex)
+            {
+                throw new ArgumentOutOfRangeException(nameof(count));
+            }
+
+            int maxValueSize = encoding.GetMaxByteCount(count);
+            int pos = this.data.ReserveSpaceFor(sizeof(UInt16) + maxValueSize);
+            fixed (char* pValue = value)
+            {
+                fixed (byte* pData = this.data.data)
+                {
+                    // Safety: startIndex and count validated above.
+                    int valueSize = encoding.GetBytes(
+                        pValue + startIndex,
+                        count,
+                        pData + pos + sizeof(UInt16),
+                        maxValueSize);
+                    pData[pos++] = (byte)valueSize;
+                    pData[pos++] = (byte)(valueSize >> 8);
+                    pos += valueSize;
+                }
+            }
+
+            this.data.SetSize(pos);
         }
 
         /// <summary>

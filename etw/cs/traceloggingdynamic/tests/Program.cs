@@ -6,6 +6,48 @@ using System.Text;
 
 namespace TraceLoggingDynamicTest
 {
+    class Latin1 : Encoding
+    {
+        public override int GetMaxByteCount(int charCount)
+        {
+            return charCount;
+        }
+
+        public override unsafe int GetBytes(char* chars, int charCount, byte* bytes, int byteCount)
+        {
+            for (int i = 0; i < charCount; i += 1)
+            {
+                bytes[i] = checked((byte)chars[i]);
+            }
+            return charCount;
+        }
+
+        public override int GetByteCount(char[] chars, int index, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int GetCharCount(byte[] bytes, int index, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override int GetMaxCharCount(int byteCount)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
     class Program
     {
         static void Main()
@@ -19,7 +61,7 @@ namespace TraceLoggingDynamicTest
                 Console.WriteLine("ERROR: Bad GetGuidForName.");
             }
 
-            var eb = new EventBuilder();
+            var eb = new EventBuilder(new Latin1());
             using (var p = new EventProvider("TraceLoggingDynamicTest"))
             {
                 Console.WriteLine("{0} enabled: {1}", p, p.IsEnabled());
@@ -55,7 +97,8 @@ namespace TraceLoggingDynamicTest
 
                 eb.Reset("structs");
                 eb.AddUInt8("start", 0);
-                eb.AddStruct("struct1", 2, 0xFE00000);
+                var structPos = eb.AddStruct("struct1", 1, 0xFE00000);
+                eb.SetStructFieldCount(structPos, 2);
                 eb.AddUInt8("nested1", 1);
                 eb.AddStruct("struct2", 1);
                 eb.AddUInt8("nested2", 2);
@@ -75,6 +118,12 @@ namespace TraceLoggingDynamicTest
                 eb.AddAnsiString("zstr8-a0", utf8.GetBytes("a\0"));
                 eb.AddAnsiString("zstr8-0a", utf8.GetBytes("\0a"));
                 eb.AddAnsiString("zstr8-a0a", utf8.GetBytes("a\0a"));
+                eb.AddAnsiString("zstr8e-", "", Encoding.ASCII);
+                eb.AddAnsiString("zstr8e-a", "a", Encoding.ASCII);
+                eb.AddAnsiString("zstr8e-0", "\0", Encoding.ASCII);
+                eb.AddAnsiString("zstr8e-a0", "a\0", Encoding.ASCII);
+                eb.AddAnsiString("zstr8e-0a", "\0a", Encoding.ASCII);
+                eb.AddAnsiString("zstr8e-a0a", "a\0a", Encoding.ASCII);
                 eb.AddUInt8("A", 65, EventOutType.String);
                 p.Write(eb);
 
@@ -106,8 +155,20 @@ namespace TraceLoggingDynamicTest
                 Validate(p, eb, "HexInt64", eb.AddHexInt64, eb.AddHexInt64Array, 0xdeadbeeffeeef000);
                 Validate(p, eb, "HexIntPtr", eb.AddHexIntPtr, eb.AddHexIntPtrArray, (IntPtr)0x1234);
                 Validate(p, eb, "HexIntPtr", eb.AddHexIntPtr, eb.AddHexIntPtrArray, (UIntPtr)0x1234);
+                ValidateBeginCount(p, eb, "UnicodeString", eb.AddUnicodeString, eb.AddUnicodeString, eb.AddUnicodeStringArray, "utf16");
                 ValidateBeginCount(p, eb, "CountedString", eb.AddCountedString, eb.AddCountedString, eb.AddCountedStringArray, "utf16");
+                ValidateBeginCount(p, eb, "AnsiString", eb.AddAnsiString, eb.AddAnsiString, eb.AddAnsiStringArray, utf8.GetBytes("utf8"));
+                ValidateBeginCount(p, eb, "AnsiStringE",
+                    (n, v, o, t) => eb.AddAnsiString(n, v, Encoding.UTF8, o, t),
+                    (n, v, s, c, o, t) => eb.AddAnsiString(n, v, Encoding.UTF8, s, c, o, t),
+                    (n, v, o, t) => eb.AddAnsiStringArray(n, v, Encoding.UTF8, o, t),
+                    "utf8");
                 ValidateBeginCount(p, eb, "CountedAnsiString", eb.AddCountedAnsiString, eb.AddCountedAnsiString, eb.AddCountedAnsiStringArray, utf8.GetBytes("utf8"));
+                ValidateBeginCount(p, eb, "CountedAnsiStringE",
+                    (n, v, o, t) => eb.AddCountedAnsiString(n, v, Encoding.UTF8, o, t),
+                    (n, v, s, c, o, t) => eb.AddCountedAnsiString(n, v, Encoding.UTF8, s, c, o, t),
+                    (n, v, o, t) => eb.AddCountedAnsiStringArray(n, v, Encoding.UTF8, o, t),
+                    "utf8");
                 ValidateBeginCount(p, eb, "CountedBinary", eb.AddCountedBinary, eb.AddCountedBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
 
                 var val = utf8.GetBytes("val");
@@ -116,8 +177,10 @@ namespace TraceLoggingDynamicTest
                 for (int i = 0; i < N; i++)
                 {
                     eb.Reset("Benchmark");
-                    eb.AddCountedAnsiString("f1", val);
+                    eb.AddCountedString("f1", "now is the time for all good men to come to the aid of their country");
                     eb.AddInt32("f2", i);
+                    eb.AddInt32("f2", i + 2);
+                    eb.AddInt32("f2", i + 4);
                     p.Write(eb);
                 }
 
