@@ -707,6 +707,7 @@ namespace Microsoft.TraceLoggingDynamic
         private const byte ChainBit = 128;
 
         private string name;
+        private Encoding utf8NameEncoding;
         private EventDescriptor descriptor;
         private int tag;
 
@@ -721,24 +722,28 @@ namespace Microsoft.TraceLoggingDynamic
         private Vector data;
 
         /// <summary>
-        /// Initializes a new instance of the EventBuilder class with default initial
-        /// buffer capacity.
+        /// Initializes a new instance of the EventBuilder.
         /// </summary>
-        public EventBuilder()
+        /// <param name="initialMetadataBufferSize">
+        /// The initial capacity of the metadata buffer. This must be a power of 2 in the
+        /// range 4 through 65536. Default is 256 bytes.
+        /// </param>
+        /// <param name="initialDataBufferSize">
+        /// The initial capacity of the data buffer. This must be a power of 2 in the
+        /// range 4 through 65536. Default is 256 bytes.
+        /// </param>
+        public EventBuilder(int initialMetadataBufferSize = 256, int initialDataBufferSize = 256)
+            : this(Encoding.UTF8, initialMetadataBufferSize, initialDataBufferSize)
         {
-            this.metadata = new Vector(256);
-            this.data = new Vector(256);
-
-            // The following has the same effect as Reset("").
-            this.name = "";
-            this.descriptor = new EventDescriptor(EventLevel.Verbose);
-            this.metadata.ReserveSpaceFor(4);
         }
 
         /// <summary>
-        /// Initializes a new instance of the EventBuilder class with the specified
-        /// initial buffer capacity.
+        /// Advanced scenarios: Initializes a new instance of the EventBuilder class that
+        /// uses a customized UTF-8 encoding for event and field names.
         /// </summary>
+        /// <param name="utf8NameEncoding">
+        /// The customized UTF-8 encoding to use for event and field names.
+        /// </param>
         /// <param name="initialMetadataBufferSize">
         /// The initial capacity of the metadata buffer. This must be a power of 2 in the
         /// range 4 through 65536.
@@ -747,7 +752,10 @@ namespace Microsoft.TraceLoggingDynamic
         /// The initial capacity of the data buffer. This must be a power of 2 in the
         /// range 4 through 65536.
         /// </param>
-        public EventBuilder(int initialMetadataBufferSize, int initialDataBufferSize)
+        public EventBuilder(
+            Encoding utf8NameEncoding,
+            int initialMetadataBufferSize = 256,
+            int initialDataBufferSize = 256)
         {
             if (initialMetadataBufferSize < 4 || initialMetadataBufferSize > 65536 ||
                 (initialMetadataBufferSize & (initialMetadataBufferSize - 1)) != 0)
@@ -761,6 +769,7 @@ namespace Microsoft.TraceLoggingDynamic
                 throw new ArgumentOutOfRangeException(nameof(initialDataBufferSize));
             }
 
+            this.utf8NameEncoding = utf8NameEncoding;
             this.metadata = new Vector(initialMetadataBufferSize);
             this.data = new Vector(initialDataBufferSize);
 
@@ -794,6 +803,28 @@ namespace Microsoft.TraceLoggingDynamic
         /// Gets the tag for the event.
         /// </summary>
         public int Tag { get { return this.tag; } }
+
+        /// <summary>
+        /// Advanced scenarios: Gets or sets the UTF-8 encoding that will be used for
+        /// event and field names.
+        /// </summary>
+        public Encoding Utf8NameEncoding
+        {
+            get
+            {
+                return this.utf8NameEncoding;
+            }
+
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(Utf8NameEncoding));
+                }
+
+                this.utf8NameEncoding = value;
+            }
+        }
 
         /// <summary>
         /// Resets this EventBuilder and begins building a new event.
@@ -1667,9 +1698,8 @@ namespace Microsoft.TraceLoggingDynamic
 
             int pos;
 
-            var encodingUtf8 = Encoding.UTF8;
             var nameLength = name.Length;
-            var nameMaxByteCount = encodingUtf8.GetMaxByteCount(nameLength);
+            var nameMaxByteCount = this.utf8NameEncoding.GetMaxByteCount(nameLength);
             if (tag != 0)
             {
                 pos = this.metadata.ReserveSpaceFor(nameMaxByteCount + 7);
@@ -1677,7 +1707,7 @@ namespace Microsoft.TraceLoggingDynamic
                 {
                     fixed (byte* pMeta = this.metadata.data)
                     {
-                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
                         pMeta[pos + 0] = 0; // nul
                         pMeta[pos + 1] = (byte)((byte)inType | ChainBit);
                         pMeta[pos + 2] = (byte)((byte)outType | ChainBit);
@@ -1697,7 +1727,7 @@ namespace Microsoft.TraceLoggingDynamic
                 {
                     fixed (byte* pMeta = this.metadata.data)
                     {
-                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
                         pMeta[pos + 0] = 0; // nul
                         pMeta[pos + 1] = (byte)((byte)inType | ChainBit);
                         pMeta[pos + 2] = (byte)outType;
@@ -1713,7 +1743,7 @@ namespace Microsoft.TraceLoggingDynamic
                 {
                     fixed (byte* pMeta = this.metadata.data)
                     {
-                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
                         pMeta[pos + 0] = 0; // nul
                         pMeta[pos + 1] = (byte)inType;
                     }
@@ -1725,13 +1755,19 @@ namespace Microsoft.TraceLoggingDynamic
             return metadataPos;
         }
 
-        private int AddMetadataName(string name, int nulInOutTagSize)
+        private unsafe int AddMetadataName(string name, int nulInOutTagSize)
         {
-            var encodingUtf8 = Encoding.UTF8;
-            int byteMax = encodingUtf8.GetMaxByteCount(name.Length) + nulInOutTagSize; // nul + intype + outtype + tag
-            int pos = this.metadata.ReserveSpaceFor(byteMax);
+            int nameLength = name.Length;
+            int byteMax = this.utf8NameEncoding.GetMaxByteCount(nameLength) + nulInOutTagSize; // nul + intype + outtype + tag
 
-            pos += encodingUtf8.GetBytes(name, 0, name.Length, this.metadata.data, pos);
+            int pos = this.metadata.ReserveSpaceFor(byteMax);
+            fixed (char* pName = name)
+            {
+                fixed (byte* pMeta = this.metadata.data)
+                {
+                    pos += this.utf8NameEncoding.GetBytes(pName, nameLength, pMeta + pos, byteMax);
+                }
+            }
 
             return pos;
         }
@@ -1874,10 +1910,9 @@ namespace Microsoft.TraceLoggingDynamic
 
             int pos = 2; // skip UInt16 MetadataSize
 
-            var encodingUtf8 = Encoding.UTF8;
             var eventName = this.name;
             var eventNameLength = eventName.Length;
-            var eventNameMaxByteCount = encodingUtf8.GetMaxByteCount(eventNameLength);
+            var eventNameMaxByteCount = this.utf8NameEncoding.GetMaxByteCount(eventNameLength);
             if ((this.tag & 0x0FE00000) == tag)
             {
                 // Event tag fits in 7 bits.
@@ -1887,12 +1922,12 @@ namespace Microsoft.TraceLoggingDynamic
                     fixed (byte* pMeta = this.metadata.data)
                     {
                         pMeta[pos++] = unchecked((byte)(this.tag >> 21));
-                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
                         pMeta[pos++] = 0;
                     }
                 }
             }
-            else if ((this.tag & 0x0FFFC000) == tag)
+            else if ((tag & 0x0FFFC000) == tag)
             {
                 // Event tag fits in 14 bits.
                 this.metadata.ReserveSpaceFor(eventNameMaxByteCount + 2 + 2 + 1);
@@ -1902,7 +1937,7 @@ namespace Microsoft.TraceLoggingDynamic
                     {
                         pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 21));
                         pMeta[pos++] = unchecked((byte)(0x7f & this.tag >> 14));
-                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
                         pMeta[pos++] = 0;
                     }
                 }
@@ -1919,7 +1954,7 @@ namespace Microsoft.TraceLoggingDynamic
                         pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 14));
                         pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 7));
                         pMeta[pos++] = unchecked((byte)(0x7f & this.tag >> 0));
-                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pos += this.utf8NameEncoding.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
                         pMeta[pos++] = 0;
                     }
                 }
@@ -1969,7 +2004,7 @@ namespace Microsoft.TraceLoggingDynamic
                 return 2;
             }
 
-            public unsafe int SetUInt32(int pos, UInt32 value)
+            public int SetUInt32(int pos, UInt32 value)
             {
                 this.data[pos + 0] = unchecked((byte)(value));
                 this.data[pos + 1] = unchecked((byte)(value >> 8));
