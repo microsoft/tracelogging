@@ -674,6 +674,32 @@ namespace Microsoft.TraceLoggingDynamic
             Struct, // Use OutType for field count.
             CountedBinary, // counted, works for arrays, newer (not always supported)
             Mask = 31,
+            NullArray = 64, // Invalid type
+            UnicodeStringArray, // nul-terminated
+            AnsiStringArray, // nul-terminated
+            Int8Array,
+            UInt8Array,
+            Int16Array,
+            UInt16Array,
+            Int32Array,
+            UInt32Array,
+            Int64Array,
+            UInt64Array,
+            Float32Array,
+            Float64Array,
+            Bool32Array,
+            BinaryArray_NotSupported,
+            GuidArray, // size = 16
+            PointerArray_NotSupported,
+            FileTimeArray, // size = 8
+            SystemTimeArray, // size = 16
+            SidArray, // size = 8 + 4 * SubAuthorityCount
+            HexInt32Array,
+            HexInt64Array,
+            CountedStringArray, // counted
+            CountedAnsiStringArray, // counted
+            StructArray, // Use OutType for field count.
+            CountedBinaryArray, // counted, works for arrays, newer (not always supported)
         }
 
         private const byte InTypeCcount = 32;
@@ -836,7 +862,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUnicodeString(string name, String value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UnicodeString, outType, tag);
+            this.AddMetadata(name, InType.UnicodeString, outType, tag);
             this.AddScalarDataNulTerminatedString(value, 0, value.Length);
         }
 
@@ -847,7 +873,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUnicodeString(string name, String value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UnicodeString, outType, tag);
+            this.AddMetadata(name, InType.UnicodeString, outType, tag);
             this.AddScalarDataNulTerminatedString(value, startIndex, count);
         }
 
@@ -858,7 +884,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUnicodeStringArray(string name, String[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.UnicodeString, outType, tag);
+            this.AddMetadata(name, InType.UnicodeStringArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (string value in values)
             {
@@ -873,7 +899,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddAnsiString(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.AnsiString, outType, tag);
+            this.AddMetadata(name, InType.AnsiString, outType, tag);
             this.AddScalarDataNulTerminatedByteString(value, 0, value.Length);
         }
 
@@ -884,7 +910,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.AnsiString, outType, tag);
+            this.AddMetadata(name, InType.AnsiString, outType, tag);
             this.AddScalarDataNulTerminatedByteString(value, startIndex, count);
         }
 
@@ -895,7 +921,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddAnsiStringArray(string name, Byte[][] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.AnsiString, outType, tag);
+            this.AddMetadata(name, InType.AnsiStringArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
@@ -909,7 +935,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt8(string name, SByte value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Int8, outType, tag);
+            this.AddMetadata(name, InType.Int8, outType, tag);
             this.AddScalarDataUInt8(unchecked((Byte)value));
         }
 
@@ -919,7 +945,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt8Array(string name, SByte[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Int8, outType, tag);
+            this.AddMetadata(name, InType.Int8Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(SByte), 0, values.Length);
         }
 
@@ -929,7 +955,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt8(string name, Byte value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UInt8, outType, tag);
+            this.AddMetadata(name, InType.UInt8, outType, tag);
             this.AddScalarDataUInt8(value);
         }
 
@@ -939,7 +965,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt8Array(string name, Byte[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.UInt8, outType, tag);
+            this.AddMetadata(name, InType.UInt8Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Byte), 0, values.Length);
         }
 
@@ -949,7 +975,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt16(string name, Int16 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Int16, outType, tag);
+            this.AddMetadata(name, InType.Int16, outType, tag);
             this.AddScalarDataUInt16(unchecked((UInt16)value));
         }
 
@@ -959,7 +985,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt16Array(string name, Int16[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Int16, outType, tag);
+            this.AddMetadata(name, InType.Int16Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int16), 0, values.Length);
         }
 
@@ -970,7 +996,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt16(string name, UInt16 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UInt16, outType, tag);
+            this.AddMetadata(name, InType.UInt16, outType, tag);
             this.AddScalarDataUInt16(value);
         }
 
@@ -981,7 +1007,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt16Array(string name, UInt16[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.UInt16, outType, tag);
+            this.AddMetadata(name, InType.UInt16Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(UInt16), 0, values.Length);
         }
 
@@ -991,7 +1017,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt32(string name, Int32 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Int32, outType, tag);
+            this.AddMetadata(name, InType.Int32, outType, tag);
             this.AddScalarDataUInt32(unchecked((UInt32)value));
         }
 
@@ -1001,7 +1027,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Int32, outType, tag);
+            this.AddMetadata(name, InType.Int32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
@@ -1011,7 +1037,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt32(string name, UInt32 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UInt32, outType, tag);
+            this.AddMetadata(name, InType.UInt32, outType, tag);
             this.AddScalarDataUInt32(value);
         }
 
@@ -1021,7 +1047,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt32Array(string name, UInt32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.UInt32, outType, tag);
+            this.AddMetadata(name, InType.UInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(UInt32), 0, values.Length);
         }
 
@@ -1031,7 +1057,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt64(string name, Int64 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Int64, outType, tag);
+            this.AddMetadata(name, InType.Int64, outType, tag);
             this.AddScalarDataUInt64(unchecked((UInt64)value));
         }
 
@@ -1041,7 +1067,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddInt64Array(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Int64, outType, tag);
+            this.AddMetadata(name, InType.Int64Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
@@ -1051,7 +1077,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt64(string name, UInt64 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.UInt64, outType, tag);
+            this.AddMetadata(name, InType.UInt64, outType, tag);
             this.AddScalarDataUInt64(value);
         }
 
@@ -1061,7 +1087,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUInt64Array(string name, UInt64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.UInt64, outType, tag);
+            this.AddMetadata(name, InType.UInt64Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(UInt64), 0, values.Length);
         }
 
@@ -1073,12 +1099,12 @@ namespace Microsoft.TraceLoggingDynamic
         {
             if (IntPtr.Size == 8)
             {
-                this.AddScalarMetadata(name, InType.Int64, outType, tag);
+                this.AddMetadata(name, InType.Int64, outType, tag);
                 this.AddScalarDataUInt64(unchecked((UInt64)value));
             }
             else
             {
-                this.AddScalarMetadata(name, InType.Int32, outType, tag);
+                this.AddMetadata(name, InType.Int32, outType, tag);
                 this.AddScalarDataUInt32(unchecked((UInt32)value));
             }
         }
@@ -1089,7 +1115,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddIntPtrArray(string name, IntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, IntPtr.Size == 8 ? InType.Int64 : InType.Int32, outType, tag);
+            this.AddMetadata(name, IntPtr.Size == 8 ? InType.Int64Array : InType.Int32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, IntPtr.Size, 0, values.Length);
         }
 
@@ -1101,12 +1127,12 @@ namespace Microsoft.TraceLoggingDynamic
         {
             if (UIntPtr.Size == 8)
             {
-                this.AddScalarMetadata(name, InType.UInt64, outType, tag);
+                this.AddMetadata(name, InType.UInt64, outType, tag);
                 this.AddScalarDataUInt64(unchecked((UInt64)value));
             }
             else
             {
-                this.AddScalarMetadata(name, InType.UInt32, outType, tag);
+                this.AddMetadata(name, InType.UInt32, outType, tag);
                 this.AddScalarDataUInt32(unchecked((UInt32)value));
             }
         }
@@ -1117,7 +1143,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddUIntPtrArray(string name, UIntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, UIntPtr.Size == 8 ? InType.UInt64 : InType.UInt32, outType, tag);
+            this.AddMetadata(name, UIntPtr.Size == 8 ? InType.UInt64Array : InType.UInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, UIntPtr.Size, 0, values.Length);
         }
 
@@ -1127,7 +1153,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFloat32(string name, Single value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Float32, outType, tag);
+            this.AddMetadata(name, InType.Float32, outType, tag);
             this.AddScalarDataFloat32(value);
         }
 
@@ -1137,7 +1163,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFloat32Array(string name, Single[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Float32, outType, tag);
+            this.AddMetadata(name, InType.Float32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Single), 0, values.Length);
         }
 
@@ -1147,7 +1173,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFloat64(string name, Double value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Float64, outType, tag);
+            this.AddMetadata(name, InType.Float64, outType, tag);
             this.AddScalarDataFloat64(value);
         }
 
@@ -1157,7 +1183,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFloat64Array(string name, Double[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Float64, outType, tag);
+            this.AddMetadata(name, InType.Float64Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Double), 0, values.Length);
         }
 
@@ -1167,7 +1193,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddBool32(string name, Int32 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Bool32, outType, tag);
+            this.AddMetadata(name, InType.Bool32, outType, tag);
             this.AddScalarDataUInt32(unchecked((UInt32)value));
         }
 
@@ -1177,7 +1203,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddBool32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Bool32, outType, tag);
+            this.AddMetadata(name, InType.Bool32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
@@ -1187,7 +1213,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddBinary(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Binary, outType, tag);
+            this.AddMetadata(name, InType.Binary, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(Byte), 0, value.Length);
         }
 
@@ -1197,7 +1223,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddBinary(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Binary, outType, tag);
+            this.AddMetadata(name, InType.Binary, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(Byte), startIndex, count);
         }
 
@@ -1207,7 +1233,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public unsafe void AddGuid(string name, Guid value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Guid, outType, tag);
+            this.AddMetadata(name, InType.Guid, outType, tag);
             int pos = this.data.ReserveSpaceFor(16);
             Marshal.Copy((IntPtr)(&value), this.data.data, pos, 16);
 
@@ -1219,7 +1245,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public unsafe void AddGuidArray(string name, Guid[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Guid, outType, tag);
+            this.AddMetadata(name, InType.GuidArray, outType, tag);
             fixed (Guid* valuesPtr = values)
             {
                 var valuesLength = values.Length;
@@ -1238,7 +1264,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFileTime(string name, Int64 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.FileTime, outType, tag);
+            this.AddMetadata(name, InType.FileTime, outType, tag);
             this.AddScalarDataUInt64(unchecked((UInt64)value));
         }
 
@@ -1248,7 +1274,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFileTimeArray(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.FileTime, outType, tag);
+            this.AddMetadata(name, InType.FileTimeArray, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
@@ -1261,7 +1287,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFileTime(string name, DateTime value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.FileTime, outType, tag);
+            this.AddMetadata(name, InType.FileTime, outType, tag);
             this.AddScalarDataUInt64(DateTimeToFileTime(value));
         }
 
@@ -1274,7 +1300,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddFileTimeArray(string name, DateTime[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.FileTime, outType, tag);
+            this.AddMetadata(name, InType.FileTimeArray, outType, tag);
 
             int pos = this.AddArrayBegin(values.Length, values.Length * sizeof(UInt64));
             foreach (DateTime value in values)
@@ -1289,7 +1315,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddSystemTime(string name, Int16[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.SystemTime, outType, tag);
+            this.AddMetadata(name, InType.SystemTime, outType, tag);
             int pos = this.data.ReserveSpaceFor(16);
             Buffer.BlockCopy(value, 0, this.data.data, pos, 16);
         }
@@ -1301,7 +1327,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddSystemTimeArray(string name, Int16[][] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.SystemTime, outType, tag);
+            this.AddMetadata(name, InType.SystemTimeArray, outType, tag);
 
             var valuesLength = values.Length;
             int pos = this.AddArrayBegin(valuesLength, valuesLength * 16);
@@ -1318,7 +1344,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddSid(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.Sid, outType, tag);
+            this.AddMetadata(name, InType.Sid, outType, tag);
             this.AddDataBytes(value, 8 + 4 * value[1]);
         }
 
@@ -1328,7 +1354,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddSidArray(string name, Byte[][] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.Sid, outType, tag);
+            this.AddMetadata(name, InType.SidArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
@@ -1342,7 +1368,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt32(string name, Int32 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.HexInt32, outType, tag);
+            this.AddMetadata(name, InType.HexInt32, outType, tag);
             this.AddScalarDataUInt32(unchecked((UInt32)value));
         }
 
@@ -1352,7 +1378,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt32Array(string name, Int32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.HexInt32, outType, tag);
+            this.AddMetadata(name, InType.HexInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int32), 0, values.Length);
         }
 
@@ -1362,7 +1388,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt32(string name, UInt32 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.HexInt32, outType, tag);
+            this.AddMetadata(name, InType.HexInt32, outType, tag);
             this.AddScalarDataUInt32(value);
         }
 
@@ -1372,7 +1398,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt32Array(string name, UInt32[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.HexInt32, outType, tag);
+            this.AddMetadata(name, InType.HexInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(UInt32), 0, values.Length);
         }
 
@@ -1382,7 +1408,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt64(string name, Int64 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.HexInt64, outType, tag);
+            this.AddMetadata(name, InType.HexInt64, outType, tag);
             this.AddScalarDataUInt64(unchecked((UInt64)value));
         }
 
@@ -1392,7 +1418,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt64Array(string name, Int64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.HexInt64, outType, tag);
+            this.AddMetadata(name, InType.HexInt64Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(Int64), 0, values.Length);
         }
 
@@ -1402,7 +1428,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt64(string name, UInt64 value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.HexInt64, outType, tag);
+            this.AddMetadata(name, InType.HexInt64, outType, tag);
             this.AddScalarDataUInt64(value);
         }
 
@@ -1412,7 +1438,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexInt64Array(string name, UInt64[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.HexInt64, outType, tag);
+            this.AddMetadata(name, InType.HexInt64Array, outType, tag);
             this.AddArrayDataBlockCopy(values, sizeof(UInt64), 0, values.Length);
         }
 
@@ -1424,12 +1450,12 @@ namespace Microsoft.TraceLoggingDynamic
         {
             if (IntPtr.Size == 8)
             {
-                this.AddScalarMetadata(name, InType.HexInt64, outType, tag);
+                this.AddMetadata(name, InType.HexInt64, outType, tag);
                 this.AddScalarDataUInt64(unchecked((UInt64)value));
             }
             else
             {
-                this.AddScalarMetadata(name, InType.HexInt32, outType, tag);
+                this.AddMetadata(name, InType.HexInt32, outType, tag);
                 this.AddScalarDataUInt32(unchecked((UInt32)value));
             }
         }
@@ -1440,7 +1466,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexIntPtrArray(string name, IntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, IntPtr.Size == 8 ? InType.HexInt64 : InType.HexInt32, outType, tag);
+            this.AddMetadata(name, IntPtr.Size == 8 ? InType.HexInt64Array : InType.HexInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, IntPtr.Size, 0, values.Length);
         }
 
@@ -1452,12 +1478,12 @@ namespace Microsoft.TraceLoggingDynamic
         {
             if (UIntPtr.Size == 8)
             {
-                this.AddScalarMetadata(name, InType.HexInt64, outType, tag);
+                this.AddMetadata(name, InType.HexInt64, outType, tag);
                 this.AddScalarDataUInt64(unchecked((UInt64)value));
             }
             else
             {
-                this.AddScalarMetadata(name, InType.HexInt32, outType, tag);
+                this.AddMetadata(name, InType.HexInt32, outType, tag);
                 this.AddScalarDataUInt32(unchecked((UInt32)value));
             }
         }
@@ -1468,7 +1494,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddHexIntPtrArray(string name, UIntPtr[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, UIntPtr.Size == 8 ? InType.HexInt64 : InType.HexInt32, outType, tag);
+            this.AddMetadata(name, UIntPtr.Size == 8 ? InType.HexInt64Array : InType.HexInt32Array, outType, tag);
             this.AddArrayDataBlockCopy(values, UIntPtr.Size, 0, values.Length);
         }
 
@@ -1478,7 +1504,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedString(string name, String value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedString, outType, tag);
+            this.AddMetadata(name, InType.CountedString, outType, tag);
             this.AddScalarDataCountedString(value, 0, value.Length);
         }
 
@@ -1488,7 +1514,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedString(string name, String value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedString, outType, tag);
+            this.AddMetadata(name, InType.CountedString, outType, tag);
             this.AddScalarDataCountedString(value, startIndex, count);
         }
 
@@ -1498,7 +1524,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedStringArray(string name, String[] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.CountedString, outType, tag);
+            this.AddMetadata(name, InType.CountedStringArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (string value in values)
             {
@@ -1512,7 +1538,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedAnsiString(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddMetadata(name, InType.CountedAnsiString, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(byte), 0, value.Length);
         }
 
@@ -1522,7 +1548,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedAnsiString(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddMetadata(name, InType.CountedAnsiString, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(byte), startIndex, count);
         }
 
@@ -1532,7 +1558,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedAnsiStringArray(string name, Byte[][] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.CountedAnsiString, outType, tag);
+            this.AddMetadata(name, InType.CountedAnsiStringArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
@@ -1546,7 +1572,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedBinary(string name, Byte[] value, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedBinary, outType, tag);
+            this.AddMetadata(name, InType.CountedBinary, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(Byte), 0, value.Length);
         }
 
@@ -1556,7 +1582,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedBinary(string name, Byte[] value, int startIndex, int count, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddScalarMetadata(name, InType.CountedBinary, outType, tag);
+            this.AddMetadata(name, InType.CountedBinary, outType, tag);
             this.AddArrayDataBlockCopy(value, sizeof(Byte), startIndex, count);
         }
 
@@ -1566,7 +1592,7 @@ namespace Microsoft.TraceLoggingDynamic
         /// </summary>
         public void AddCountedBinaryArray(string name, Byte[][] values, EventOutType outType = EventOutType.Default, int tag = 0)
         {
-            this.AddArrayMetadata(name, InType.CountedBinary, outType, tag);
+            this.AddMetadata(name, InType.CountedBinaryArray, outType, tag);
             this.AddArrayBegin(values.Length, 0);
             foreach (var value in values)
             {
@@ -1579,14 +1605,41 @@ namespace Microsoft.TraceLoggingDynamic
         /// fieldCount logical fields should be considered as members of this field.
         /// Note that fieldCount must be in the range 1 to 127.
         /// </summary>
-        public void AddStruct(string name, byte fieldCount, int tag = 0)
+        /// <returns>
+        /// The offset of the struct size within the metadata. This value is normally
+        /// ignored. However, if you do not know the number of fields in a structure
+        /// ahead of time, you can use this value with SetStructFieldCount.
+        /// </returns>
+        public int AddStruct(string name, byte fieldCount, int tag = 0)
         {
             if (fieldCount < 1 || fieldCount > 127)
             {
                 throw new ArgumentOutOfRangeException(nameof(fieldCount));
             }
 
-            this.AddScalarMetadata(name, InType.Struct, (EventOutType)fieldCount, tag);
+            return this.AddMetadata(name, InType.Struct, (EventOutType)fieldCount, tag);
+        }
+
+        /// <summary>
+        /// Resets the number of logical fields in the specified structure.
+        /// </summary>
+        /// <param name="metadataPosition">
+        /// The position of the metadata field within the structure. This value is
+        /// returned by the AddStruct method.
+        /// </param>
+        /// <param name="fieldCount">
+        /// The actual number of fields in the structure. This value must be in the range
+        /// 1 to 127.
+        /// </param>
+        public void SetStructFieldCount(int metadataPosition, byte fieldCount)
+        {
+            if (fieldCount < 1 || fieldCount > 127)
+            {
+                throw new ArgumentOutOfRangeException(nameof(fieldCount));
+            }
+
+            var meta = this.metadata.data;
+            meta[metadataPosition] = (byte)((meta[metadataPosition] & 0x80) | (fieldCount & 0x7F));
         }
 
         /// <summary>
@@ -1604,74 +1657,72 @@ namespace Microsoft.TraceLoggingDynamic
             };
         }
 
-        private void AddScalarMetadata(string name, InType inType, EventOutType outType, int tag)
+        /// <returns>The position of the outType byte within the metadata array.</returns>
+        private unsafe int AddMetadata(string name, InType inType, EventOutType outType, int tag)
         {
+            int metadataPos;
             Debug.Assert(name.IndexOf('\0') < 0, "Field name must not have embedded NUL characters.");
             Debug.Assert(((int)outType & 127) == (int)outType, "Invalid outType.");
             Debug.Assert((tag & 0xfffffff) == tag, "Tag must be 28-bit value.");
 
+            int pos;
+
+            var encodingUtf8 = Encoding.UTF8;
+            var nameLength = name.Length;
+            var nameMaxByteCount = encodingUtf8.GetMaxByteCount(nameLength);
             if (tag != 0)
             {
-                int pos = this.AddMetadataName(name, 7);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)((byte)inType | ChainBit);
-                this.metadata.data[pos++] = (byte)((byte)outType | ChainBit);
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 21));
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 14));
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 7));
-                this.metadata.data[pos++] = unchecked((byte)(0x7F & tag));
-                this.metadata.SetSize(pos);
+                pos = this.metadata.ReserveSpaceFor(nameMaxByteCount + 7);
+                fixed (char* pName = name)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pMeta[pos + 0] = 0; // nul
+                        pMeta[pos + 1] = (byte)((byte)inType | ChainBit);
+                        pMeta[pos + 2] = (byte)((byte)outType | ChainBit);
+                        pMeta[pos + 3] = unchecked((byte)(0x80 | tag >> 21));
+                        pMeta[pos + 4] = unchecked((byte)(0x80 | tag >> 14));
+                        pMeta[pos + 5] = unchecked((byte)(0x80 | tag >> 7));
+                        pMeta[pos + 6] = unchecked((byte)(0x7F & tag));
+                    }
+                }
+                this.metadata.SetSize(pos + 7);
+                metadataPos = pos + 2;
             }
             else if (outType != EventOutType.Default)
             {
-                int pos = this.AddMetadataName(name, 3);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)((byte)inType | ChainBit);
-                this.metadata.data[pos++] = (byte)outType;
-                this.metadata.SetSize(pos);
+                pos = this.metadata.ReserveSpaceFor(nameMaxByteCount + 3);
+                fixed (char* pName = name)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pMeta[pos + 0] = 0; // nul
+                        pMeta[pos + 1] = (byte)((byte)inType | ChainBit);
+                        pMeta[pos + 2] = (byte)outType;
+                    }
+                }
+                this.metadata.SetSize(pos + 3);
+                metadataPos = pos + 2;
             }
             else
             {
-                int pos = this.AddMetadataName(name, 2);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)inType;
-                this.metadata.SetSize(pos);
+                pos = this.metadata.ReserveSpaceFor(nameMaxByteCount + 2);
+                fixed (char* pName = name)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pos += encodingUtf8.GetBytes(pName, nameLength, pMeta + pos, nameMaxByteCount);
+                        pMeta[pos + 0] = 0; // nul
+                        pMeta[pos + 1] = (byte)inType;
+                    }
+                }
+                this.metadata.SetSize(pos + 2);
+                metadataPos = -1;
             }
-        }
 
-        private void AddArrayMetadata(string name, InType inType, EventOutType outType, int tag)
-        {
-            Debug.Assert(name.IndexOf('\0') < 0, "Field name must not have embedded NUL characters.");
-            Debug.Assert(((int)outType & 127) == (int)outType, "Invalid outType.");
-            Debug.Assert((tag & 0xfffffff) == tag, "Tag must be 28-bit value.");
-
-            if (tag != 0)
-            {
-                int pos = this.AddMetadataName(name, 7);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)((byte)inType | InTypeVcount | ChainBit);
-                this.metadata.data[pos++] = (byte)((byte)outType | ChainBit);
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 21));
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 14));
-                this.metadata.data[pos++] = unchecked((byte)(0x80 | tag >> 7));
-                this.metadata.data[pos++] = unchecked((byte)(0x7F & tag));
-                this.metadata.SetSize(pos);
-            }
-            else if (outType != EventOutType.Default)
-            {
-                int pos = this.AddMetadataName(name, 3);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)((byte)inType | InTypeVcount | ChainBit);
-                this.metadata.data[pos++] = (byte)outType;
-                this.metadata.SetSize(pos);
-            }
-            else
-            {
-                int pos = this.AddMetadataName(name, 2);
-                this.metadata.data[pos++] = 0; // nul
-                this.metadata.data[pos++] = (byte)((byte)inType | InTypeVcount);
-                this.metadata.SetSize(pos);
-            }
+            return metadataPos;
         }
 
         private int AddMetadataName(string name, int nulInOutTagSize)
@@ -1741,7 +1792,7 @@ namespace Microsoft.TraceLoggingDynamic
             this.data.SetUInt8(pos + copyLength, 0);
         }
 
-        private void AddScalarDataNulTerminatedString(String value, int startIndex, int count)
+        private unsafe void AddScalarDataNulTerminatedString(String value, int startIndex, int count)
         {
             Debug.Assert(count >= 0);
             Debug.Assert(count <= value.Length - startIndex);
@@ -1750,25 +1801,37 @@ namespace Microsoft.TraceLoggingDynamic
             int copyLength = endIndex < 0
                 ? count
                 : endIndex - startIndex;
-            var encodingUtf16 = Encoding.Unicode;
-            int valueMaxSize = encodingUtf16.GetMaxByteCount(copyLength + 1);
-            int pos = this.data.ReserveSpaceFor(valueMaxSize);
-            pos += encodingUtf16.GetBytes(value, startIndex, copyLength, this.data.data, pos);
-            pos += this.data.SetUInt16(pos, 0);
-            this.data.SetSize(pos);
+
+            int valueSize = copyLength * sizeof(UInt16);
+            int pos = this.data.ReserveSpaceFor(valueSize + sizeof(UInt16));
+            fixed (char* pValue = value)
+            {
+                fixed (byte* pData = this.data.data)
+                {
+                    Buffer.MemoryCopy(pValue + startIndex, pData + pos, valueSize, valueSize);
+                    pos += valueSize;
+                    pData[pos++] = 0;
+                    pData[pos++] = 0;
+                }
+            }
         }
 
-        private void AddScalarDataCountedString(String value, int startIndex, int count)
+        private unsafe void AddScalarDataCountedString(String value, int startIndex, int count)
         {
             Debug.Assert(count >= 0);
             Debug.Assert(count <= value.Length - startIndex);
 
-            var encodingUtf16 = Encoding.Unicode;
-            int valueMax = encodingUtf16.GetMaxByteCount(count);
-            int pos = this.data.ReserveSpaceFor(sizeof(UInt16) + valueMax);
-            int valueSize = encodingUtf16.GetBytes(value, startIndex, count, this.data.data, pos + sizeof(UInt16));
-            this.data.SetUInt16(pos, (UInt16)valueSize);
-            this.data.SetSize(pos + sizeof(UInt16) + valueSize);
+            int valueSize = count * sizeof(UInt16);
+            int pos = this.data.ReserveSpaceFor(sizeof(UInt16) + valueSize);
+            fixed (char* pValue = value)
+            {
+                fixed (byte* pData = this.data.data)
+                {
+                    pData[pos++] = (byte)valueSize;
+                    pData[pos++] = (byte)(valueSize >> 8);
+                    Buffer.MemoryCopy(pValue + startIndex, pData + pos, valueSize, valueSize);
+                }
+            }
         }
 
         /// <summary>
@@ -1803,56 +1866,70 @@ namespace Microsoft.TraceLoggingDynamic
             return valueTicks < 504911232000000000 ? 0u : (UInt64)valueTicks - 504911232000000000u;
         }
 
-        private void ResetEvent()
+        private unsafe void ResetEvent()
         {
             Debug.Assert(this.name.IndexOf('\0') < 0, "Event name must not have embedded NUL characters.");
-
             this.data.Reset();
             this.metadata.Reset();
 
+            int pos = 2; // skip UInt16 MetadataSize
+
+            var encodingUtf8 = Encoding.UTF8;
+            var eventName = this.name;
+            var eventNameLength = eventName.Length;
+            var eventNameMaxByteCount = encodingUtf8.GetMaxByteCount(eventNameLength);
             if ((this.tag & 0x0FE00000) == tag)
             {
                 // Event tag fits in 7 bits.
-                this.ResetEventSkipTag(2 + 1);
-                this.metadata.data[2] = unchecked((byte)(this.tag >> 21));
+                this.metadata.ReserveSpaceFor(eventNameMaxByteCount + 2 + 1 + 1);
+                fixed (char* pEventName = eventName)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pMeta[pos++] = unchecked((byte)(this.tag >> 21));
+                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pMeta[pos++] = 0;
+                    }
+                }
             }
             else if ((this.tag & 0x0FFFC000) == tag)
             {
                 // Event tag fits in 14 bits.
-                this.ResetEventSkipTag(2 + 2);
-                this.metadata.data[2] = unchecked((byte)(0x80 | this.tag >> 21));
-                this.metadata.data[3] = unchecked((byte)(0x7f & this.tag >> 14));
+                this.metadata.ReserveSpaceFor(eventNameMaxByteCount + 2 + 2 + 1);
+                fixed (char* pEventName = eventName)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 21));
+                        pMeta[pos++] = unchecked((byte)(0x7f & this.tag >> 14));
+                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pMeta[pos++] = 0;
+                    }
+                }
             }
             else if ((this.tag & 0x0FFFFFFF) == tag)
             {
                 // Event tag fits in 28 bits.
-                this.ResetEventSkipTag(2 + 4);
-                this.metadata.data[2] = unchecked((byte)(0x80 | this.tag >> 21));
-                this.metadata.data[3] = unchecked((byte)(0x80 | this.tag >> 14));
-                this.metadata.data[4] = unchecked((byte)(0x80 | this.tag >> 7));
-                this.metadata.data[5] = unchecked((byte)(0x7f & this.tag >> 0));
+                this.metadata.ReserveSpaceFor(eventNameMaxByteCount + 2 + 4 + 1);
+                fixed (char* pEventName = eventName)
+                {
+                    fixed (byte* pMeta = this.metadata.data)
+                    {
+                        pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 21));
+                        pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 14));
+                        pMeta[pos++] = unchecked((byte)(0x80 | this.tag >> 7));
+                        pMeta[pos++] = unchecked((byte)(0x7f & this.tag >> 0));
+                        pos += encodingUtf8.GetBytes(pEventName, eventNameLength, pMeta + pos, eventNameMaxByteCount);
+                        pMeta[pos++] = 0;
+                    }
+                }
             }
             else
             {
                 throw new ArgumentException("Tag does not fit in 28 bits.", "tag");
             }
-        }
 
-        private void ResetEventSkipTag(int namePos)
-        {
-            var encodingUtf8 = Encoding.UTF8;
-            int metadataMax = encodingUtf8.GetMaxByteCount(this.name.Length) + namePos + 1;
-            this.metadata.ReserveSpaceFor(metadataMax);
-
-            // Placeholder for UINT16 metadata size, filled-in by EndEvent.
-            this.metadata.data[0] = 0;
-            this.metadata.data[1] = 0;
-
-            // Name + NUL
-            int pos = namePos;
-            pos += encodingUtf8.GetBytes(this.name, 0, this.name.Length, this.metadata.data, pos);
-            this.metadata.data[pos] = 0;
-            this.metadata.SetSize(pos + 1);
+            this.metadata.SetSize(pos);
         }
 
         private struct Vector
@@ -1892,7 +1969,7 @@ namespace Microsoft.TraceLoggingDynamic
                 return 2;
             }
 
-            public int SetUInt32(int pos, UInt32 value)
+            public unsafe int SetUInt32(int pos, UInt32 value)
             {
                 this.data[pos + 0] = unchecked((byte)(value));
                 this.data[pos + 1] = unchecked((byte)(value >> 8));
