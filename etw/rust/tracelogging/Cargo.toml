@@ -1,0 +1,16 @@
+[package]
+name = "tracelogging"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default =["macros"]
+macros = ["dep:tracelogging_macros"]
+no_windows = [] # For testing:everything is a no-op even when running on Windows.
+
+[dependencies]
+tracelogging_macros = { path = "tracelogging_macros", optional = true }
+
+[dev-dependencies]
+windows = ">= 0.39"
+uuid  = ">= 1.1"

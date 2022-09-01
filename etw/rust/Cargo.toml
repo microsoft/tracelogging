@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "tracelogging",
+    "tracelogging/tracelogging_macros",
+    "tracelogging_dynamic",
+]
+
+[profile.release]
+lto = true
