@@ -1,50 +1,176 @@
-﻿using Microsoft.TraceLoggingDynamic;
-using System.Security.Principal;
-using System;
-using System.Diagnostics;
-using System.Text;
-
-namespace TraceLoggingDynamicTest
+﻿namespace TraceLoggingDynamicTest
 {
-    class Latin1 : Encoding
+    using Microsoft.TraceLoggingDynamic;
+    using System;
+    using System.Diagnostics;
+    using Encoding = System.Text.Encoding;
+    using Stopwatch = System.Diagnostics.Stopwatch;
+
+    /// <summary>
+    /// Like ASCIIEncoding but instead of checking for non-ASCII characters, it just
+    /// ignores the top bits of the character. This is significantly faster than
+    /// ASCIIEncoding and can be used to improve performance in cases where you know a
+    /// string only contains ASCII characters.
+    /// </summary>
+    class UncheckedASCIIEncoding : Encoding
     {
+        public UncheckedASCIIEncoding()
+            : base(20127) { }
+
+        #region Required implementation of Encoding abstract methods
+
         public override int GetMaxByteCount(int charCount)
         {
             return charCount;
         }
 
-        public override unsafe int GetBytes(char* chars, int charCount, byte* bytes, int byteCount)
+        public override int GetMaxCharCount(int byteCount)
         {
-            for (int i = 0; i < charCount; i += 1)
-            {
-                bytes[i] = checked((byte)chars[i]);
-            }
+            return byteCount;
+        }
+
+        public override int GetByteCount(char[] chars, int charIndex, int charCount)
+        {
             return charCount;
         }
 
-        public override int GetByteCount(char[] chars, int index, int count)
+        public override int GetCharCount(byte[] bytes, int byteIndex, int byteCount)
         {
-            throw new NotImplementedException();
+            return byteCount;
         }
 
-        public override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
+        public unsafe override int GetBytes(char[] chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
         {
-            throw new NotImplementedException();
+            ValidateArgs(chars, charIndex, charCount, bytes, byteIndex, "char", "byte");
+            fixed (char* charPtr = chars)
+            {
+                fixed (byte* bytePtr = bytes)
+                {
+                    return this.GetBytes(charPtr + charIndex, charCount, bytePtr + byteIndex, bytes.Length - byteIndex);
+                }
+            }
         }
 
-        public override int GetCharCount(byte[] bytes, int index, int count)
+        public unsafe override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
         {
-            throw new NotImplementedException();
+            ValidateArgs(bytes, byteIndex, byteCount, chars, charIndex, "byte", "char");
+            fixed (byte* bytePtr = bytes)
+            {
+                fixed (char* charPtr = chars)
+                {
+                    return this.GetChars(bytePtr + byteIndex, byteCount, charPtr + charIndex, chars.Length - charIndex);
+                }
+            }
         }
 
-        public override int GetChars(byte[] bytes, int byteIndex, int byteCount, char[] chars, int charIndex)
+        #endregion
+
+        #region Required overrides (used by the required implementation)
+
+        public override unsafe int GetBytes(char* charPtr, int charCount, byte* bytePtr, int byteCount)
         {
-            throw new NotImplementedException();
+            if (byteCount < charCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(byteCount));
+            }
+
+            for (int i = 0; i < charCount; i += 1)
+            {
+                bytePtr[i] = unchecked((byte)(charPtr[i] & 0x7F));
+            }
+
+            return charCount;
         }
 
-        public override int GetMaxCharCount(int byteCount)
+        public override unsafe int GetChars(byte* bytePtr, int byteCount, char* charPtr, int charCount)
         {
-            throw new NotImplementedException();
+            if (charCount < byteCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(charCount));
+            }
+
+            for (int i = 0; i < byteCount; i += 1)
+            {
+                charPtr[i] = (char)bytePtr[i];
+            }
+
+            return byteCount;
+        }
+
+        #endregion
+
+        #region Optional overrides (performance/functionality improvement)
+
+        public override bool IsSingleByte => true;
+
+        public override int GetByteCount(string chars)
+        {
+            if (chars == null)
+            {
+                throw new ArgumentNullException(nameof(chars));
+            }
+
+            return chars.Length;
+        }
+
+        public override unsafe int GetByteCount(char* charPtr, int charCount)
+        {
+            return charCount;
+        }
+
+        public override unsafe int GetCharCount(byte* bytePtr, int byteCount)
+        {
+            return byteCount;
+        }
+
+        public unsafe override int GetBytes(string chars, int charIndex, int charCount, byte[] bytes, int byteIndex)
+        {
+            if (chars == null || bytes == null)
+            {
+                throw new ArgumentNullException(chars == null ? nameof(chars) : nameof(bytes));
+            }
+            else if (charIndex < 0 || charCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(charIndex < 0 ? nameof(charIndex) : nameof(charCount));
+            }
+            else if (chars.Length - charIndex < charCount)
+            {
+                throw new ArgumentOutOfRangeException(chars);
+            }
+            else if (byteIndex < 0 || byteIndex > bytes.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(byteIndex));
+            }
+
+            fixed (char* charPtr = chars)
+            {
+                fixed (byte* bytePtr = bytes)
+                {
+                    return this.GetBytes(charPtr + charIndex, charCount, bytePtr + byteIndex, bytes.Length - byteIndex);
+                }
+            }
+        }
+
+        #endregion
+
+        private static void ValidateArgs<A, B>(A[] a, int aIndex, int aCount, B[] b, int bIndex, string aName, string bName)
+        {
+            if (a == null || b == null)
+            {
+                throw new ArgumentNullException(a == null ? aName + "s" : bName + "s");
+            }
+            else if (aIndex < 0 || aCount < 0)
+            {
+                throw new ArgumentOutOfRangeException(aIndex < 0 ? aName + "Index" : aName + "Count");
+            }
+            else if (a.Length - aIndex < aCount)
+            {
+                throw new ArgumentOutOfRangeException(aName + "s");
+            }
+            else if (bIndex < 0 || bIndex > b.Length)
+            {
+                throw new ArgumentOutOfRangeException(bName + "Index");
+            }
         }
     }
 
@@ -61,7 +187,10 @@ namespace TraceLoggingDynamicTest
                 Console.WriteLine("ERROR: Bad GetGuidForName.");
             }
 
-            var eb = new EventBuilder(new Latin1());
+            var eb = new EventBuilder(new UncheckedASCIIEncoding());
+            var rawFields = eb.GetRawFields();
+            Debug.Assert(rawFields.Item1.Length == 0);
+            Debug.Assert(rawFields.Item2.Length == 0);
             using (var p = new EventProvider("TraceLoggingDynamicTest"))
             {
                 Console.WriteLine("{0} enabled: {1}", p, p.IsEnabled());
@@ -75,20 +204,31 @@ namespace TraceLoggingDynamicTest
 
                 eb.Reset("tag0xFE00000", EventLevel.Verbose, 1, 0xFE00000);
                 p.Write(eb);
+                rawFields = eb.GetRawFields();
+                Debug.Assert(rawFields.Item1.Length == 0);
+                Debug.Assert(rawFields.Item2.Length == 0);
 
                 eb.Reset("tag0xFEDC000", EventLevel.Verbose, 1, 0xFEDC000);
                 p.Write(eb);
+                rawFields = eb.GetRawFields();
+                Debug.Assert(rawFields.Item1.Length == 0);
+                Debug.Assert(rawFields.Item2.Length == 0);
 
                 eb.Reset("tag0xFEDCBAF", EventLevel.Verbose, 1, 0xFEDCBAF);
                 p.Write(eb);
+                rawFields = eb.GetRawFields();
+                Debug.Assert(rawFields.Item1.Length == 0);
+                Debug.Assert(rawFields.Item2.Length == 0);
 
                 eb.Reset("fieldtag");
                 eb.AddUInt8("0xFE00000", 0, EventOutType.Default, 0xFE00000);
                 eb.AddUInt8("0xFEDC000", 0, EventOutType.Default, 0xFEDC000);
                 eb.AddUInt8("0xFEDCBAF", 0, EventOutType.Default, 0xFEDCBAF);
                 p.Write(eb);
+                rawFields = eb.GetRawFields();
 
                 eb.Reset("outtypes");
+                eb.AppendRawFields(rawFields);
                 eb.AddUInt8("default100", 100);
                 eb.AddUInt8("string65", 65, EventOutType.String);
                 eb.AddUInt8("bool1", 1, EventOutType.Boolean);
@@ -97,11 +237,21 @@ namespace TraceLoggingDynamicTest
 
                 eb.Reset("structs");
                 eb.AddUInt8("start", 0);
-                var structPos = eb.AddStruct("struct1", 1, 0xFE00000);
-                eb.SetStructFieldCount(structPos, 2);
-                eb.AddUInt8("nested1", 1);
-                eb.AddStruct("struct2", 1);
-                eb.AddUInt8("nested2", 2);
+                var struct1Pos = eb.AddStruct("struct1", 127, 0xFE00000); // 127 = placeholder value
+                {
+                    byte struct1FieldCount = 0;
+
+                    eb.AddUInt8("nested1", 1);
+                    struct1FieldCount += 1;
+
+                    eb.AddStruct("struct2", 1);
+                    {
+                        eb.AddUInt8("nested2", 2);
+                    }
+                    struct1FieldCount += 1;
+
+                    eb.SetStructFieldCount(struct1Pos, struct1FieldCount); // replace placeholder with actual value
+                }
                 p.Write(eb);
 
                 eb.Reset("zstrs-L4-kFF", EventLevel.Info, 0xff);
@@ -172,7 +322,7 @@ namespace TraceLoggingDynamicTest
                 ValidateBeginCount(p, eb, "CountedBinary", eb.AddCountedBinary, eb.AddCountedBinary, eb.AddCountedBinaryArray, utf8.GetBytes("0123"));
 
                 var val = utf8.GetBytes("val");
-                var N = p.IsEnabled() ? 10000 : 1000000;
+                var N = p.IsEnabled() ? 1 : 50000000;
                 var timer = Stopwatch.StartNew();
                 for (int i = 0; i < N; i++)
                 {
