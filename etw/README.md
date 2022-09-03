@@ -29,3 +29,4 @@ This project provides additional support for TraceLogging developers:
   runtime-dynamic events from C# code.
 - [TraceLoggingDynamic for Python](python/traceloggingdynamic/README.md) provides support for generating
   runtime-dynamic events from Python3 code.
+- [TraceLogging for Rust](rust/README.md) provides support for generating events from Rust code.
