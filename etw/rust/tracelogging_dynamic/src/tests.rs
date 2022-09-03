@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 //extern crate alloc;
 
 use crate::*;
@@ -27,13 +30,10 @@ fn provider() {
     let new_aid1 = Provider::create_activity_id();
     let new_aid2 = Provider::create_activity_id();
 
-    match NATIVE_IMPLEMENTATION {
-        NativeImplementation::Windows => {
-            assert_ne!(new_aid1, Guid::zero());
-            assert_ne!(new_aid2, Guid::zero());
-            assert_ne!(new_aid1, new_aid2);
-        }
-        _ => {}
+    if let NativeImplementation::Windows = NATIVE_IMPLEMENTATION {
+        assert_ne!(new_aid1, Guid::zero());
+        assert_ne!(new_aid2, Guid::zero());
+        assert_ne!(new_aid1, new_aid2);
     }
 
     let aid0 = Provider::current_thread_activity_id();
@@ -177,23 +177,23 @@ fn builder() {
 
     b.reset("zstrs-L4-kFF", Level::Informational, 0xff, 0)
         .add_u8("A", 65, OutType::String, 0)
-        .add_sz16("zstr16-", to_utf16("").as_slice(), OutType::Default, 0)
-        .add_sz16("zstr16-a", to_utf16("a").as_slice(), OutType::Default, 0)
-        .add_sz16("zstr16-0", to_utf16("\0").as_slice(), OutType::Default, 0)
-        .add_sz16("zstr16-a0", to_utf16("a\0").as_slice(), OutType::Default, 0)
-        .add_sz16("zstr16-0a", to_utf16("\0a").as_slice(), OutType::Default, 0)
-        .add_sz16(
+        .add_strz16("zstr16-", to_utf16("").as_slice(), OutType::Default, 0)
+        .add_strz16("zstr16-a", to_utf16("a").as_slice(), OutType::Default, 0)
+        .add_strz16("zstr16-0", to_utf16("\0").as_slice(), OutType::Default, 0)
+        .add_strz16("zstr16-a0", to_utf16("a\0").as_slice(), OutType::Default, 0)
+        .add_strz16("zstr16-0a", to_utf16("\0a").as_slice(), OutType::Default, 0)
+        .add_strz16(
             "zstr16-a0a",
             to_utf16("a\0a").as_slice(),
             OutType::Default,
             0,
         )
-        .add_sz8("zstr8-", "".as_bytes(), OutType::Default, 0)
-        .add_sz8("zstr8-a", "a".as_bytes(), OutType::Default, 0)
-        .add_sz8("zstr8-0", "\0".as_bytes(), OutType::Default, 0)
-        .add_sz8("zstr8-a0", "a\0".as_bytes(), OutType::Default, 0)
-        .add_sz8("zstr8-0a", "\0a".as_bytes(), OutType::Default, 0)
-        .add_sz8("zstr8-a0a", "a\0a".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-", "".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-a", "a".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-0", "\0".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-a0", "a\0".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-0a", "\0a".as_bytes(), OutType::Default, 0)
+        .add_strz8("zstr8-a0a", "a\0a".as_bytes(), OutType::Default, 0)
         .add_u8("A", 65, OutType::String, 0)
         .write(&p, None, None);
 
@@ -203,10 +203,10 @@ fn builder() {
         "UnicodeString",
         to_utf16("zutf16").as_slice(),
         |b, n, v, o, t| {
-            b.add_sz16(n, v, o, t);
+            b.add_strz16(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_sz16_array(n, v, o, t);
+            b.add_strz16_array(n, v, o, t);
         },
     );
     validate(
@@ -215,10 +215,10 @@ fn builder() {
         "AnsiString",
         "zutf8".as_bytes(),
         |b, n, v, o, t| {
-            b.add_sz8(n, v, o, t);
+            b.add_strz8(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_sz8_array(n, v, o, t);
+            b.add_strz8_array(n, v, o, t);
         },
     );
     validate(

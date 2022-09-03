@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use alloc::vec::Vec;
 use core::mem::size_of;
 use core::ptr::copy_nonoverlapping;
@@ -11,14 +14,14 @@ use tracelogging::OutType;
 use tracelogging::_internal::EventDataDescriptor;
 use tracelogging::_internal::EventDescriptor;
 
-use crate::provider;
+use crate::provider::Provider;
 
-/// `EventBuilder` is a builder for events to be written through a Provider.
+/// `EventBuilder` is a builder for events to be written through a [Provider].
 ///
-/// ## Usage
+/// # Overview
 ///
-/// - Check `provider.enabled(level, keyword)` so that you skip the remaining steps if
-///   nobody is listening for your event.
+/// - Check [Provider::enabled], e.g. `my_provider.enabled(level, keyword)`, so that you
+///   skip the remaining steps if no ETW logging sessions are listening for your event.
 /// - Get an EventBuilder, e.g. `let mut builder = EventBuilder::new();`.
 ///   - EventBuilder is reusable. You may get a small performance improvement by reusing
 ///     builders instead of creating a new one for each event.
@@ -31,22 +34,22 @@ use crate::provider;
 ///     metadata of the event. Use 0 if you are not using event tags.
 /// - For each field of the event, call
 ///   `builder.add_TYPE("FieldName", field_value, OutType::OUTTYPE, field_tag)`.
-///   - The method's TYPE suffix maps to an ETW InType that specifies the encoding of the
-///     field as well as the default formatting that should apply if OutType::Default is
-///     used. For example, `add_hex32` maps to ETW InType::Hex32.
+///   - The method's TYPE suffix maps to an [InType] that specifies the encoding of the
+///     field as well as the default formatting that should apply if [OutType::Default]
+///     is used. For example, `add_hex32` maps to [InType::Hex32].
 ///   - The field name should be short and distinct.
 ///   - The OUTTYPE controls the formatting that will be used when the field is decoded.
-///     Use OutType::Default to get the normal formatting based on the method's TYPE
-///     suffix (i.e. the default format for the corresponding InType). Use other OutType
-///     values when non-default formatting is needed. For example, `add_u8` adds a
-///     `UInt8` field to the event. The default OutType for `UInt8` is Unsigned, so if
-///     you use `add_u8(..., OutType::Default, ...), the field will be decoded as an
-///     unsigned decimal integer. However, if you specify OutType::String, the field
-///     will be decoded as a char, and if you specify OutType::Hex, the field will be
-///     formatted as a hexadecimal integer.
+///     Use [OutType::Default] to get the normal formatting based on the method's TYPE
+///     suffix (i.e. the default format for the corresponding [InType]). Use other
+///     [OutType] values when non-default formatting is needed. For example, `add_u8`
+///     adds an [InType::U8] field to the event. The default format for [InType::U8] is
+///     [OutType::Unsigned], so if you use `add_u8(..., OutType::Default, ...), the field
+///     will be decoded as an unsigned decimal integer. However, if you specify
+///     [OutType::String], the field will be formatted as a char, and if you specify
+///     [OutType::Hex], the field will be formatted as a hexadecimal integer.
 ///   - field_tag is a 28-bit provider-defined value that will be included in the
 ///     metadata of the field. Use 0 if you are not using field tags.
-/// - If needed, configure other event options by calling `builder.id_version(id, ver)`,
+/// - As needed, configure other event options by calling `builder.id_version(id, ver)`,
 ///   `builder.channel(channel)`, `builder.opcode(opcode)`, or `builder.task(task)`.
 /// - Call `builder.write(provider, activity_id, related_id)` to
 ///   send the event to ETW.
@@ -57,7 +60,7 @@ use crate::provider;
 ///     newly-started activity. This should be specified for activity-start events and
 ///     should be `None` for other events.
 ///
-/// ## Event Size Limits
+/// # Event Size Limits
 ///
 /// ETW does not support events larger than the event consumer's buffer size. In
 /// addition, regardless of the event consumer's buffer size, ETW does not support events
@@ -167,7 +170,7 @@ impl EventBuilder {
     /// be set for activity-start events and should be None for other events.
     pub fn write(
         &mut self,
-        provider: &provider::Provider,
+        provider: &Provider,
         activity_id: Option<&Guid>,
         related_id: Option<&Guid>,
     ) -> u32 {
@@ -189,7 +192,8 @@ impl EventBuilder {
         return result;
     }
 
-    /// Sets the id and version of the event. Default id = 0, version = 0.
+    /// Sets the id and version of the event. Default is id = 0, version = 0.
+    ///
     /// TraceLogging events are primarily identified by event name, not by id.
     /// Most events use id = 0, version = 0 and therefore do not need to call this
     /// method.
@@ -205,6 +209,7 @@ impl EventBuilder {
     }
 
     /// Sets the channel of the event. Default channel = TraceLogging.
+    ///
     /// Most events should use channel = TraceLogging and therefore do not need to call
     /// this method.
     pub fn channel(&mut self, channel: Channel) -> &mut Self {
@@ -213,13 +218,14 @@ impl EventBuilder {
     }
 
     /// Sets the opcode of the event. Default opcode = Info.
+    ///
     /// Most events use opcode = Info and therefore do not need to call this method.
     ///
     /// You can use opcode to create an activity (a group of related events):
     ///
     /// 1. Begin the activity by writing an activity-start event with opcode = Start,
-    ///    activity_id = the id of the new activity (generated by Guid::new() or
-    ///    Provider::create_activity_id()), and related_id = the id of the parent
+    ///    activity_id = the id of the new activity (generated by [Guid::new] or
+    ///    [Provider::create_activity_id]), and related_id = the id of the parent
     ///    activity.
     /// 2. As appropriate, write activity-info events with opcode = Info,
     ///    activity_id = the id of the activity, and related_id = None.
@@ -232,6 +238,7 @@ impl EventBuilder {
     }
 
     /// Sets the task of the event. Default task = 0.
+    ///
     /// Most events use task = 0 and therefore do not need to call this method.
     ///
     /// Task is a provider-defined 16-bit value assigned to the event. It can be used
@@ -244,7 +251,7 @@ impl EventBuilder {
         return self;
     }
 
-    /// Adds an Sz16 field (nul-terminated UTF16-LE) from a `&[u16]` value.
+    /// Adds a StrZ16 field (nul-terminated UTF16-LE) from a `&[u16]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
     /// If the string contains no `'\0'` chars, one will be added automatically.
@@ -256,7 +263,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str16` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_sz16(
+    pub fn add_strz16(
         &mut self,
         field_name: &str,
         field_value: impl AsRef<[u16]>,
@@ -264,11 +271,11 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_scalar(field_name, InType::Sz16, out_type, field_tag)
-            .raw_add_data_sz(field_value.as_ref());
+            .raw_add_meta_scalar(field_name, InType::StrZ16, out_type, field_tag)
+            .raw_add_data_strz(field_value.as_ref());
     }
 
-    /// Adds an Sz16 array field (nul-terminated UTF16-LE) from an
+    /// Adds a StrZ16 array field (nul-terminated UTF16-LE) from an
     /// iterator-of-`&[u16]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
@@ -281,7 +288,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str16_array` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_sz16_array<T: IntoIterator>(
+    pub fn add_strz16_array<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -292,13 +299,13 @@ impl EventBuilder {
         T::Item: AsRef<[u16]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::Sz16, out_type, field_tag)
+            .raw_add_meta_array(field_name, InType::StrZ16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
-                this.raw_add_data_sz(value.as_ref());
+                this.raw_add_data_strz(value.as_ref());
             });
     }
 
-    /// Adds an Sz8 field (nul-terminated 8-bit string) from a `&[u8]` value.
+    /// Adds a StrZ8 field (nul-terminated 8-bit string) from a `&[u8]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
     /// If the string contains no `'\0'` chars, one will be added automatically.
@@ -310,7 +317,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str8` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_sz8(
+    pub fn add_strz8(
         &mut self,
         field_name: &str,
         field_value: impl AsRef<[u8]>,
@@ -318,11 +325,12 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_scalar(field_name, InType::Sz8, out_type, field_tag)
-            .raw_add_data_sz(field_value.as_ref());
+            .raw_add_meta_scalar(field_name, InType::StrZ8, out_type, field_tag)
+            .raw_add_data_strz(field_value.as_ref());
     }
 
-    /// Adds an Sz8 array field (nul-terminated 8-bit string) from an iterator-of-`&[u8]` value.
+    /// Adds a StrZ8 array field (nul-terminated 8-bit string) from an
+    /// iterator-of-`&[u8]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
     /// If the string contains no `'\0'` chars then one will be added automatically.
@@ -334,7 +342,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str8_array` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_sz8_array<T: IntoIterator>(
+    pub fn add_strz8_array<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -345,9 +353,9 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::Sz8, out_type, field_tag)
+            .raw_add_meta_array(field_name, InType::StrZ8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
-                this.raw_add_data_sz(value.as_ref());
+                this.raw_add_data_strz(value.as_ref());
             });
     }
 
@@ -787,15 +795,14 @@ impl EventBuilder {
     /// Other useful out_type values: IPv6, SocketAddress, Pkcs7WithTypeInfo.
     ///
     /// This is the same as `add_binaryc` except that it uses an older ETW encoding.
-    /// - Older ETW InType, so decoding works in all versions of Windows.
-    /// - Decodes with a synthesized "FieldName.Length" field.
+    /// - Older ETW [InType], so decoding works in all versions of Windows.
+    /// - Decoded event frequently includes a synthesized "FieldName.Length" field.
     /// - Arrays are not supported.
     ///
     /// Note: There is no `add_binary_array` method because the ETW's `Binary` encoding does
     /// not decode correctly with arrays. Array of binary can be created using
     /// `add_binaryc_array`, though the resulting event will only decode correctly
-    /// if the decoder supports ETW's newer `BinaryC` encoding, typically supported if
-    /// the decoder is running on Windows 10 2018 Fall Update or later.
+    /// if the decoder supports ETW's newer `BinaryC` encoding.
     pub fn add_binary(
         &mut self,
         field_name: &str,
@@ -1058,9 +1065,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_sz16` except that the ETW field will be encoded
+    /// This is the same as `add_strz16` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_sz16` only if you specifically
+    /// you should prefer this method and use `add_strz16` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str16(
         &mut self,
@@ -1079,9 +1086,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_sz16_array` except that the ETW field will be encoded
+    /// This is the same as `add_strz16_array` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_sz16_array` only if you specifically
+    /// you should prefer this method and use `add_strz16_array` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str16_array<T: IntoIterator>(
         &mut self,
@@ -1105,9 +1112,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_sz8` except that the ETW field will be encoded
+    /// This is the same as `add_strz8` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_sz8` only if you specifically
+    /// you should prefer this method and use `add_strz8` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str8(
         &mut self,
@@ -1126,9 +1133,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_sz8_array` except that the ETW field will be encoded
+    /// This is the same as `add_strz8_array` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_sz8_array` only if you specifically
+    /// you should prefer this method and use `add_strz8_array` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str8_array<T: IntoIterator>(
         &mut self,
@@ -1153,8 +1160,7 @@ impl EventBuilder {
     /// Other useful out_type values: IPv6, SocketAddress, Pkcs7WithTypeInfo.
     ///
     /// This is the same as add_binary, except that it uses a newer ETW encoding.
-    /// - Newer ETW InType, so decoding might not work with older decoders or on
-    ///   decoders running on Windows older than Windows 10 2018 Fall Update.
+    /// - Newer ETW [InType], so decoding might not work with older decoders.
     /// - Decodes without the synthesized "FieldName.Length" field.
     /// - Arrays are supported.
     pub fn add_binaryc(
@@ -1175,8 +1181,7 @@ impl EventBuilder {
     /// Other useful out_type values: IPv6, SocketAddress, Pkcs7WithTypeInfo.
     ///
     /// This is the same as add_binary, except that it uses a newer ETW encoding.
-    /// - Newer ETW InType, so decoding might not work with older decoders or on
-    ///   decoders running on Windows older than Windows 10 2018 Fall Update.
+    /// - Newer ETW [InType], so decoding might not work with older decoders.
     /// - Decodes without the synthesized "FieldName.Length" field.
     /// - Arrays are supported.
     pub fn add_binaryc_array<T: IntoIterator>(
@@ -1373,7 +1378,7 @@ impl EventBuilder {
         return self.raw_add_data_slice(&value[0..sid_length]);
     }
 
-    fn raw_add_data_sz<T: Copy + Default + Eq>(&mut self, value: &[T]) -> &mut Self {
+    fn raw_add_data_strz<T: Copy + Default + Eq>(&mut self, value: &[T]) -> &mut Self {
         let zero = T::default();
         let mut nul_pos = 0;
         while nul_pos != value.len() {

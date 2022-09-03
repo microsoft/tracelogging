@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use proc_macro::*;
 use std::mem;
 use std::vec;
@@ -180,5 +183,25 @@ impl Tree {
             );
         }
         return self;
+    }
+
+    /// If array_count == 0: `identity::<&type_path>(value_tokens)`
+    ///
+    /// If array_count != 0: `identity::<&[type_path; array_count]>(value_tokens)`
+    pub fn add_identity_call(
+        &mut self,
+        scratch_tree: &mut Tree,
+        type_path: &[&str],
+        array_count: u8,
+        value_tokens: impl IntoIterator<Item = TokenTree>,
+    ) -> &mut Self {
+        return self
+            .add_path(IDENTITY_PATH)
+            .add_punct("::")
+            .add_punct("<")
+            .add_punct("&")
+            .add_scalar_type_path(scratch_tree, type_path, array_count)
+            .add_punct(">")
+            .add_group_paren(value_tokens);
     }
 }

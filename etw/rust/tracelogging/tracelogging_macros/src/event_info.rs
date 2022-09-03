@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use proc_macro::*;
 
 use crate::enums::OutType;
@@ -69,7 +72,14 @@ impl EventInfo {
 
         #[cfg(debug_assertions)]
         for i in 1..FIELD_OPTIONS.len() {
-            debug_assert!(FIELD_OPTIONS[i - 1].option_name < FIELD_OPTIONS[i].option_name);
+            debug_assert!(
+                FIELD_OPTIONS[i - 1]
+                    .option_name
+                    .lt(FIELD_OPTIONS[i].option_name),
+                "{} <=> {}",
+                FIELD_OPTIONS[i - 1].option_name,
+                FIELD_OPTIONS[i].option_name
+            );
         }
 
         // provider
@@ -193,11 +203,12 @@ impl EventInfo {
             {
                 let mut field = FieldInfo {
                     type_name_span: option_ident.span(),
-                    option: FIELD_OPTIONS[field_option_index],
+                    option: &FIELD_OPTIONS[field_option_index],
                     name: String::new(),
                     value_tokens: TokenStream::new(),
                     intype_tokens: TokenStream::new(),
-                    outtype: Expression::empty(option_ident.span()),
+                    outtype_or_field_count_expr: Expression::empty(option_ident.span()),
+                    outtype_or_field_count_int: FIELD_OPTIONS[field_option_index].outtype as u8,
                     tag: Expression::empty(option_ident.span()),
                 };
 
@@ -220,7 +231,7 @@ impl EventInfo {
                     FieldStrategy::Scalar
                     | FieldStrategy::SystemTime
                     | FieldStrategy::Sid
-                    | FieldStrategy::Sz
+                    | FieldStrategy::StrZ
                     | FieldStrategy::Counted
                     | FieldStrategy::Slice => {
                         field_accepts_tag = true;
@@ -264,7 +275,7 @@ impl EventInfo {
 
                         let tokens = option_parser
                             .next_tokens(Required, "expected struct field count value, e.g. 2");
-                        field.outtype = Expression::new(
+                        field.outtype_or_field_count_expr = Expression::new(
                             option_ident.span(),
                             scratch_tree
                                 .push_span(option_ident.span())
@@ -295,13 +306,13 @@ impl EventInfo {
                         ArgResult::Struct(mut struct_parser) => {
                             let struct_index = self.fields.len();
 
-                            field.option.outtype = OutType::NoPrint; // For metadata estimate, assume fields present.
+                            field.outtype_or_field_count_int = 1; // For metadata estimate, assume fields present.
                             self.push_field(struct_parser.errors(), field);
 
                             let field_count =
                                 self.parse_event_options(&mut struct_parser, true, scratch_tree);
-                            self.fields[struct_index].option.outtype =
-                                OutType::from_int(field_count & OutType::TypeMask);
+                            self.fields[struct_index].outtype_or_field_count_int =
+                                field_count & OutType::TypeMask;
                             break;
                         }
                         ArgResult::Option(field_option_ident, mut field_option_parser) => {
@@ -322,10 +333,10 @@ impl EventInfo {
                                     );
                                 }
                                 "format" if field_accepts_format => {
-                                    if !field.outtype.is_empty() {
+                                    if !field.outtype_or_field_count_expr.is_empty() {
                                         errors.add(field_option_ident.span(), "format already set");
                                     }
-                                    field.outtype = Expression::new(
+                                    field.outtype_or_field_count_expr = Expression::new(
                                         field_option_ident.span(),
                                         filter_enum_tokens(
                                             field_option_parser.next_tokens(
@@ -480,7 +491,7 @@ impl EventInfo {
             + 1 // name nul-termination
             + if !field.tag.is_empty() {
                 6 // intype + outtype + tag
-            } else if field.option.outtype != OutType::Default {
+            } else if field.outtype_or_field_count_int != 0 {
                 2 // intype + outtype
             } else {
                 1 // intype

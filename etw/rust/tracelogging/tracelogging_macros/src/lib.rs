@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 //! Implements the macros that are exported by the tracelogging crate.
 
 #![allow(clippy::needless_return)]
@@ -16,6 +19,7 @@ use crate::event_info::EventInfo;
 use crate::provider_generator::ProviderGenerator;
 use crate::provider_info::ProviderInfo;
 
+mod enums;
 mod errors;
 mod event_generator;
 mod event_info;
@@ -38,10 +42,6 @@ mod tree;
 #[allow(dead_code)]
 #[path = "../../src/guid.rs"]
 mod guid;
-
-#[allow(dead_code)]
-#[path = "../../src/enums.rs"]
-mod enums;
 
 #[proc_macro]
 pub fn define_provider(arg_tokens: TokenStream) -> TokenStream {

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use crate::enums::{InType, OutType};
 
 #[derive(Clone, Copy)]
@@ -9,7 +12,7 @@ pub enum FieldStrategy {
     /// meta = scalar; data = from_sid
     Sid,
     /// meta = scalar; data = from_strz + nul
-    Sz,
+    StrZ,
     /// meta = scalar; data = counted_size + from_counted
     Counted,
     /// meta = array; data = slice_count + from_slice, adds bit to intype.
@@ -38,7 +41,7 @@ impl FieldStrategy {
             FieldStrategy::Scalar
             | FieldStrategy::SystemTime
             | FieldStrategy::Sid
-            | FieldStrategy::Sz
+            | FieldStrategy::StrZ
             | FieldStrategy::Counted
             | FieldStrategy::Struct
             | FieldStrategy::RawStruct
@@ -72,7 +75,7 @@ impl FieldStrategy {
             | FieldStrategy::RawField
             | FieldStrategy::RawFieldSlice => 1,
 
-            | FieldStrategy::Sz         // 1 for data, 1 for nul termination.
+            | FieldStrategy::StrZ       // 1 for data, 1 for nul termination.
             | FieldStrategy::Counted    // 1 for size, 1 for data.
             | FieldStrategy::Slice => 2,// 1 for size, 1 for data.
         }

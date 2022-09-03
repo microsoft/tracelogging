@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use core::marker::PhantomData;
 use core::mem::size_of;
 
@@ -13,6 +16,9 @@ pub struct EventDescriptor {
     pub id: u16,
 
     /// Set version to 0 unless the event has a manually-assigned stable id.
+    /// If the event does have a manually-assigned stable id, start the event
+    /// with version 0, then increment the version for each breaking change to
+    /// the event (e.g. changes to the field names, types, or semantics).
     pub version: u8,
 
     /// For TraceLogging events, channel should usually be set to 11.
@@ -23,24 +29,26 @@ pub struct EventDescriptor {
     /// If unsure, use 5 (verbose).
     pub level: Level,
 
-    /// Event semantics: 0=informational, 1=activity-start, 2=activity-stop.
+    /// Special semantics for event: 0=informational, 1=activity-start, 2=activity-stop.
     pub opcode: Opcode,
 
-    /// Provider-defined event task. Usually set to t0.
+    /// Provider-defined event task. Usually set to 0.
     pub task: u16,
 
-    /// keyword is a bit mask of category bits. The upper 16 bits are defined by Microsoft,
-    /// and the low 48 bits are defined by the user on a per-provider basis, i.e. all
-    /// providers with a particular name + id should use the same category bit assignments.
-    /// For example, your provider might define 0x2 as the "networking" category bit and 0x4
-    /// as the "threading" category bit. Keyword should always be a non-zero value. If
-    /// category bits have not been defined for your provider, define 0x1 as "uncategorized"
-    /// and use 0x1 as the keyword for all events.
+    /// keyword is a bit mask of category bits. The upper 16 bits are defined by
+    /// Microsoft. The low 48 bits are defined by the user on a per-provider basis, i.e.
+    /// all providers with a particular name and id should use the same category bit
+    /// assignments. For example, your provider might define 0x2 as the "networking"
+    /// category bit and 0x4 as the "threading" category bit.
+    ///
+    /// Keyword should always be a non-zero value. If category bits have not been defined
+    /// for your provider, define 0x1 as "uncategorized" and use 0x1 as the keyword for
+    /// all events.
     pub keyword: u64,
 }
 
 impl EventDescriptor {
-    /// Creates a new descriptor with all zero values (channel=TraceClassic).
+    /// Creates a new descriptor with all zero values (channel = TraceClassic).
     /// The resulting descriptor should not usually be used until the values
     /// for level, keyword, and channel have been updated.
     pub const fn zero() -> EventDescriptor {
@@ -55,9 +63,10 @@ impl EventDescriptor {
         };
     }
 
-    /// Creates a new descriptor for an informational event (channel=TraceLogging).
-    /// Event may be written with an activity_id.
+    /// Creates a new descriptor for an informational event (channel = TraceLogging).
+    ///
     /// level: critical, error, warning, info, verbose; if unsure use verbose.
+    ///
     /// keyword: event category bits; if unsure use 0x1.
     pub const fn new(level: Level, keyword: u64) -> EventDescriptor {
         return EventDescriptor {

@@ -1,8 +1,11 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use core::marker::PhantomPinned;
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 use core::cell::UnsafeCell;
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 use core::sync::atomic;
 
 use crate::descriptors::EventDataDescriptor;
@@ -10,21 +13,20 @@ use crate::descriptors::EventDescriptor;
 use crate::enums::Level;
 use crate::guid::Guid;
 
-/// Possible configurations under which this crate can be compiled.
+/// Possible configurations under which this crate can be compiled: `Windows` or `Other`.
 pub enum NativeImplementation {
-    /// Crate compiled for other configuration.
+    /// Crate compiled for other configuration (no logging is performed).
     Other,
-    /// Crate compiled for Windows (ETW) configuration.
+    /// Crate compiled for Windows (ETW) configuration (logging performed via ETW APIs).
     Windows,
 }
 
-/// The configuration under which this crate was compiled.
-pub const NATIVE_IMPLEMENTATION: NativeImplementation =
-    if cfg!(all(windows, not(feature = "no_windows"))) {
-        NativeImplementation::Windows
-    } else {
-        NativeImplementation::Other
-    };
+/// The configuration under which this crate was compiled: `Windows` or `Other`.
+pub const NATIVE_IMPLEMENTATION: NativeImplementation = if cfg!(all(windows, feature = "etw")) {
+    NativeImplementation::Windows
+} else {
+    NativeImplementation::Other
+};
 
 /// Signature for a custom
 /// [provider enable callback](https://docs.microsoft.com/windows/win32/api/evntprov/nc-evntprov-penablecallback).
@@ -38,7 +40,7 @@ pub type ProviderEnableCallback = fn(
     callback_context: usize,
 );
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 type OuterEnableCallback = unsafe extern "system" fn(
     source_id: &Guid,
     event_control_code: u32,
@@ -53,7 +55,7 @@ type OuterEnableCallback = unsafe extern "system" fn(
 pub struct ProviderContext {
     _pinned: PhantomPinned,
 
-    #[cfg(all(windows, not(feature = "no_windows")))]
+    #[cfg(all(windows, feature = "etw"))]
     cell: UnsafeCell<ProviderContextInner>,
 }
 
@@ -62,11 +64,11 @@ impl ProviderContext {
     /// Other: return ERROR_NOT_SUPPORTED;
     pub fn activity_id_control(_control_code: u32, _activity_id: &mut Guid) -> u32 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 50; // ERROR_NOT_SUPPORTED
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             result = unsafe { EventActivityIdControl(_control_code, _activity_id) };
         }
@@ -78,7 +80,7 @@ impl ProviderContext {
         return ProviderContext {
             _pinned: PhantomPinned,
 
-            #[cfg(all(windows, not(feature = "no_windows")))]
+            #[cfg(all(windows, feature = "etw"))]
             cell: UnsafeCell::new(ProviderContextInner::new()),
         };
     }
@@ -86,11 +88,11 @@ impl ProviderContext {
     /// Returns the registration handle. For diagnostic purposes only.
     pub const fn reg_handle(&self) -> u64 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             let inner_ptr: *const ProviderContextInner = self.cell.get();
             let inner = unsafe { &*inner_ptr };
@@ -103,11 +105,11 @@ impl ProviderContext {
     #[inline(always)]
     pub const fn enabled(&self, _level: Level, _keyword: u64) -> bool {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = false;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             let inner_ptr: *const ProviderContextInner = self.cell.get();
             let inner = unsafe { &*inner_ptr };
@@ -118,16 +120,16 @@ impl ProviderContext {
 
     /// Calls EventUnregister and sets reg_handle = 0.
     ///
-    /// ## Preconditions
+    /// # Preconditions
     /// - This will panic if it overlaps with another thread simultaneously calling
     ///   register or unregister.
     pub fn unregister(&self) -> u32 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             let inner_ptr: *mut ProviderContextInner = self.cell.get();
             let inner_mut = unsafe { &mut *inner_ptr };
@@ -138,12 +140,12 @@ impl ProviderContext {
 
     /// Calls EventRegister.
     ///
-    /// ## Preconditions
+    /// # Preconditions
     /// - This will panic if provider is currently registered.
     /// - This will panic if it overlaps with another thread simultaneously calling
     ///   register or unregister.
     ///
-    /// ## Safety
+    /// # Safety
     /// 1. Pinning: Context must not be moved-from as long as provider is registered.
     /// 2. Unregister: If a provider is registered in a DLL, unregister **must** be
     ///    called before the DLL unloads.
@@ -154,11 +156,11 @@ impl ProviderContext {
         _callback_context: usize,
     ) -> u32 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             result = /* unsafe */ { &mut *self.cell.get() }.register(
                 _provider_id,
@@ -171,11 +173,11 @@ impl ProviderContext {
     /// Calls EventSetInformation.
     pub fn set_information(&self, _information_class: u32, _information: &[u8]) -> u32 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             result = unsafe {
                 EventSetInformation(
@@ -198,11 +200,11 @@ impl ProviderContext {
         _data: &[EventDataDescriptor],
     ) -> u32 {
         let result;
-        #[cfg(not(all(windows, not(feature = "no_windows"))))]
+        #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, not(feature = "no_windows")))]
+        #[cfg(all(windows, feature = "etw"))]
         {
             result = unsafe {
                 EventWriteTransfer(
@@ -234,7 +236,7 @@ impl Drop for ProviderContext {
     }
 }
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 struct ProviderContextInner {
     level: i32, // -1 means not enabled by anybody.
     busy: atomic::AtomicBool,
@@ -245,7 +247,7 @@ struct ProviderContextInner {
     callback_context: usize,
 }
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 impl ProviderContextInner {
     const fn new() -> Self {
         return Self {
@@ -319,7 +321,7 @@ impl ProviderContextInner {
         return result;
     }
 
-    #[cfg(all(windows, not(feature = "no_windows")))]
+    #[cfg(all(windows, feature = "etw"))]
     fn outer_callback_impl(
         &mut self,
         source_id: &Guid,
@@ -375,7 +377,7 @@ impl ProviderContextInner {
     }
 }
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 extern "system" {
     fn EventUnregister(reg_handle: u64) -> u32;
     fn EventRegister(

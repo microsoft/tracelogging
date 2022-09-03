@@ -3,5 +3,9 @@ name = "tracelogging_dynamic"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["etw"]
+etw = ["tracelogging/etw"]
+
 [dependencies]
-tracelogging = { path = "../tracelogging" }
+tracelogging = { path = "../tracelogging", default-features = false }

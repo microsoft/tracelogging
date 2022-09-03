@@ -1,6 +1,9 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use proc_macro::*;
 
-use crate::enums::{InType, OutType};
+use crate::enums::{EnumToken, InType};
 use crate::expression::Expression;
 use crate::field_info::FieldInfo;
 use crate::field_option::{FieldOption, FieldStrategy};
@@ -39,6 +42,8 @@ pub struct EventGenerator {
     arg_n: IdentBuilder,
     /// Buffered _TlgMeta bytes.
     meta_buffer: Vec<u8>,
+    /// "_TLG_PROV_...""
+    tlg_prov_var: String,
     /// number of fields added so far
     field_count: u16,
     /// number of runtime lengths needed
@@ -62,6 +67,7 @@ impl EventGenerator {
             tag_n: IdentBuilder::new(TLG_TAG_CONST),
             arg_n: IdentBuilder::new(TLG_ARG_VAR),
             meta_buffer: Vec::with_capacity(128),
+            tlg_prov_var: String::new(),
             field_count: 0,
             lengths_count: 0,
         };
@@ -73,6 +79,11 @@ impl EventGenerator {
         self.lengths_count = 0;
 
         // Before-field stuff:
+
+        self.tlg_prov_var.clear();
+        self.tlg_prov_var.push_str(TLG_PROV_PREFIX);
+        self.tlg_prov_var
+            .push_str(&event.provider_symbol.to_string());
 
         // metadata size: u16 = size_of::<_TlgMeta>() as u16
         self.meta_type_tree.add_path(U16_PATH);
@@ -163,8 +174,11 @@ impl EventGenerator {
 
         // always-present args for the helper function's call site
         self.func_call_tree
-            // _tlg_prov
-            .add_ident(TLG_PROV_VAR)
+            // &_TLG_PROV_...
+            .add_punct("&")
+            .push_span(event.provider_symbol.span())
+            .add_ident(&self.tlg_prov_var)
+            .pop_span()
             // , tlg::meta_as_bytes(&_tlg_meta)
             .add_punct(",")
             .add_path_call(
@@ -199,7 +213,7 @@ impl EventGenerator {
         const _TLG_DESC = EventDescriptor::from_raw_parts(...);
         tags_tree...
         struct _TlgMeta(meta_type_tree...);
-        static _TLG_META = _TlgMeta(meta_init_tree...);
+        const _TLG_META = _TlgMeta(meta_init_tree...);
         fn _tlg_write(func_args_tree...) -> u32 {
             let _tlg_lengths = [lengths_init_tree...];
             provider_write_transfer(prov, desc, aid, rid, &[data_desc_init_tree...]);
@@ -243,7 +257,7 @@ impl EventGenerator {
             .add_group_paren(self.meta_type_tree.drain())
             .add_punct(";")
             // const _TLG_META: _TlgMeta = _TlgMeta(...);
-            .add_ident("static")
+            .add_ident("const")
             .add_ident(TLG_META_CONST)
             .add_punct(":")
             .add_ident(TLG_META_TYPE)
@@ -372,20 +386,12 @@ impl EventGenerator {
             .push_span(event.level.context)
             .add_const_from_tokens(TLG_LEVEL_CONST, LEVEL_PATH, event.level.tokens)
             .pop_span()
-            // let _tlg_prov: &Provider = &PROVIDER;
-            .add_ident("let")
-            .add_ident(TLG_PROV_VAR)
-            .add_punct(":")
-            .add_punct("&")
-            .add_path(PROVIDER_PATH)
-            .add_punct("=")
-            .add_punct("&")
-            .add(event.provider_symbol)
-            .add_punct(";")
             // if !_tlg_prov.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
             .add_ident("if")
             .add_punct("!")
-            .add_ident(TLG_PROV_VAR)
+            .push_span(event.provider_symbol.span())
+            .add_ident(&self.tlg_prov_var)
+            .pop_span()
             .add_punct(".")
             .add_ident("enabled")
             .add_group_paren(
@@ -400,14 +406,17 @@ impl EventGenerator {
             .add_ident("else")
             .add_group_curly(self.enabled_tree.drain());
 
-        let event_tokens = event_tree.drain().collect();
+        // Wrap the event in "{...}":
+        let event_tokens = TokenStream::from(TokenTree::Group(Group::new(
+            Delimiter::Brace,
+            event_tree.drain().collect(),
+        )));
 
         if event.debug {
             println!("{}", event_tokens);
         }
 
-        // Wrap the event in "{...}":
-        return TokenStream::from(TokenTree::Group(Group::new(Delimiter::Brace, event_tokens)));
+        return event_tokens;
     }
 
     fn add_field(&mut self, field: FieldInfo) {
@@ -417,7 +426,8 @@ impl EventGenerator {
             self.meta_buffer.extend(field.name.as_bytes());
             self.meta_buffer.push(0);
 
-            let has_out = !field.outtype.is_empty() || field.option.outtype != OutType::Default;
+            let has_out = !field.outtype_or_field_count_expr.is_empty()
+                || field.outtype_or_field_count_int != 0;
             let has_tag = !field.tag.is_empty();
 
             let inflags = (if has_out || has_tag { 0x80 } else { 0 })
@@ -430,7 +440,7 @@ impl EventGenerator {
                 INTYPE_PATH,
                 field.intype_tokens,
                 field.type_name_span,
-                field.option.intype.as_int(),
+                field.option.intype.to_token(),
                 inflags,
             );
 
@@ -438,9 +448,9 @@ impl EventGenerator {
                 let outflags = if has_tag { 0x80 } else { 0 };
                 self.add_typecode_meta(
                     OUTTYPE_PATH,
-                    field.outtype.tokens,
-                    field.outtype.context,
-                    field.option.outtype.as_int(),
+                    field.outtype_or_field_count_expr.tokens,
+                    field.outtype_or_field_count_expr.context,
+                    EnumToken::U8(field.outtype_or_field_count_int),
                     outflags,
                 );
             }
@@ -461,19 +471,17 @@ impl EventGenerator {
                 self.tree1
                     // , identity::<&VALUE_TYPE>(value_tokens...)
                     .push_span(field.type_name_span) // Use identity(...) as a target for error messages.
-                    .add_path(IDENTITY_PATH)
-                    .add_punct("::")
-                    .add_punct("<")
-                    .add_punct("&")
-                    .add_scalar_type_path(
+                    .add_identity_call(
                         &mut self.tree2,
                         field.option.value_type,
                         field.option.value_array_count,
+                        field.value_tokens,
                     )
-                    .add_punct(">")
-                    .add_group_paren(field.value_tokens)
                     .pop_span();
-                self.add_func_scalar_arg(&field.option); // consumes tree1
+
+                // Prototype: , _tlg_argN: &value_type
+                // Call site: , identity::<&value_type>(value_tokens...)
+                self.add_func_scalar_arg(field.option); // consumes tree1
 
                 // EventDataDescriptor::from_value(_tlg_argN),
                 self.add_data_desc_for_arg_n(DATADESC_FROM_VALUE_PATH);
@@ -527,38 +535,47 @@ impl EventGenerator {
                             .drain(),
                     )
                     .pop_span();
-                self.add_func_scalar_arg(&field.option); // consumes tree1
+
+                // Prototype: , _tlg_argN: &i64
+                // Call site: , match SystemTime::duration_since(value_tokens, SystemTime::UNIX_EPOCH) { ... }
+                self.add_func_scalar_arg(field.option); // consumes tree1
 
                 // EventDataDescriptor::from_value(_tlg_argN),
                 self.add_data_desc_for_arg_n(DATADESC_FROM_VALUE_PATH);
             }
 
             FieldStrategy::RawData | FieldStrategy::RawField | FieldStrategy::RawFieldSlice => {
-                self.add_func_slice_arg(&field.option, field.type_name_span, field.value_tokens);
+                // Prototype: , _tlg_argN: &[value_type]
+                // Call site: , AsRef::<[value_type]>::as_ref(value_tokens...)
+                self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
 
                 // EventDataDescriptor::from_counted(_tlg_argN),
                 self.add_data_desc_for_arg_n(DATADESC_FROM_COUNTED_PATH);
             }
 
             FieldStrategy::Sid => {
-                self.add_func_slice_arg(&field.option, field.type_name_span, field.value_tokens);
+                // Prototype: , _tlg_argN: &[value_type]
+                // Call site: , AsRef::<[value_type]>::as_ref(value_tokens...)
+                self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
 
                 // EventDataDescriptor::from_sid(_tlg_argN),
                 self.add_data_desc_for_arg_n(DATADESC_FROM_SID_PATH);
             }
 
-            FieldStrategy::Sz => {
-                self.add_func_slice_arg(&field.option, field.type_name_span, field.value_tokens);
+            FieldStrategy::StrZ => {
+                // Prototype: , _tlg_argN: &[value_type]
+                // Call site: , AsRef::<[value_type]>::as_ref(value_tokens...)
+                self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
 
                 // EventDataDescriptor::from_strz(_tlg_argN),
                 self.add_data_desc_for_arg_n(DATADESC_FROM_STRZ_PATH);
 
                 self.data_desc_init_tree
-                    // EventDataDescriptor::from_value<VALUE_TYPE>(&0),
+                    // EventDataDescriptor::from_value<value_type>(&0),
                     .add_path(DATADESC_FROM_VALUE_PATH)
                     .add_punct("::")
                     .add_punct("<")
-                    .add_path(field.option.value_type) // VALUE_TYPE is u8 or u16
+                    .add_path(field.option.value_type) // value_type is u8 or u16
                     .add_punct(">")
                     .add_group_paren(
                         self.tree1
@@ -570,7 +587,27 @@ impl EventGenerator {
             }
 
             FieldStrategy::Counted => {
-                self.add_func_slice_arg(&field.option, field.type_name_span, field.value_tokens);
+                if field.option.value_array_count == 0 {
+                    // Prototype: , _tlg_argN: &[value_type]
+                    // Call site: , AsRef::<[value_type]>::as_ref(value_tokens...)
+                    self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
+                } else {
+                    // e.g. ipv6 takes a fixed-length array, not a variable-length slice
+                    self.tree1
+                        // , identity::<&value_type>(value_tokens...)
+                        .push_span(field.type_name_span) // Use identity(...) as a target for error messages.
+                        .add_identity_call(
+                            &mut self.tree2,
+                            field.option.value_type,
+                            field.option.value_array_count,
+                            field.value_tokens,
+                        )
+                        .pop_span();
+
+                    // Prototype: , _tlg_argN: &[value_type; value_array_count]
+                    // Call site: , identity::<&[value_type; value_array_count]>(value_tokens...)
+                    self.add_func_scalar_arg(field.option); // consumes tree1
+                }
 
                 // EventDataDescriptor::from_value(&_tlg_lengths[N]),
                 // EventDataDescriptor::from_counted(_tlg_argN),
@@ -578,7 +615,7 @@ impl EventGenerator {
             }
 
             FieldStrategy::Slice => {
-                self.add_func_slice_arg(&field.option, field.type_name_span, field.value_tokens);
+                self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
 
                 // EventDataDescriptor::from_value(&_tlg_lengths[N]),
                 // EventDataDescriptor::from_slice(_tlg_argN),
@@ -732,43 +769,63 @@ impl EventGenerator {
 
     fn add_typecode_meta(
         &mut self,
-        type_path: &[&str],
+        enum_type_path: &[&str],
         tokens: TokenStream,
         span: Span,
-        typecode: u8,
+        type_token: EnumToken,
         flags: u8,
     ) {
         if tokens.is_empty() {
-            self.meta_buffer.push(typecode | flags);
+            match type_token {
+                EnumToken::U8(enum_int) => {
+                    self.meta_buffer.push(enum_int | flags);
+                    return;
+                }
+
+                EnumToken::Str(enum_name) => {
+                    self.flush_meta_buffer();
+
+                    // , EnumVal
+                    self.meta_init_tree
+                        .add_punct(",")
+                        .push_span(span)
+                        .add_path(enum_type_path)
+                        .add_punct("::")
+                        .add_ident(enum_name);
+                }
+            };
         } else {
             self.flush_meta_buffer();
 
-            // , u8
-            self.meta_type_tree.add_punct(",").add_path(U8_PATH);
-
-            // , identity::<InType>(...)
+            // , identity::<EnumType>(...)
             self.meta_init_tree
                 .add_punct(",")
                 .push_span(span)
                 .add_path(IDENTITY_PATH) // Use identity(...) as a target for error messages.
                 .add_punct("::")
                 .add_punct("<")
-                .add_path(type_path)
+                .add_path(enum_type_path)
                 .add_punct(">")
-                .add_group_paren(tokens)
-                .add_punct(".")
-                .add_ident("as_int")
-                .add_group_paren(self.tree1.drain());
-
-            // | flags
-            if flags != 0 {
-                self.meta_init_tree
-                    .add_punct("|")
-                    .add(Literal::u8_unsuffixed(flags));
-            }
-
-            self.meta_init_tree.pop_span();
+                .add_group_paren(tokens);
         }
+
+        // , u8
+        self.meta_type_tree.add_punct(",").add_path(U8_PATH);
+
+        // .as_int()
+        self.meta_init_tree
+            .add_punct(".")
+            .add_ident("as_int")
+            .add_group_paren(self.tree1.drain());
+
+        // | flags
+        if flags != 0 {
+            self.meta_init_tree
+                .add_punct("|")
+                .add(Literal::u8_unsuffixed(flags));
+        }
+
+        self.meta_init_tree.pop_span();
     }
 
     fn add_tag(&mut self, expression: Expression) {

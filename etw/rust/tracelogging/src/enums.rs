@@ -1,11 +1,18 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 #![allow(non_upper_case_globals)]
 
 use core::fmt;
 use core::mem::size_of;
 
-/// Indicates routing and decoding for an event.
-/// This should almost always be set to TraceLogging (11) for TraceLogging events.
-/// This should almost always be set to TraceClassic (0) for non-TraceLogging events.
+/// Advanced: Indicates routing and decoding for an event.
+///
+/// This should almost always be set to [Channel::TraceLogging] (11) for TraceLogging
+/// events.
+///
+/// This should almost always be set to [Channel::TraceClassic] (0) for non-TraceLogging
+/// events.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Channel(u8);
@@ -99,10 +106,12 @@ impl From<Level> for u8 {
     }
 }
 
-/// Indicates special semantics to be used by the event decoder
-/// for grouping and organizing events. For example, the Start opcode indicates the
-/// beginning of an activity and the Stop opcode indicates the end of an activity. Most
-/// events default to Info (0).
+/// Indicates special semantics to be used by the event decoder for grouping and
+/// organizing events, e.g. for activities.
+///
+/// For example, the [Opcode::Start] opcode indicates the beginning of an activity and
+/// the [Opcode::Stop] indicates the end of an activity. Most events use [Opcode::Info]
+/// (0).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct Opcode(u8);
@@ -198,13 +207,14 @@ impl From<Opcode> for u8 {
     }
 }
 
-/// Advanced: Used in EventBuilder::raw_add_meta to indicate the field's intype.
-/// An intype indicates the binary encoding of the field (i.e. how to determine
-/// the field's size), e.g. intype I32 indicates the field is always 4 bytes,
-/// and intype Str8 indicates the field starts with a U16 byte-count.
-/// The intype also provides a default format to be used if no outtype is provided,
-/// e.g. I32 has a default outtype "Signed", and Hex32 has a default outtype
-/// "Hex".
+/// Advanced: Used to indicate the field's type for raw metadata operations.
+///
+/// An InType indicates the binary encoding of the field, i.e. how to determine  the
+/// field's size. For example, [InType::I32] indicates the field is always 4 bytes,
+/// while [InType::Str8] indicates the field begins with a U16 byte-count to specify the
+/// field's size. The InType also provides a default format to be used if a field's
+/// [OutType] is [OutType::Default], e.g. [InType::I32] defaults to [OutType::Signed],
+/// and [InType::Hex32] defaults to [OutType::Hex].
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct InType(u8);
@@ -228,68 +238,71 @@ impl InType {
 
     /// TlgInUNICODESTRING = NUL-terminated UTF-16LE string.
     ///
-    /// Default outtype: String.
+    /// Default format: [OutType::String]
     ///
-    /// Other usable outtypes: Xml, Json.
-    pub const Sz16: InType = InType(1);
+    /// Other usable formats: [OutType::Xml], [OutType::Json].
+    pub const StrZ16: InType = InType(1);
 
     /// TlgInANSISTRING = NUL-terminated 8-bit string, assumed to be encoded as CP1252.
     ///
-    /// Default outtype: String.
+    /// Default format: [OutType::String]
     ///
-    /// Other usable outtypes: Xml, Json, Utf8.
-    pub const Sz8: InType = InType(2);
+    /// Other usable formats: [OutType::Xml], [OutType::Json], [OutType::Utf8].
+    pub const StrZ8: InType = InType(2);
 
     /// TlgInINT8 = 8-bit signed integer.
     ///
-    /// Default outtype: Signed.
+    /// Default format: [OutType::Signed]
     ///
-    /// Other usable outtypes: String (formats as CP1252 char).
+    /// Other usable formats: [OutType::String] (formats as CP1252 char).
     pub const I8: InType = InType(3);
 
     /// TlgInUINT8 = 8-bit unsigned integer.
     ///
-    /// Default outtype: Unsigned.
+    /// Default format: [OutType::Unsigned]
     ///
-    /// Other usable outtypes: Hex, String (formats as CP1252 char), Boolean.
+    /// Other usable formats: [OutType::Hex], [OutType::String] (formats as CP1252 char),
+    /// [OutType::Boolean].
     pub const U8: InType = InType(4);
 
     /// TlgInINT16 = 16-bit signed integer.
     ///
-    /// Default outtype: Signed.
+    /// Default format: [OutType::Signed]
     pub const I16: InType = InType(5);
 
     /// TlgInUINT16 = 16-bit unsigned integer.
     ///
-    /// Default outtype: Unsigned.
+    /// Default format: [OutType::Unsigned]
     ///
-    /// Other usable outtypes: Hex, String (formats as UCS-2 char), Port.
+    /// Other usable formats: [OutType::Hex], [OutType::String] (formats as UCS-2 char),
+    /// [OutType::Port] (formats as big-endian `u16`).
     pub const U16: InType = InType(6);
 
     /// TlgInINT32 = 32-bit signed integer.
     ///
-    /// Default outtype: Signed.
+    /// Default format: [OutType::Signed]
     ///
-    /// Other usable outtypes: HResult.
+    /// Other usable formats: [OutType::HResult].
     pub const I32: InType = InType(7);
 
     /// TlgInUINT32 = 32-bit unsigned integer.
     ///
-    /// Default outtype: Unsigned.
+    /// Default format: [OutType::Unsigned]
     ///
-    /// Other usable outtypes: Pid, Tid, IPv4, Win32Error, NtStatus, CodePointer.
+    /// Other usable formats: [OutType::Pid], [OutType::Tid], [OutType::IPv4],
+    /// [OutType::Win32Error], [OutType::NtStatus], [OutType::CodePointer].
     pub const U32: InType = InType(8);
 
     /// TlgInINT64 = 64-bit signed integer.
     ///
-    /// Default outtype: Signed.
+    /// Default format: [OutType::Signed]
     pub const I64: InType = InType(9);
 
     /// TlgInUINT64 = 64-bit signed integer.
     ///
-    /// Default outtype: Unsigned.
+    /// Default format: [OutType::Unsigned]
     ///
-    /// Other usable outtypes: CodePointer.
+    /// Other usable formats: [OutType::CodePointer].
     pub const U64: InType = InType(10);
 
     /// TlgInFLOAT = 32-bit float.
@@ -300,70 +313,80 @@ impl InType {
 
     /// TlgInBOOL32 = 32-bit Boolean.
     ///
-    /// Default outtype: Boolean.
+    /// Default format: [OutType::Boolean]
     pub const Bool32: InType = InType(13);
 
     /// TlgInBINARY = UINT16 byte-count followed by binary data.
     ///
-    /// Default outtype: Hex.
+    /// Default format: [OutType::Hex]
     ///
-    /// Other usable outtypes: IPv6, SocketAddress, Pkcs7WithTypeInfo.
+    /// Other usable formats: [OutType::IPv6], [OutType::SocketAddress],
+    /// [OutType::Pkcs7WithTypeInfo].
     ///
-    /// Note: Binary array is not supported. Use BinaryC array.
+    /// Note: Array of Binary is not supported. For arrays, use [InType::BinaryC].
     pub const Binary: InType = InType(14);
 
     /// TlgInGUID = 128-bit GUID in Windows (little-endian) byte order.
     pub const Guid: InType = InType(15);
 
-    /// _TlgInPOINTER_unsupported = Not supported. Use HexSize.
+    /// _TlgInPOINTER_unsupported = Not supported. Use [InType::HexSize] instead.
     pub const _HexSize_PlatformSpecific: InType = InType(16);
 
-    /// TlgInFILETIME = 64-bit timestamp in Windows FILETIME format.
+    /// TlgInFILETIME = 64-bit timestamp in Windows
+    /// [FILETIME](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+    /// format.
     ///
-    /// Default outtype: DateTime.
+    /// Default format: [OutType::DateTime]
     ///
-    /// Other usable outtypes: DateTimeCultureInsensitive, DateTimeUtc.
+    /// Other usable formats: [OutType::DateTimeCultureInsensitive],
+    /// [OutType::DateTimeUtc].
     pub const FileTime: InType = InType(17);
 
-    /// TlgInSYSTEMTIME = 128-bit date/time in Windows SYSTEMTIME format.
+    /// TlgInSYSTEMTIME = 128-bit date/time in Windows
+    /// [SYSTEMTIME](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-systemtime)
+    /// format.
     ///
-    /// Default outtype: DateTime.
+    /// Default format: [OutType::DateTime]
     ///
-    /// Other usable outtypes: DateTimeCultureInsensitive, DateTimeUtc.
+    /// Other usable formats: [OutType::DateTimeCultureInsensitive],
+    /// [OutType::DateTimeUtc].
     pub const SystemTime: InType = InType(18);
 
-    /// TlgInSID = Security ID win Windows SID format.
+    /// TlgInSID = Security ID win Windows
+    /// [SID](https://docs.microsoft.com/windows/win32/api/winnt/ns-winnt-sid)
+    /// format.
     ///
     /// Note: Expected size (sid_length) is `8 + 4 * sid.as_bytes()[1]`.
     pub const Sid: InType = InType(19);
 
     /// TlgInHEXINT32 = 32-bit integer formatted as hex.
     ///
-    /// Default outtype: Hex.
+    /// Default format: [OutType::Hex]
     ///
-    /// Other usable outtypes: Win32Error, NtStatus, CodePointer.
+    /// Other usable formats: [OutType::Win32Error], [OutType::NtStatus],
+    /// [OutType::CodePointer].
     pub const Hex32: InType = InType(20);
 
     /// TlgInHEXINT64 = 64-bit integer formatted as hex.
     ///
-    /// Default outtype: Hex.
+    /// Default format: [OutType::Hex]
     ///
-    /// Other usable outtypes: CodePointer.
+    /// Other usable formats: [OutType::CodePointer].
     pub const Hex64: InType = InType(21);
 
     /// TlgInCOUNTEDSTRING = 16-bit byte count followed by UTF-16LE string.
     ///
-    /// Default outtype: String.
+    /// Default format: [OutType::String]
     ///
-    /// Other usable outtypes: Xml, Json.
+    /// Other usable formats: [OutType::Xml], [OutType::Json].
     pub const Str16: InType = InType(22);
 
     /// TlgInCOUNTEDANSISTRING = 16-bit byte count followed by 8-bit string, assumed
     /// to be encoded as CP1252.
     ///
-    /// Default outtype: String.
+    /// Default format: [OutType::String]
     ///
-    /// Other usable outtypes: Xml, Json, Utf8.
+    /// Other usable formats: [OutType::Xml], [OutType::Json], [OutType::Utf8].
     pub const Str8: InType = InType(23);
 
     /// _TlgInSTRUCT = The struct field contains no data, but the following N fields
@@ -373,44 +396,46 @@ impl InType {
 
     /// TlgInCOUNTEDBINARY = UINT16 byte-count followed by binary data.
     ///
-    /// Default outtype: Hex.
+    /// Default format: [OutType::Hex]
     ///
-    /// Other usable outtypes: IPv6, SocketAddress, Pkcs7WithTypeInfo.
+    /// Other usable formats: [OutType::IPv6], [OutType::SocketAddress],
+    /// [OutType::Pkcs7WithTypeInfo].
     ///
-    /// This is the same as Binary except:
-    /// - New type code. Decoding supported added in Windows 2018 Fall Update.
-    /// - Decodes without the synthesized "FieldName.Length" fields.
+    /// This is the same as [InType::Binary] except:
+    /// - New type code. Decoders might not support it yet.
+    /// - Decodes without the synthesized "FieldName.Length" fields that are common
+    ///   with Binary.
     /// - Arrays are supported.
     pub const BinaryC: InType = InType(25);
 
-    /// TlgInINTPTR = an alias for either I64 or I32, depending on the running process's
-    /// pointer size.
+    /// TlgInINTPTR = an alias for either [InType::I64] or [InType::I32], depending on
+    /// the running process's pointer size.
     ///
-    /// Default outtype: Signed.
+    /// Default format: [OutType::Signed]
     pub const ISize: InType = if size_of::<usize>() == 8 {
         InType::I64
     } else {
         InType::I32
     };
 
-    /// TlgInUINTPTR = an alias for either U64 or U32, depending on the running process's
-    /// pointer size.
+    /// TlgInUINTPTR = an alias for either [InType::U64] or [InType::U32], depending on
+    /// the running process's pointer size.
     ///
-    /// Default outtype: Unsigned.
+    /// Default format: [OutType::Unsigned]
     ///
-    /// Other usable outtypes: CodePointer.
+    /// Other usable formats: [OutType::CodePointer].
     pub const USize: InType = if size_of::<usize>() == 8 {
         InType::U64
     } else {
         InType::U32
     };
 
-    /// TlgInPOINTER = an alias for either Hex64 or Hex32, depending on the running
-    /// process's pointer size.
+    /// TlgInPOINTER = an alias for either [InType::Hex64] or [InType::Hex32], depending
+    /// on the running process's pointer size.
     ///
-    /// Default outtype: Hex.
+    /// Default format: [OutType::Hex]
     ///
-    /// Other usable outtypes: CodePointer.
+    /// Other usable formats: [OutType::CodePointer].
     pub const HexSize: InType = if size_of::<usize>() == 8 {
         InType::Hex64
     } else {
@@ -458,36 +483,36 @@ impl From<InType> for u8 {
 
 /// Data formatting hints that may be used or ignored by decoders.
 ///
-/// Each field of an event has an InType (specifies the field's binary
-/// encoding) and an OutType (formatting hint for the decoder).
+/// Each field of an event has an [InType] (specifies the field's binary
+/// encoding) and an [OutType] (formatting hint for the decoder).
 ///
 /// If a field has an OutType set and the decoder supports the field's
 /// combination of InType + OutType then the decoder will use the OutType as a
 /// formatting hint when decoding the field. For example, a field with
-/// InType=U8 is normally formatted as decimal, but if the field sets
-/// OutType=Hex and the decoder supports U8+Hex then it would be formatted
-/// as hexadecimal, or if the field sets OutType=String and the decoder
+/// [InType::U8] and [OutType::Default] is formatted as decimal. If the field sets
+/// [OutType::Hex] and the decoder supports U8+Hex then the field would be formatted as
+/// hexadecimal. If the field sets [OutType::String] and the decoder
 /// supports U8+String then it would be formatted as a CP1252 CHAR.
 ///
-/// If the OutType is Default or is not supported by the decoder then the field
-/// receives a default formatting based on the InType.
+/// If the OutType is [OutType::Default] or is not supported by the decoder then the
+/// field receives a default formatting based on the field's InType.
 ///
 /// Note: Setting the OutType to a value other than Default will add 1 byte per
-/// field per event in the resulting ETL file. Add a non-Default outtype only if
-/// the default outtype is not appropriate.
+/// field per event in the resulting ETL file. Add a non-Default OutType only if
+/// [OutType::Default] does not produce the desired format.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct OutType(u8);
 
 impl OutType {
-    /// Returns an outtype with the specified value.
+    /// Returns an OutType with the specified value.
     /// Requires: `value <= 127`.
     pub const fn from_int(value: u8) -> OutType {
         assert!(value <= 127, "OutType requires value <= 127");
         return OutType(value);
     }
 
-    /// Returns the numeric value corresponding to this outtype.
+    /// Returns the numeric value corresponding to this OutType.
     #[inline(always)]
     pub const fn as_int(self) -> u8 {
         return self.0;
@@ -497,59 +522,69 @@ impl OutType {
     pub const Default: OutType = OutType(0);
     /// TlgOutNOPRINT = field should be hidden. (Most decoders show it anyway.)
     pub const NoPrint: OutType = OutType(1);
-    /// TlgOutSTRING = field should be formatted as a string. Use with I8, U8, or
-    /// U16 to log a char.
+    /// TlgOutSTRING = field should be formatted as a string. Use with [InType::I8],
+    /// [InType::U8], or [InType::U16] to log a char.
     pub const String: OutType = OutType(2);
-    /// TlgOutBOOLEAN = field should be formatted as a Bool. Use with U8.
+    /// TlgOutBOOLEAN = field should be formatted as a Boolean. Use with [InType::U8].
     pub const Boolean: OutType = OutType(3);
-    /// TlgOutHEX = field should be formatted as hexadecimal. Use with U8, U16.
+    /// TlgOutHEX = field should be formatted as hexadecimal. Use with [InType::U8],
+    /// [InType::U16].
     pub const Hex: OutType = OutType(4);
-    /// TlgOutPID = field should be formatted as a process id. Use with U32.
+    /// TlgOutPID = field should be formatted as a process id. Use with [InType::U32].
     pub const Pid: OutType = OutType(5);
-    /// TlgOutTID = field should be formatted as a thread id. Use with U32.
+    /// TlgOutTID = field should be formatted as a thread id. Use with [InType::U32].
     pub const Tid: OutType = OutType(6);
-    /// TlgOutPORT = field should be formatted as a big-endian IP port. Use with U16.
+    /// TlgOutPORT = field should be formatted as a big-endian IP port. Use with
+    /// [InType::U16].
     pub const Port: OutType = OutType(7);
-    /// TlgOutIPV4 = field should be formatted as an IPv4 address. Use with U32.
+    /// TlgOutIPV4 = field should be formatted as an IPv4 address. Use with
+    /// [InType::U32].
     pub const IPv4: OutType = OutType(8);
-    /// TlgOutIPV6 = field should be formatted as an IPv6 address. Use with Binary,
+    /// TlgOutIPV6 = field should be formatted as an IPv6 address. Use with
+    /// [InType::Binary],
     /// BinaryC.
     pub const IPv6: OutType = OutType(9);
-    /// TlgOutSOCKETADDRESS = field should be formatted as a sockaddr. Use with Binary or
-    /// BinaryC.
+    /// TlgOutSOCKETADDRESS = field should be formatted as a sockaddr. Use with
+    /// [InType::Binary] or [InType::BinaryC].
     pub const SocketAddress: OutType = OutType(10);
-    /// TlgOutXML = field should be formatted as XML. Use with Str16, Str8, Sz16, and Sz8
-    /// types. Implies UTF-8 when used with Str8 or Sz8.
+    /// TlgOutXML = field should be formatted as XML. Use with [InType::Str16],
+    /// [InType::Str8], [InType::StrZ16], and [InType::StrZ8] types. Implies UTF-8 when
+    /// used with [InType::Str8] or [InType::StrZ8].
     pub const Xml: OutType = OutType(11);
-    /// TlgOutJSON = field should be formatted as JSON. Use with Str16, Str8, Sz16, and Sz8
-    /// types. Implies UTF-8 when used with Str8 or Sz8.
+    /// TlgOutJSON = field should be formatted as JSON. Use with [InType::Str16],
+    /// [InType::Str8], [InType::StrZ16], and [InType::StrZ8] types. Implies UTF-8 when
+    /// used with [InType::Str8] or [InType::StrZ8].
     pub const Json: OutType = OutType(12);
     /// TlgOutWIN32ERROR = field should be formatted as a Win32 result code. Use with
-    /// U32.
+    /// [InType::U32].
     pub const Win32Error: OutType = OutType(13);
-    /// TlgOutNTSTATUS = field should be formatted as a Win32 NTSTATUS. Use with U32.
+    /// TlgOutNTSTATUS = field should be formatted as a Win32 NTSTATUS. Use with
+    /// [InType::U32].
     pub const NtStatus: OutType = OutType(14);
-    /// TlgOutHRESULT = field should be formatted as a Win32 HRESULT. Use with I32.
+    /// TlgOutHRESULT = field should be formatted as a Win32 HRESULT. Use with
+    /// [InType::I32].
     pub const HResult: OutType = OutType(15);
-    /// TlgOutFILETIME = not generally used. Appropriate intypes already imply DateTime.
+    /// TlgOutFILETIME = not generally used. Appropriate InTypes already imply DateTime.
     pub const DateTime: OutType = OutType(16);
-    /// TlgOutSIGNED = not generally used. Appropriate intypes already imply Signed.
+    /// TlgOutSIGNED = not generally used. Appropriate InTypes already imply Signed.
     pub const Signed: OutType = OutType(17);
-    /// TlgOutUNSIGNED = not generally used. Appropriate intypes already imply Unsigned.
+    /// TlgOutUNSIGNED = not generally used. Appropriate InTypes already imply Unsigned.
     pub const Unsigned: OutType = OutType(18);
     /// TlgOutDATETIME_CULTURE_INSENSITIVE = Invariant-culture date-time. Use with
-    /// FileTime or SystemTime.
+    /// [InType::FileTime] or [InType::SystemTime].
     pub const DateTimeCultureInsensitive: OutType = OutType(33);
-    /// TlgOutUTF8 = field should be decoded as UTF-8. Use with Str8 or Sz8.
+    /// TlgOutUTF8 = field should be decoded as UTF-8. Use with [InType::Str8] or
+    /// [InType::StrZ8].
     pub const Utf8: OutType = OutType(35);
     /// TlgOutPKCS7_WITH_TYPE_INFO = field should be decoded as a PKCS7 packet followed
-    /// by TLG type info. Use with Binary or BinaryC.
+    /// by TLG type info. Use with [InType::Binary] or [InType::BinaryC].
     pub const Pkcs7WithTypeInfo: OutType = OutType(36);
     /// TlgOutCODE_POINTER = field should be formatted as a code pointer. Use with
-    /// U32, U64, USize, Hex32, Hex64, HexSize.
+    /// [InType::U32], [InType::U64], [InType::USize], [InType::Hex32], [InType::Hex64],
+    /// [InType::HexSize].
     pub const CodePointer: OutType = OutType(37);
     /// TlgOutDATETIME_UTC = field should be decoded assuming UTC timezone. Use with
-    /// FileTime or SystemTime.
+    /// [InType::FileTime] or [InType::SystemTime].
     pub const DateTimeUtc: OutType = OutType(38);
     /// _TlgOutTypeMask = raw encoding flag: mask for the outtype portion of the encoded
     /// byte.

@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use proc_macro::*;
 
 use crate::provider_info::ProviderInfo;
@@ -9,6 +12,7 @@ pub struct ProviderGenerator {
     tree1: Tree,
     tree2: Tree,
     tree3: Tree,
+    tlg_prov_symbol: String,
 }
 
 impl ProviderGenerator {
@@ -18,6 +22,7 @@ impl ProviderGenerator {
             tree1: Tree::new(span),
             tree2: Tree::new(span),
             tree3: Tree::new(span),
+            tlg_prov_symbol: String::new(),
         };
     }
 
@@ -44,11 +49,17 @@ impl ProviderGenerator {
 
         let id_fields = provider.id.to_fields();
 
+        self.tlg_prov_symbol.clear();
+        self.tlg_prov_symbol.push_str(TLG_PROV_PREFIX);
+        self.tlg_prov_symbol.push_str(&provider.symbol.to_string());
+
         let prov_tokens = self
             .prov_tree
-            // static PROVIDER: ::tracelogging::Provider = unsafe { ... }
+            // static _TLG_PROVIDER: ::tracelogging::Provider = unsafe { ... }
             .add_ident("static")
-            .add(provider.symbol)
+            .push_span(provider.symbol.span())
+            .add_ident(&self.tlg_prov_symbol)
+            .pop_span()
             .add_punct(":")
             .add_path(PROVIDER_PATH)
             .add_punct("=")
@@ -81,6 +92,15 @@ impl ProviderGenerator {
                     )
                     .drain(),
             )
+            .add_punct(";")
+            .add_ident("static")
+            .add(provider.symbol)
+            .add_punct(":")
+            .add_punct("&")
+            .add_path(PROVIDER_PATH)
+            .add_punct("=")
+            .add_punct("&")
+            .add_ident(&self.tlg_prov_symbol)
             .add_punct(";")
             .drain()
             .collect();

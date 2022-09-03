@@ -1,9 +1,12 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 /// Channel names special-cased by channel(...) option.
-/// Strings must be sorted for binary search.
+/// Strings must be strcmp-sorted for binary search.
 pub const CHANNEL_ENUMS: &[&str] = &["ProviderMetadata", "TraceClassic", "TraceLogging"];
 
 /// Level names special-cased by level(...) option.
-/// Strings must be sorted.
+/// Strings must be strcmp-sorted for binary search.
 pub const LEVEL_ENUMS: &[&str] = &[
     "Critical",
     "Error",
@@ -14,7 +17,7 @@ pub const LEVEL_ENUMS: &[&str] = &[
 ];
 
 /// Opcode names special-cased by opcode(...) option.
-/// Strings must be sorted for binary search.
+/// Strings must be strcmp-sorted for binary search.
 pub const OPCODE_ENUMS: &[&str] = &[
     "DC_Start",
     "DC_Stop",
@@ -30,7 +33,7 @@ pub const OPCODE_ENUMS: &[&str] = &[
 ];
 
 /// InType names special-cased by type(...) option.
-/// Strings must be sorted for binary search.
+/// Strings must be strcmp-sorted for binary search.
 pub const INTYPE_ENUMS: &[&str] = &[
     "Binary",
     "Bool32",
@@ -51,10 +54,10 @@ pub const INTYPE_ENUMS: &[&str] = &[
     "Sid",
     "Str16",
     "Str8",
+    "StrZ16",
+    "StrZ8",
     "Struct",
     "SystemTime",
-    "Sz16",
-    "Sz8",
     "U16",
     "U32",
     "U64",
@@ -63,7 +66,7 @@ pub const INTYPE_ENUMS: &[&str] = &[
 ];
 
 /// OutType names special-cased by format(...) option.
-/// Strings must be sorted for binary search.
+/// Strings must be strcmp-sorted for binary search.
 pub const OUTTYPE_ENUMS: &[&str] = &[
     "Boolean",
     "CodePointer",
@@ -91,6 +94,7 @@ pub const OUTTYPE_ENUMS: &[&str] = &[
     "Xml",
 ];
 
+pub const TLG_PROV_PREFIX: &str = "_TLG_PROV_";
 pub const TLG_LEVEL_CONST: &str = "_TLG_LEVEL";
 pub const TLG_KEYWORD_CONST: &str = "_TLG_KEYWORD";
 pub const TLG_TAG_CONST: &str = "_TLG_TAG";

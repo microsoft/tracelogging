@@ -1,8 +1,12 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use core::fmt;
 use core::str::from_utf8;
 
-/// GUID (UUID).
-/// Stored as integer fields (in-memory representation is host-endian).
+/// [GUID](https://docs.microsoft.com/windows/win32/api/guiddef/ns-guiddef-guid)
+/// ([UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier)).
+/// In-memory representation is as expected by the ETW APIs (host-endian).
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Guid {
@@ -29,7 +33,7 @@ impl Guid {
     /// # use tracelogging::Guid;
     /// let g = Guid::new();
     /// ```
-    #[cfg(all(windows, not(feature = "no_windows"), not(proc_macro)))]
+    #[cfg(all(windows, not(proc_macro)))]
     pub fn new() -> Self {
         #[link(name = "rpcrt4")]
         extern "system" {

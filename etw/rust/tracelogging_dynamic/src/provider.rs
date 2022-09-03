@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 use alloc::vec::Vec;
 use core::fmt;
 use core::pin::Pin;
@@ -8,18 +11,22 @@ use tracelogging::Level;
 use tracelogging::ProviderEnableCallback;
 use tracelogging::_internal::ProviderContext;
 
-/// `Provider` represents a pipe for writing dynamic tracelogging (manifest-free) events
-/// to ETW.
+#[allow(unused_imports)] // For docs
+use crate::EventBuilder;
+
+/// Represents a connection for writing dynamic tracelogging (manifest-free) events to
+/// ETW.
 ///
-/// ## Usage
+/// # Overview
 ///
-/// - Create a pinned provider object.
-///   - Example: `let mut provider = Box::pin(Provider::new());`
+/// - Create a pinned Provider object, e.g.
+///   `let mut provider = Box::pin(Provider::new());`.
 ///   - See below for ways to pin the provider without a heap allocation.
 /// - Call `unsafe { provider.as_mut().register(provider_name, options); }` to open the
 ///     connection to ETW.
-///   - `register` is unsafe because a registered provider **must** be properly dropped.
-///     Dropping is usually automatic so this normally isn't an issue.
+///   - `register` is unsafe because a registered provider **must** be properly
+///     unregistered. This automatically happens when the provider is dropped so this
+///     normally isn't an issue unless the provider is declared as a static variable.
 ///   - Since the `register` method requires a `Pin<&mut>`, you'll usually need to use
 ///    `as_mut()` when calling it.
 ///   - The provider name should be short and human-readable but should be unique enough
@@ -29,16 +36,16 @@ use tracelogging::_internal::ProviderContext;
 ///   - You'll usually just use default `&Provider::options()` for the options parameter.
 ///     For advanced scenarios, you can use the options parameter to specify a provider
 ///     group id or a provider enable callback.
-/// - Use EventBuilder to construct and write events as needed.
+/// - Use an [EventBuilder] to construct and write events as needed.
 /// - The provider will automatically unregister when it is dropped. You can manually call
-///   `unregister()` if you want to unregister sooner.
+///   `unregister()` if you want to unregister sooner or if the provider is static.
 ///
-/// ## Pinning your provider
+/// # Pinning your provider
 ///
 /// Since the provider manages an asynchronous ETW callback, it must be pinned before you
 /// can call register and must remain pinned until it is dropped. Some ways to do this:
 ///
-/// ### On the heap (safe pinning):
+/// ## On the heap (safe pinning):
 ///
 /// ```
 /// use tracelogging_dynamic as tld;
@@ -48,7 +55,7 @@ use tracelogging::_internal::ProviderContext;
 /// }
 /// ```
 ///
-/// ### On the stack (unsafe pinning):
+/// ## On the stack (unsafe pinning):
 ///
 /// ```
 /// use core::pin::Pin;
@@ -60,7 +67,7 @@ use tracelogging::_internal::ProviderContext;
 /// }
 /// ```
 ///
-/// ### On the stack (safe pinning, requires unstable Rust):
+/// ## On the stack (safe pinning, requires unstable Rust):
 ///
 /// ```ignore
 /// use core::pin::pin;
@@ -71,7 +78,7 @@ use tracelogging::_internal::ProviderContext;
 /// }
 /// ```
 ///
-/// ### As a field on your own struct (unsafe pinning):
+/// ## As a field on your own struct (unsafe pinning):
 ///
 /// You'll need to pin your own struct and then you can use your struct's pin to get a
 /// pinned provider.
@@ -87,58 +94,6 @@ use tracelogging::_internal::ProviderContext;
 ///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
 /// }
 /// ```
-///
-/// ## Example
-/// ```
-/// use tracelogging_dynamic as tld;
-///
-/// // Pinning is required because the register() method sets up a callback.
-/// let mut provider = Box::pin(tld::Provider::new());
-///
-/// // Register the provider. If you don't register (or if register fails) then enabled()
-/// // will always return false and write() will be a no-op.
-/// unsafe {
-///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
-/// }
-///
-/// // If provider is not enabled for a given level + keyword, the write() call will do
-/// // nothing. Check enabled(level, keyword) before building the event so we don't waste
-/// // time on an event that nobody will receive.
-/// let my_event_level = tld::Level::Verbose; // Severity level.
-/// let my_event_keyword = 0x123; // User-defined category bits.
-/// if provider.enabled(my_event_level, my_event_keyword) {
-///     // Create and write an event with two fields:
-///     tld::EventBuilder::new()
-///         .reset("MyEventName", my_event_level, my_event_keyword, 0) // Most events specify 0 for tag.
-///         .add_str8("FieldName1", "FieldValue".as_bytes(), tld::OutType::Default, 0)
-///         .add_u8("FieldName2", b'A', tld::OutType::String, 0)
-///         .write(&provider, None, None);
-/// }
-/// ```
-///
-/// ## Notes
-///
-/// The EventBuilder object is reusable. You may get a small performance benefit by
-/// reusing an EventBuilder object for multiple events rather than using a new
-/// EventBuilder for each event.
-///
-/// Collect the events using Windows SDK tools like traceview or tracelog. Decode the
-/// events using Windows SDK tools like traceview or tracefmt.
-/// For example, to collect events from a provider that was registered as
-/// `provider.register("MyCompany.MyComponent", ...)`:
-///
-/// ```text
-/// tracelog -start MyTrace -f MyTraceFile.etl -guid *MyCompany.MyComponent -level 5 -matchanykw 0xf
-/// <run your program>
-/// tracelog -stop MyTrace
-/// tracefmt -o MyTraceData.txt MyTraceFile.etl
-/// ```
-///
-/// ETW events are limited in size (event size = headers + metadata + data). Windows will
-/// ignore any event that is larger than 64KB and will ignore any event that is larger
-/// than the buffer size of the recording session.
-///
-/// Most ETW decoding tools are unable to decode an event with more than 128 fields.
 pub struct Provider {
     pub(crate) context: ProviderContext,
     pub(crate) meta: Vec<u8>, // provider metadata
@@ -148,8 +103,8 @@ pub struct Provider {
 impl Provider {
     /// Returns the current thread's thread-local activity id.
     ///
-    /// The thread-local activity id will be used if write is called with an activity_id
-    /// of None.
+    /// The thread-local activity id will be used if [EventBuilder::write] is called with
+    /// an `activity_id` of `None`.
     pub fn current_thread_activity_id() -> Guid {
         let mut activity_id = Guid::zero();
         ProviderContext::activity_id_control(
@@ -161,8 +116,8 @@ impl Provider {
 
     /// Sets the current thread's thread-local activity id. Returns the previous value.
     ///
-    /// The thread-local activity id will be used if write is called with an activity_id
-    /// of None.
+    /// The thread-local activity id will be used if [EventBuilder::write] is called with
+    /// an `activity_id` of `None`.
     ///
     /// Important: thread-local activity id should follow scoping rules. If you set the
     /// thread-local activity id in a scope, you should restore the previous value before
@@ -176,16 +131,17 @@ impl Provider {
         return activity_id;
     }
 
-    /// Generates a new 128-bit value suitable for use as an activity id.
+    /// Generates a new 128-bit value suitable for use as an `activity_id` with
+    /// [EventBuilder::write].
     ///
     /// The returned value is not a true GUID/UUID since it is not globally-unique. The
     /// returned value is locally-unique: it is guaranteed to be unique from all other
-    /// values generated by create_activity_id() in the current boot session.
+    /// values generated by `create_activity_id` in the current boot session.
     ///
     /// Activity ids need to be unique within the trace but do not need to be
     /// globally-unique, so your activity ids can use either a real GUID/UUID or a
-    /// locally-unique id generated by create_activity_id(). Use create_activity_id() to
-    /// generate locally-unique activity ids or use Guid::new() to generate
+    /// locally-unique id generated by `create_activity_id`. Use `create_activity_id` to
+    /// generate locally-unique activity ids or use [Guid::new] to generate
     /// globally-unique activity ids.
     pub fn create_activity_id() -> Guid {
         let mut activity_id = Guid::zero();
@@ -199,11 +155,11 @@ impl Provider {
     /// Returns a GUID generated from a case-insensitive hash of the specified
     /// trace provider name using the same algorithm as is used by many other ETW
     /// APIs and tools. Given the same name, it will always generate the same
-    /// GUID. (Same as Guid::from_name.)
+    /// GUID. (Same as [Guid::from_name].)
     ///
     /// The result can (and usually should) be used as the provider id.
     ///
-    /// Do not use guid_from_name to generate activity ids.
+    /// **Note:** Do not use guid_from_name to generate activity ids.
     /// ```
     /// use tracelogging_dynamic as tld;
     /// assert_eq!(
@@ -252,7 +208,7 @@ impl Provider {
         return &self.id;
     }
 
-    /// Returns true if any event listener is listening for events from this provider
+    /// Returns true if any ETW logging session is listening to this provider for events
     /// with the specified level and keyword.
     #[inline(always)]
     pub const fn enabled(&self, level: Level, keyword: u64) -> bool {
@@ -270,7 +226,7 @@ impl Provider {
     /// out of scope. The provider automatically unregisters when it is dropped so most
     /// users do  not need to call `unregister` directly.
     ///
-    /// ## Preconditions
+    /// # Preconditions
     /// - A call on one thread to any `register` or `unregister` method must not occur at
     ///   the same time as a call to any `register` or `unregister` method on any other
     ///   thread. Verified at runtime, failure = panic.
@@ -281,10 +237,10 @@ impl Provider {
     /// Registers the provider using `Guid::from_name(name)` as the provider id.
     ///
     /// This method will panic if the provider is already registered. You must call
-    /// `unregister()` before you can re-register a provider.
+    /// [Provider::unregister()] before you can re-register a provider.
     ///
     /// Since the provider manages an ETW callback, it must be pinned before you can call
-    /// `register`. Refer to the documentation for `Provider` for examples of how to pin
+    /// `register`. Refer to the documentation for [Provider] for examples of how to pin
     /// the provider. Once you have a pinned `provider`, you'll use
     /// `provider.as_mut().register(...)` to register it.
     ///
@@ -298,27 +254,33 @@ impl Provider {
     /// If the provider needs to specify a custom provider enable callback, use
     /// `Provider::options().callback(callback_fn, callback_context)`.
     ///
-    /// Returns 0 for success or a Win32 error from `EventRegister` for failure. The
-    /// return value is for diagnostic purposes only and should generally be ignored in
-    /// retail builds: if `register()` fails then `enabled()` will always return `false`,
-    /// `unregister()` will be a no-op, and `EventBuilder::write()` will be a no-op.
+    /// Returns 0 for success or a Win32 error from
+    /// [EventRegister](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister)
+    /// for failure. The return value is for diagnostic purposes only and should
+    /// generally be ignored in retail builds: if `register` fails then
+    /// [Provider::enabled()] will always return `false`, [Provider::unregister()] will
+    /// be a no-op, and [EventBuilder::write()] will be a no-op.
     ///
-    /// ## Preconditions
+    /// # Preconditions
+    ///
     /// - Provider must not already be registered. Verified at runtime, failure = panic.
     /// - A call on one thread to any `register` or `unregister` method must not occur at
     ///   the same time as a call to any `register` or `unregister` method on any other
     ///   thread. Verified at runtime, failure = panic.
     ///
-    /// ## Safety
+    /// # Safety
     ///
-    /// - If the provider is in a DLL, it **must** be dropped before the DLL unloads.
-    ///   This is the default behavior in most cases, but this is not automatic for
-    ///   static variables. If a provider variable is registered by a DLL and the DLL
-    ///   unloads without dropping the variable, the process may subsequently crash. This
-    ///   occurs because `register` enables an ETW callback into the calling DLL and
-    ///   `drop` ensures that the callback is disabled. If the module unloads without
-    ///   disabling the callback, the process will crash the next time that ETW tries to
-    ///   invoke the callback.
+    /// - If the provider is in a DLL, it **must** be unregistered before the DLL unloads.
+    ///
+    ///   [Provider::unregister] is called automatically when the provider is dropped so
+    ///   this generally isn't an issue unless the provider is declared as a static variable.
+    ///
+    ///   If a provider variable is registered by a DLL and the DLL unloads without dropping
+    ///   the variable, the process may subsequently crash. This occurs because `register`
+    ///   enables an ETW callback into the calling DLL and `unregister` ensures that the
+    ///   callback is disabled. If the module unloads without disabling the callback, the
+    ///   process will crash the next time that ETW tries to invoke the callback.
+    ///
     /// - Once registered, you may not move-out of the provider variable until the
     ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
     ///   for clarity.)
@@ -329,10 +291,10 @@ impl Provider {
     /// Registers the provider using the specified custom provider id.
     ///
     /// This method will panic if the provider is already registered. You must call
-    /// `unregister()` before you can re-register a provider.
+    /// [Provider::unregister()] before you can re-register a provider.
     ///
     /// Since the provider manages an ETW callback, it must be pinned before you can call
-    /// `register`. Refer to the documentation for `Provider` for examples of how to pin
+    /// `register`. Refer to the documentation for [Provider] for examples of how to pin
     /// the provider. Once you have a pinned `provider`, you'll use
     /// `provider.as_mut().register(...)` to register it.
     ///
@@ -350,27 +312,33 @@ impl Provider {
     /// coupled, the provider id should usually be generated from the name using
     /// `Guid::from_name(name)`.
     ///
-    /// Returns 0 for success or a Win32 error from `EventRegister` for failure. The
-    /// return value is for diagnostic purposes only and should generally be ignored in
-    /// retail builds: if `register()` fails then `enabled()` will always return `false`,
-    /// `unregister()` will be a no-op, and `EventBuilder::write()` will be a no-op.
+    /// Returns 0 for success or a Win32 error from
+    /// [EventRegister](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister)
+    /// for failure. The return value is for diagnostic purposes only and should
+    /// generally be ignored in retail builds: if `register_with_id` fails then
+    /// [Provider::enabled()] will always return `false`, [Provider::unregister()] will
+    /// be a no-op, and [EventBuilder::write()] will be a no-op.
     ///
-    /// ## Preconditions
+    /// # Preconditions
+    ///
     /// - Provider must not already be registered. Verified at runtime, failure = panic.
     /// - A call on one thread to any `register` or `unregister` method must not occur at
     ///   the same time as a call to any `register` or `unregister` method on any other
     ///   thread. Verified at runtime, failure = panic.
     ///
-    /// ## Safety
+    /// # Safety
     ///
-    /// - If the provider is in a DLL, it **must** be dropped before the DLL unloads.
-    ///   This is the default behavior in most cases, but this is not automatic for
-    ///   static variables. If a provider variable is registered by a DLL and the DLL
-    ///   unloads without dropping the variable, the process may subsequently crash. This
-    ///   occurs because `register` enables an ETW callback into the calling DLL and
-    ///   `drop` ensures that the callback is disabled. If the module unloads without
-    ///   disabling the callback, the process will crash the next time that ETW tries to
-    ///   invoke the callback.
+    /// - If the provider is in a DLL, it **must** be unregistered before the DLL unloads.
+    ///
+    ///   [Provider::unregister] is called automatically when the provider is dropped so
+    ///   this generally isn't an issue unless the provider is declared as a static variable.
+    ///
+    ///   If a provider variable is registered by a DLL and the DLL unloads without dropping
+    ///   the variable, the process may subsequently crash. This occurs because `register`
+    ///   enables an ETW callback into the calling DLL and `unregister` ensures that the
+    ///   callback is disabled. If the module unloads without disabling the callback, the
+    ///   process will crash the next time that ETW tries to invoke the callback.
+    ///
     /// - Once registered, you may not move-out of the provider variable until the
     ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
     ///   for clarity.)
@@ -536,7 +504,9 @@ impl ProviderOptions {
         };
     }
 
-    /// Sets the id of the provider group that the provider should join.
+    /// Sets the id of the
+    /// [provider group](https://docs.microsoft.com/windows/win32/etw/provider-traits)
+    /// that the provider should join.
     ///
     /// Most providers do not join any provider group so this is usually not called.
     pub fn group_id(&mut self, value: &Guid) -> &mut Self {
@@ -544,7 +514,9 @@ impl ProviderOptions {
         return self;
     }
 
-    /// Sets a custom provider enable callback and context.
+    /// Sets a custom
+    /// [provider enable callback](https://docs.microsoft.com/windows/win32/api/evntprov/nc-evntprov-penablecallback)
+    /// and context.
     ///
     /// Most providers do not need a custom provider enable callback so this is usually
     /// not called.

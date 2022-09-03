@@ -1,3 +1,6 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 #![doc(hidden)]
 //! Internal implementation details for tracelogging macros and tracelogging_dynamic.
 //! Contents subject to change without notice.

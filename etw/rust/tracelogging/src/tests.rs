@@ -1,5 +1,9 @@
+// Copyright (c) Microsoft Corporation.
+// Licensed under the MIT license.
+
 extern crate alloc;
 
+#[allow(clippy::unusual_byte_groupings)]
 #[test]
 fn guid() {
     use crate::guid::Guid;
@@ -119,7 +123,7 @@ fn guid() {
     }
 }
 
-#[cfg(all(windows, not(feature = "no_windows")))]
+#[cfg(all(windows, feature = "etw"))]
 #[test]
 fn guid_new() {
     use crate::guid::Guid;

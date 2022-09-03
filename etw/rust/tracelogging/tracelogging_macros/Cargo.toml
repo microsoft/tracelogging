@@ -5,6 +5,7 @@ edition = "2021"
 
 [lib]
 proc-macro = true
+doc = false
 doctest = false
 
 [dependencies]
