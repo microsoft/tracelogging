@@ -275,7 +275,7 @@ impl EventBuilder {
             .raw_add_data_strz(field_value.as_ref());
     }
 
-    /// Adds a StrZ16 array field (nul-terminated UTF16-LE) from an
+    /// Adds a StrZ16 variable-length array field (nul-terminated UTF16-LE) from an
     /// iterator-of-`&[u16]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
@@ -284,11 +284,11 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_str16_array` except that the ETW field will be encoded
+    /// This is the same as `add_str16_sequence` except that the ETW field will be encoded
     /// as a nul-terminated string instead of as a counted string. In most cases
-    /// you should prefer `add_str16_array` and use this method only if you specifically
+    /// you should prefer `add_str16_sequence` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz16_array<T: IntoIterator>(
+    pub fn add_strz16_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -299,7 +299,7 @@ impl EventBuilder {
         T::Item: AsRef<[u16]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::StrZ16, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::StrZ16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_strz(value.as_ref());
             });
@@ -329,7 +329,7 @@ impl EventBuilder {
             .raw_add_data_strz(field_value.as_ref());
     }
 
-    /// Adds a StrZ8 array field (nul-terminated 8-bit string) from an
+    /// Adds a StrZ8 variable-length array field (nul-terminated 8-bit string) from an
     /// iterator-of-`&[u8]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
@@ -338,11 +338,11 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_str8_array` except that the ETW field will be encoded
+    /// This is the same as `add_str8_sequence` except that the ETW field will be encoded
     /// as a nul-terminated string instead of as a counted string. In most cases
-    /// you should prefer `add_str8_array` and use this method only if you specifically
+    /// you should prefer `add_str8_sequence` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz8_array<T: IntoIterator>(
+    pub fn add_strz8_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -353,7 +353,7 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::StrZ8, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::StrZ8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_strz(value.as_ref());
             });
@@ -375,11 +375,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an I8 array field from an iterator-of-`&i8` value.
+    /// Adds an I8 variable-length array field from an iterator-of-`&i8` value.
     ///
     /// If out_type is Default, field will format as Signed.
     /// Other useful out_type value: String (formats as CP1252 character).
-    pub fn add_i8_array<'a>(
+    pub fn add_i8_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i8>,
@@ -387,7 +387,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::I8, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::I8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -409,11 +409,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a U8 array field from an iterator-of-`&u8` value.
+    /// Adds a U8 variable-length array field from an iterator-of-`&u8` value.
     ///
     /// If out_type is Default, field will format as Unsigned.
     /// Other useful out_type values: Hex, String (formats as CP1252 char), Boolean.
-    pub fn add_u8_array<'a>(
+    pub fn add_u8_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u8>,
@@ -421,7 +421,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::U8, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::U8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -442,10 +442,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an I16 array field from an iterator-of-`&i16` value.
+    /// Adds an I16 variable-length array field from an iterator-of-`&i16` value.
     ///
     /// If out_type is Default, field will format as Signed.
-    pub fn add_i16_array<'a>(
+    pub fn add_i16_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i16>,
@@ -453,7 +453,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::I16, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::I16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -475,11 +475,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a U16 array field from an iterator-of-`&u16` value.
+    /// Adds a U16 variable-length array field from an iterator-of-`&u16` value.
     ///
     /// If out_type is Default, field will format as Unsigned.
     /// Other useful out_type values: Hex, String (formats as UCS-2 char), Port.
-    pub fn add_u16_array<'a>(
+    pub fn add_u16_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u16>,
@@ -487,7 +487,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::U16, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::U16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -509,11 +509,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an I32 array field from an iterator-of-`&i32` value.
+    /// Adds an I32 variable-length array field from an iterator-of-`&i32` value.
     ///
     /// If out_type is Default, field will format as Signed.
     /// Other useful out_type value: HResult.
-    pub fn add_i32_array<'a>(
+    pub fn add_i32_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i32>,
@@ -521,7 +521,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::I32, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::I32, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -543,11 +543,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a U32 array field from an iterator-of-`&u32` value.
+    /// Adds a U32 variable-length array field from an iterator-of-`&u32` value.
     ///
     /// If out_type is Default, field will format as Unsigned.
     /// Other useful out_type values: Pid, Tid, IPv4, Win32Error, NtStatus, CodePointer.
-    pub fn add_u32_array<'a>(
+    pub fn add_u32_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u32>,
@@ -555,7 +555,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::U32, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::U32, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -576,10 +576,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an I64 array field from an iterator-of-`&i64` value.
+    /// Adds an I64 variable-length array field from an iterator-of-`&i64` value.
     ///
     /// If out_type is Default, field will format as Signed.
-    pub fn add_i64_array<'a>(
+    pub fn add_i64_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i64>,
@@ -587,7 +587,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::I64, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::I64, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -609,11 +609,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a U64 array field from an iterator-of-`&u64` value.
+    /// Adds a U64 variable-length array field from an iterator-of-`&u64` value.
     ///
     /// If out_type is Default, field will format as Unsigned.
     /// Other useful out_type value: CodePointer.
-    pub fn add_u64_array<'a>(
+    pub fn add_u64_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u64>,
@@ -621,7 +621,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::U64, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::U64, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -642,10 +642,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an ISize array field from an iterator-of-`&isize` value.
+    /// Adds an ISize variable-length array field from an iterator-of-`&isize` value.
     ///
     /// If out_type is Default, field will format as Signed.
-    pub fn add_isize_array<'a>(
+    pub fn add_isize_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a isize>,
@@ -653,7 +653,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::ISize, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::ISize, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -675,11 +675,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a USize array field from an iterator-of-`&usize` value.
+    /// Adds a USize variable-length array field from an iterator-of-`&usize` value.
     ///
     /// If out_type is Default, field will format as Unsigned.
     /// Other useful out_type value: CodePointer.
-    pub fn add_usize_array<'a>(
+    pub fn add_usize_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a usize>,
@@ -687,7 +687,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::USize, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::USize, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -708,10 +708,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an F32 array field from an iterator-of-`&f32` value.
+    /// Adds an F32 variable-length array field from an iterator-of-`&f32` value.
     ///
     /// If out_type is Default, field will format as float.
-    pub fn add_f32_array<'a>(
+    pub fn add_f32_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a f32>,
@@ -719,7 +719,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::F32, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::F32, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -740,10 +740,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds an F64 array field from an iterator-of-`&f64` value.
+    /// Adds an F64 variable-length array field from an iterator-of-`&f64` value.
     ///
     /// If out_type is Default, field will format as float.
-    pub fn add_f64_array<'a>(
+    pub fn add_f64_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a f64>,
@@ -751,7 +751,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::F64, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::F64, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -772,10 +772,10 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a Bool32 array field from an iterator-of-`&i32` value.
+    /// Adds a Bool32 variable-length array field from an iterator-of-`&i32` value.
     ///
     /// If out_type is Default, field will format as Boolean.
-    pub fn add_bool32_array<'a>(
+    pub fn add_bool32_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i32>,
@@ -783,7 +783,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::Bool32, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Bool32, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -799,9 +799,9 @@ impl EventBuilder {
     /// - Decoded event frequently includes a synthesized "FieldName.Length" field.
     /// - Arrays are not supported.
     ///
-    /// Note: There is no `add_binary_array` method because the ETW's `Binary` encoding does
+    /// Note: There is no `add_binary_sequence` method because the ETW's `Binary` encoding does
     /// not decode correctly with arrays. Array of binary can be created using
-    /// `add_binaryc_array`, though the resulting event will only decode correctly
+    /// `add_binaryc_sequence`, though the resulting event will only decode correctly
     /// if the decoder supports ETW's newer `BinaryC` encoding.
     pub fn add_binary(
         &mut self,
@@ -832,12 +832,12 @@ impl EventBuilder {
             .raw_add_data_value(field_value);
     }
 
-    /// Adds a Guid array field from an iterator-of-`&Guid` value.
+    /// Adds a Guid variable-length array field from an iterator-of-`&Guid` value.
     ///
     /// GUID is assumed to be encoded in Windows (little-endian) byte order.
     ///
     /// If out_type is Default, field will format as Guid.
-    pub fn add_guid_array<'a>(
+    pub fn add_guid_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a Guid>,
@@ -845,7 +845,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::Guid, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Guid, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -867,11 +867,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a FileTime array field from an iterator-of-`&i64` value.
+    /// Adds a FileTime variable-length array field from an iterator-of-`&i64` value.
     ///
     /// If out_type is Default, field will format as DateTime.
     /// Other useful out_type values: DateTimeCultureInsensitive, DateTimeUtc.
-    pub fn add_filetime_array<'a>(
+    pub fn add_filetime_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a i64>,
@@ -879,7 +879,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::FileTime, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::FileTime, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -901,11 +901,11 @@ impl EventBuilder {
             .raw_add_data_value(field_value);
     }
 
-    /// Adds a SystemTime array field from an iterator-of-`&[u16; 8]` value.
+    /// Adds a SystemTime variable-length array field from an iterator-of-`&[u16; 8]` value.
     ///
     /// If out_type is Default, field will format as DateTime.
     /// Other useful out_type values: DateTimeCultureInsensitive, DateTimeUtc.
-    pub fn add_systemtime_array<'a>(
+    pub fn add_systemtime_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a [u16; 8]>,
@@ -913,7 +913,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::SystemTime, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::SystemTime, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -936,12 +936,12 @@ impl EventBuilder {
             .raw_add_data_sid(field_value.as_ref());
     }
 
-    /// Adds a Sid array field from an iterator-of-`&[u8]` value.
+    /// Adds a Sid variable-length array field from an iterator-of-`&[u8]` value.
     ///
     /// Sid size is determined by `8 + field_value[1] * 4`.
     ///
     /// If out_type is Default, field will format as SID.
-    pub fn add_sid_array<T: IntoIterator>(
+    pub fn add_sid_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -952,7 +952,7 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::Sid, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Sid, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_sid(value.as_ref());
             });
@@ -974,11 +974,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a Hex32 array field from an iterator-of-`&u32` value.
+    /// Adds a Hex32 variable-length array field from an iterator-of-`&u32` value.
     ///
     /// If out_type is Default, field will format as Hex.
     /// Other useful out_type values: Win32Error, NtStatus, CodePointer.
-    pub fn add_hex32_array<'a>(
+    pub fn add_hex32_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u32>,
@@ -986,7 +986,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::Hex32, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Hex32, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -1008,11 +1008,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a Hex64 array field from an iterator-of-`&u64` value.
+    /// Adds a Hex64 variable-length array field from an iterator-of-`&u64` value.
     ///
     /// If out_type is Default, field will format as Hex.
     /// Other useful out_type values: CodePointer.
-    pub fn add_hex64_array<'a>(
+    pub fn add_hex64_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a u64>,
@@ -1020,7 +1020,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::Hex64, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Hex64, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -1042,11 +1042,11 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a HexSize array field from an iterator-of-`&usize` value.
+    /// Adds a HexSize variable-length array field from an iterator-of-`&usize` value.
     ///
     /// If out_type is Default, field will format as Hex.
     /// Other useful out_type values: CodePointer.
-    pub fn add_hexsize_array<'a>(
+    pub fn add_hexsize_sequence<'a>(
         &mut self,
         field_name: &str,
         field_values: impl IntoIterator<Item = &'a usize>,
@@ -1054,7 +1054,7 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_array(field_name, InType::HexSize, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::HexSize, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_value(value);
             });
@@ -1081,16 +1081,16 @@ impl EventBuilder {
             .raw_add_data_counted(field_value.as_ref());
     }
 
-    /// Adds a Str16 array field (counted UTF16-LE) from an iterator-of-`&[u16]` value.
+    /// Adds a Str16 variable-length array field (counted UTF16-LE) from an iterator-of-`&[u16]` value.
     ///
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_strz16_array` except that the ETW field will be encoded
+    /// This is the same as `add_strz16_sequence` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz16_array` only if you specifically
+    /// you should prefer this method and use `add_strz16_sequence` only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_str16_array<T: IntoIterator>(
+    pub fn add_str16_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -1101,7 +1101,7 @@ impl EventBuilder {
         T::Item: AsRef<[u16]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::Str16, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Str16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_counted(value.as_ref());
             });
@@ -1128,16 +1128,16 @@ impl EventBuilder {
             .raw_add_data_counted(field_value.as_ref());
     }
 
-    /// Adds a Str8 array field (counted 8-bit string) from an iterator-of-`&[u8]` value.
+    /// Adds a Str8 variable-length array field (counted 8-bit string) from an iterator-of-`&[u8]` value.
     ///
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_strz8_array` except that the ETW field will be encoded
+    /// This is the same as `add_strz8_sequence` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz8_array` only if you specifically
+    /// you should prefer this method and use `add_strz8_sequence` only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_str8_array<T: IntoIterator>(
+    pub fn add_str8_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -1148,7 +1148,7 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::Str8, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::Str8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_counted(value.as_ref());
             });
@@ -1175,7 +1175,7 @@ impl EventBuilder {
             .raw_add_data_counted(field_value.as_ref());
     }
 
-    /// Adds a BinaryC array field from an iterator-of-`&[u8]` value.
+    /// Adds a BinaryC variable-length array field from an iterator-of-`&[u8]` value.
     ///
     /// If out_type is Default, field will format as Hex.
     /// Other useful out_type values: IPv6, SocketAddress, Pkcs7WithTypeInfo.
@@ -1184,7 +1184,7 @@ impl EventBuilder {
     /// - Newer ETW [InType], so decoding might not work with older decoders.
     /// - Decodes without the synthesized "FieldName.Length" field.
     /// - Arrays are supported.
-    pub fn add_binaryc_array<T: IntoIterator>(
+    pub fn add_binaryc_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -1195,7 +1195,7 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_array(field_name, InType::BinaryC, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::BinaryC, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
                 this.raw_add_data_counted(value.as_ref());
             });
@@ -1229,8 +1229,8 @@ impl EventBuilder {
         );
     }
 
-    /// Advanced scenarios: Directly adds unchecked metadata to the event. Using this method
-    /// may result in events that do not decode correctly.
+    /// *Advanced scenarios:* Directly adds unchecked metadata to the event. Using this
+    /// method may result in events that do not decode correctly.
     ///
     /// There are a few things that are supported by TraceLogging that cannot be expressed
     /// by directly calling the add methods, e.g. array-of-struct. If these edge cases are
@@ -1253,8 +1253,8 @@ impl EventBuilder {
         return self.raw_add_meta(field_name, in_type.as_int(), out_type.as_int(), field_tag);
     }
 
-    /// Advanced scenarios: Directly adds unchecked metadata to the event. Using this method
-    /// may result in events that do not decode correctly.
+    /// *Advanced scenarios:* Directly adds unchecked metadata to the event. Using this
+    /// method may result in events that do not decode correctly.
     ///
     /// There are a few things that are supported by TraceLogging that cannot be expressed
     /// by directly calling the add methods, e.g. array-of-struct. If these edge cases are
@@ -1262,7 +1262,7 @@ impl EventBuilder {
     /// that would otherwise be impossible. Doing this requires advanced understanding of
     /// the TraceLogging encoding system. If done incorrectly, the resulting events will not
     /// decode properly.
-    pub fn raw_add_meta_array(
+    pub fn raw_add_meta_vcount(
         &mut self,
         field_name: &str,
         in_type: InType,
@@ -1276,14 +1276,14 @@ impl EventBuilder {
         );
         return self.raw_add_meta(
             field_name,
-            in_type.as_int() | InType::DynamicArrayFlag,
+            in_type.as_int() | InType::VariableCountFlag,
             out_type.as_int(),
             field_tag,
         );
     }
 
-    /// Advanced scenarios: Directly adds unchecked data to the event. Using this method
-    /// may result in events that do not decode correctly.
+    /// *Advanced scenarios:* Directly adds unchecked data to the event. Using this
+    /// method may result in events that do not decode correctly.
     ///
     /// There are a few things that are supported by TraceLogging that cannot be expressed
     /// by directly calling the add methods, e.g. array-of-struct. If these edge cases are
@@ -1306,8 +1306,8 @@ impl EventBuilder {
         return self;
     }
 
-    /// Advanced scenarios: Directly adds unchecked data to the event. Using this method
-    /// may result in events that do not decode correctly.
+    /// *Advanced scenarios:* Directly adds unchecked data to the event. Using this
+    /// method may result in events that do not decode correctly.
     ///
     /// There are a few things that are supported by TraceLogging that cannot be expressed
     /// by directly calling the add methods, e.g. array-of-struct. If these edge cases are

@@ -23,12 +23,12 @@ use crate::write_event;
 ///
 /// # Overview
 ///
-/// - Use [`define_provider!`] to create a static provider variable.
-/// - Call [Provider::register] during component initialization to open the connection to
-///   ETW.
-/// - Use [`write_event!`] as needed to write events.
-/// - Call [Provider::unregister] during component cleanup to close the connection to
-///   ETW.
+/// 1. Use [`define_provider!`] to create a static provider variable.
+/// 2. Call [Provider::register] during component initialization to open the connection
+///    to ETW.
+/// 3. Use [`write_event!`] as needed to write events.
+/// 4. Call [Provider::unregister] during component cleanup to close the connection to
+///    ETW.
 pub struct Provider {
     context: ProviderContext,
     meta: &'static [u8], // provider metadata
@@ -103,7 +103,7 @@ impl Provider {
         return Guid::from_name(name);
     }
 
-    /// Advanced: Returns this provider's encoded metadata bytes.
+    /// *Advanced:* Returns this provider's encoded metadata bytes.
     pub const fn raw_meta(&self) -> &[u8] {
         return self.meta;
     }
@@ -124,6 +124,10 @@ impl Provider {
 
     /// Returns true if any ETW logging session is listening to this provider for events
     /// with the specified level and keyword.
+    ///
+    /// Note: [`write_event!`] already checks `enabled()` and skips evaluating its
+    /// parameters if nobody is listening to the event. You only need to make your own
+    /// call to `enabled()` if you want to skip something other than [`write_event!`].
     #[inline(always)]
     pub const fn enabled(&self, level: Level, keyword: u64) -> bool {
         return self.context.enabled(level, keyword);

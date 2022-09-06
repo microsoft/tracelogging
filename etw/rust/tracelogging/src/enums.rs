@@ -6,7 +6,7 @@
 use core::fmt;
 use core::mem::size_of;
 
-/// Advanced: Indicates routing and decoding for an event.
+/// *Advanced:* Indicates routing and decoding for an event.
 ///
 /// This should almost always be set to [Channel::TraceLogging] (11) for TraceLogging
 /// events.
@@ -207,7 +207,7 @@ impl From<Opcode> for u8 {
     }
 }
 
-/// Advanced: Used to indicate the field's type for raw metadata operations.
+/// *Advanced:* Used to indicate the field's type for raw metadata operations.
 ///
 /// An InType indicates the binary encoding of the field, i.e. how to determine  the
 /// field's size. For example, [InType::I32] indicates the field is always 4 bytes,
@@ -444,11 +444,11 @@ impl InType {
 
     /// Raw encoding flag: _TlgInCcount indicates that field metadata contains a
     /// const-array-count slot.
-    pub const StaticArrayFlag: u8 = 0x20;
+    pub const ConstantCountFlag: u8 = 0x20;
 
     /// Raw encoding flag: TlgInVcount indicates that field data contains a
     /// variable-array-count slot.
-    pub const DynamicArrayFlag: u8 = 0x40;
+    pub const VariableCountFlag: u8 = 0x40;
 
     /// Raw encoding flag: _TlgInCustom indicates that the field uses a custom
     /// serializer.

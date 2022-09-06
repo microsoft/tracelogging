@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+#![no_std]
+#![warn(missing_docs)]
+#![allow(clippy::needless_return)]
+
 //! # TraceLoggingDynamic for Rust
 //!
 //! `tracelogging_dynamic` provides a flexible way to log
@@ -107,10 +111,6 @@
 //! tracefmt -o MyTraceData.txt MyTraceFile.etl
 //! ```
 
-#![no_std]
-#![warn(missing_docs)]
-#![allow(clippy::needless_return)]
-
 // Re-exports from tracelogging:
 pub use tracelogging::Channel;
 pub use tracelogging::Guid;
@@ -130,6 +130,3 @@ pub use provider::ProviderOptions;
 extern crate alloc;
 mod builder;
 mod provider;
-
-#[cfg(test)]
-mod tests;

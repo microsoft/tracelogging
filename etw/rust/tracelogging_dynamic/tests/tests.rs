@@ -3,22 +3,8 @@
 
 //extern crate alloc;
 
-use crate::*;
-use alloc::boxed::Box;
-use alloc::vec::Vec;
 use core::pin::Pin;
-
-fn my_callback(
-    _source_id: &Guid,
-    _event_control_code: u32,
-    _level: Level,
-    _match_any_keyword: u64,
-    _match_all_keyword: u64,
-    _filter_data: usize,
-    callback_context: usize,
-) {
-    assert_eq!(callback_context, 0xDEADBEEF);
-}
+use tracelogging_dynamic::*;
 
 #[test]
 fn provider() {
@@ -48,6 +34,18 @@ fn provider() {
     assert_eq!(aid2, Provider::set_current_thread_activity_id(&aid0));
 
     assert_eq!(Guid::from_name("Hello"), Provider::guid_from_name("Hello"));
+
+    fn my_callback(
+        _source_id: &Guid,
+        _event_control_code: u32,
+        _level: Level,
+        _match_any_keyword: u64,
+        _match_all_keyword: u64,
+        _filter_data: usize,
+        callback_context: usize,
+    ) {
+        assert_eq!(callback_context, 0xDEADBEEF);
+    }
 
     Provider::options()
         .group_id(&Guid::zero())
@@ -206,7 +204,7 @@ fn builder() {
             b.add_strz16(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_strz16_array(n, v, o, t);
+            b.add_strz16_sequence(n, v, o, t);
         },
     );
     validate(
@@ -218,7 +216,7 @@ fn builder() {
             b.add_strz8(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_strz8_array(n, v, o, t);
+            b.add_strz8_sequence(n, v, o, t);
         },
     );
     validate(
@@ -230,7 +228,7 @@ fn builder() {
             b.add_i8(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_i8_array(n, v, o, t);
+            b.add_i8_sequence(n, v, o, t);
         },
     );
     validate(
@@ -242,7 +240,7 @@ fn builder() {
             b.add_u8(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_u8_array(n, v, o, t);
+            b.add_u8_sequence(n, v, o, t);
         },
     );
     validate(
@@ -254,7 +252,7 @@ fn builder() {
             b.add_i16(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_i16_array(n, v, o, t);
+            b.add_i16_sequence(n, v, o, t);
         },
     );
     validate(
@@ -266,7 +264,7 @@ fn builder() {
             b.add_u16(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_u16_array(n, v, o, t);
+            b.add_u16_sequence(n, v, o, t);
         },
     );
     validate(
@@ -278,7 +276,7 @@ fn builder() {
             b.add_i32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_i32_array(n, v, o, t);
+            b.add_i32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -290,7 +288,7 @@ fn builder() {
             b.add_u32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_u32_array(n, v, o, t);
+            b.add_u32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -302,7 +300,7 @@ fn builder() {
             b.add_i64(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_i64_array(n, v, o, t);
+            b.add_i64_sequence(n, v, o, t);
         },
     );
     validate(
@@ -314,7 +312,7 @@ fn builder() {
             b.add_u64(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_u64_array(n, v, o, t);
+            b.add_u64_sequence(n, v, o, t);
         },
     );
     validate(
@@ -326,7 +324,7 @@ fn builder() {
             b.add_isize(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_isize_array(n, v, o, t);
+            b.add_isize_sequence(n, v, o, t);
         },
     );
     validate(
@@ -338,7 +336,7 @@ fn builder() {
             b.add_usize(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_usize_array(n, v, o, t);
+            b.add_usize_sequence(n, v, o, t);
         },
     );
     validate(
@@ -350,7 +348,7 @@ fn builder() {
             b.add_f32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_f32_array(n, v, o, t);
+            b.add_f32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -362,7 +360,7 @@ fn builder() {
             b.add_f64(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_f64_array(n, v, o, t);
+            b.add_f64_sequence(n, v, o, t);
         },
     );
     validate(
@@ -374,7 +372,7 @@ fn builder() {
             b.add_bool32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_bool32_array(n, v, o, t);
+            b.add_bool32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -386,7 +384,7 @@ fn builder() {
             b.add_bool32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_bool32_array(n, v, o, t);
+            b.add_bool32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -398,9 +396,9 @@ fn builder() {
             b.add_binary(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_binaryc_array(n, v, o, t);
+            b.add_binaryc_sequence(n, v, o, t);
         },
-    ); // There is no add_binary_array.
+    ); // There is no add_binary_sequence.
     validate(
         &p,
         &mut b,
@@ -410,7 +408,7 @@ fn builder() {
             b.add_guid(n, &v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_guid_array(n, v, o, t);
+            b.add_guid_sequence(n, v, o, t);
         },
     );
     validate(
@@ -422,7 +420,7 @@ fn builder() {
             b.add_filetime(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_filetime_array(n, v, o, t);
+            b.add_filetime_sequence(n, v, o, t);
         },
     );
     validate(
@@ -434,7 +432,7 @@ fn builder() {
             b.add_systemtime(n, &v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_systemtime_array(n, v, o, t);
+            b.add_systemtime_sequence(n, v, o, t);
         },
     );
     validate(
@@ -446,7 +444,7 @@ fn builder() {
             b.add_sid(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_sid_array(n, v, o, t);
+            b.add_sid_sequence(n, v, o, t);
         },
     );
     validate(
@@ -458,7 +456,7 @@ fn builder() {
             b.add_hex32(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_hex32_array(n, v, o, t);
+            b.add_hex32_sequence(n, v, o, t);
         },
     );
     validate(
@@ -470,7 +468,7 @@ fn builder() {
             b.add_hex64(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_hex64_array(n, v, o, t);
+            b.add_hex64_sequence(n, v, o, t);
         },
     );
     validate(
@@ -482,7 +480,7 @@ fn builder() {
             b.add_hexsize(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_hexsize_array(n, v, o, t);
+            b.add_hexsize_sequence(n, v, o, t);
         },
     );
     validate(
@@ -494,7 +492,7 @@ fn builder() {
             b.add_str16(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_str16_array(n, v, o, t);
+            b.add_str16_sequence(n, v, o, t);
         },
     );
     validate(
@@ -506,7 +504,7 @@ fn builder() {
             b.add_str8(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_str8_array(n, v, o, t);
+            b.add_str8_sequence(n, v, o, t);
         },
     );
     validate(
@@ -518,7 +516,7 @@ fn builder() {
             b.add_binaryc(n, v, o, t);
         },
         |b, n, v, o, t| {
-            b.add_binaryc_array(n, v, o, t);
+            b.add_binaryc_sequence(n, v, o, t);
         },
     );
 }

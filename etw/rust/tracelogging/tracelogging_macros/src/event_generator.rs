@@ -84,6 +84,7 @@ impl EventGenerator {
         self.tlg_prov_var.push_str(TLG_PROV_PREFIX);
         self.tlg_prov_var
             .push_str(&event.provider_symbol.to_string());
+        let tlg_prov_span = event.provider_symbol.span();
 
         // metadata size: u16 = size_of::<_TlgMeta>() as u16
         self.meta_type_tree.add_path(U16_PATH);
@@ -174,9 +175,8 @@ impl EventGenerator {
 
         // always-present args for the helper function's call site
         self.func_call_tree
-            // &_TLG_PROV_...
-            .add_punct("&")
-            .push_span(event.provider_symbol.span())
+            // tlg_prov_var
+            .push_span(tlg_prov_span)
             .add_ident(&self.tlg_prov_var)
             .pop_span()
             // , tlg::meta_as_bytes(&_tlg_meta)
@@ -325,8 +325,7 @@ impl EventGenerator {
         /*
         const _TLG_KEYWORD = keywords...;
         const _TLG_LEVEL = level...;
-        let _tlg_prov = &provider_symbol;
-        if(!_tlg_prov.enabled(_TLG_LEVEL, _TLG_KEYWORD)) {
+        if(!tlg_prov_var.enabled(_TLG_LEVEL, _TLG_KEYWORD)) {
             0
         } else {
             enabled_tree...
@@ -386,10 +385,10 @@ impl EventGenerator {
             .push_span(event.level.context)
             .add_const_from_tokens(TLG_LEVEL_CONST, LEVEL_PATH, event.level.tokens)
             .pop_span()
-            // if !_tlg_prov.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
+            // if !tlg_prov_var.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
             .add_ident("if")
             .add_punct("!")
-            .push_span(event.provider_symbol.span())
+            .push_span(tlg_prov_span)
             .add_ident(&self.tlg_prov_var)
             .pop_span()
             .add_punct(".")
@@ -432,7 +431,7 @@ impl EventGenerator {
 
             let inflags = (if has_out || has_tag { 0x80 } else { 0 })
                 | (if field.option.strategy.is_slice() {
-                    InType::DynamicArrayFlag
+                    InType::VariableCountFlag
                 } else {
                     0
                 });

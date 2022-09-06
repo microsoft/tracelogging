@@ -2,10 +2,16 @@
 name = "tracelogging"
 version = "0.1.0"
 edition = "2021"
+authors = ["Microsoft"]
+license = "MIT"
+description = "TraceLogging for Rust"
+repository = "https://github.com/microsoft/tracelogging"
+readme = "../README.md"
+rust-version = "1.63"
 
 [features]
 default = ["etw", "macros"]
-etw = [] # Everything is a no-op unless windows && etw.
+etw = [] # Logging is enabled if windows && etw.
 macros = ["dep:tracelogging_macros"]
 
 [dependencies]

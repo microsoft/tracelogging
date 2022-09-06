@@ -55,11 +55,9 @@ impl ProviderGenerator {
 
         let prov_tokens = self
             .prov_tree
-            // static _TLG_PROVIDER: ::tracelogging::Provider = unsafe { ... }
+            // static PROVIDER: ::tracelogging::Provider = unsafe { ... };
             .add_ident("static")
-            .push_span(provider.symbol.span())
-            .add_ident(&self.tlg_prov_symbol)
-            .pop_span()
+            .add(provider.symbol.clone())
             .add_punct(":")
             .add_path(PROVIDER_PATH)
             .add_punct("=")
@@ -93,14 +91,17 @@ impl ProviderGenerator {
                     .drain(),
             )
             .add_punct(";")
+            // const _TLG_PROVIDER: &::tracelogging::Provider = &PROVIDER'
             .add_ident("static")
-            .add(provider.symbol)
+            .push_span(provider.symbol.span())
+            .add_ident(&self.tlg_prov_symbol)
+            .pop_span()
             .add_punct(":")
             .add_punct("&")
             .add_path(PROVIDER_PATH)
             .add_punct("=")
             .add_punct("&")
-            .add_ident(&self.tlg_prov_symbol)
+            .add(provider.symbol)
             .add_punct(";")
             .drain()
             .collect();

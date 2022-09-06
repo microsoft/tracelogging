@@ -221,7 +221,11 @@ impl<'a> Parser<'a> {
                         }
                     };
 
-                    self.next_comma(Optional); // Assume options are optional.
+                    self.next_comma(if want_struct {
+                        OptionalNotLast
+                    } else {
+                        Optional
+                    }); // Assume options are optional.
                     result =
                         ArgResult::Option(name_ident, Parser::from_group(self.errors, args_group));
                     break;
@@ -304,7 +308,7 @@ impl<'a> Parser<'a> {
         let error_message = match constraints {
             Optional | Required => "expected ',' or ')'",
             RequiredLast /*| OptionalLast*/ => "expected ')'",
-            RequiredNotLast => "expected ','",
+            OptionalNotLast | RequiredNotLast => "expected ','",
         };
         self.errors.add(span, error_message);
     }
@@ -334,6 +338,13 @@ pub enum ArgConstraints {
     /// - `expected ')'` if any tokens after trailing comma.
     OptionalLast,
     */
+    /// Optional:
+    /// - No error for end-of-stream while looking for item.
+    ///
+    /// Never last:
+    /// - `expected ','` if unexpected tokens after item.
+    OptionalNotLast,
+
     /// Required:
     /// - Error for end-of-stream while looking for item.
     ///

@@ -1,6 +1,10 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+#![no_std]
+#![warn(missing_docs)]
+#![allow(clippy::needless_return)]
+
 //! # TraceLogging for Rust
 //!
 //! `tracelogging` provides a simple and efficient way to log
@@ -88,22 +92,6 @@
 //! tracelog -stop MyTrace
 //! tracefmt -o MyTraceData.txt MyTraceFile.etl
 //! ```
-
-#![no_std]
-#![warn(missing_docs)]
-#![allow(clippy::needless_return)]
-
-pub use enums::Channel;
-pub use enums::InType;
-pub use enums::Level;
-pub use enums::Opcode;
-pub use enums::OutType;
-pub use guid::Guid;
-pub use native::NativeImplementation;
-pub use native::ProviderEnableCallback;
-pub use native::NATIVE_IMPLEMENTATION;
-pub use provider::Provider;
-pub mod _internal;
 
 /// Creates a static symbol representing an ETW provider.
 ///
@@ -707,8 +695,8 @@ pub use tracelogging_macros::define_provider;
 ///
 /// ### Raw fields
 ///
-/// In certain cases, you may need capabilities not directly exposed by the normal field
-/// types. For example,
+/// *Advanced:* In certain cases, you may need capabilities not directly exposed by the
+/// normal field types. For example,
 ///
 /// - You might need to log an array of a variable-sized type, such as an array of
 ///   string.
@@ -865,11 +853,20 @@ pub use tracelogging_macros::define_provider;
 #[cfg(feature = "macros")]
 pub use tracelogging_macros::write_event;
 
+pub use enums::Channel;
+pub use enums::InType;
+pub use enums::Level;
+pub use enums::Opcode;
+pub use enums::OutType;
+pub use guid::Guid;
+pub use native::NativeImplementation;
+pub use native::ProviderEnableCallback;
+pub use native::NATIVE_IMPLEMENTATION;
+pub use provider::Provider;
+pub mod _internal;
+
 mod descriptors;
 mod enums;
 mod guid;
 mod native;
 mod provider;
-
-#[cfg(test)]
-mod tests;

@@ -37,13 +37,16 @@ pub enum InType {
     Str8 = 23,
     Struct = 24,
     BinaryC = 25,
+
+    // The following types need to be expressed symbolically in the generated code, i.e.
+    // we have to generate "HexSize.to_int()" instead of literal "21".
     ISize,
     USize,
     HexSize,
 }
 
 impl InType {
-    pub const DynamicArrayFlag: u8 = 0x40;
+    pub const VariableCountFlag: u8 = 0x40;
 
     pub const fn to_token(self) -> EnumToken {
         match self {
