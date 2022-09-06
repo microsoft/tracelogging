@@ -42,8 +42,6 @@ pub struct EventGenerator {
     arg_n: IdentBuilder,
     /// Buffered _TlgMeta bytes.
     meta_buffer: Vec<u8>,
-    /// "_TLG_PROV_...""
-    tlg_prov_var: String,
     /// number of fields added so far
     field_count: u16,
     /// number of runtime lengths needed
@@ -67,7 +65,6 @@ impl EventGenerator {
             tag_n: IdentBuilder::new(TLG_TAG_CONST),
             arg_n: IdentBuilder::new(TLG_ARG_VAR),
             meta_buffer: Vec::with_capacity(128),
-            tlg_prov_var: String::new(),
             field_count: 0,
             lengths_count: 0,
         };
@@ -79,12 +76,6 @@ impl EventGenerator {
         self.lengths_count = 0;
 
         // Before-field stuff:
-
-        self.tlg_prov_var.clear();
-        self.tlg_prov_var.push_str(TLG_PROV_PREFIX);
-        self.tlg_prov_var
-            .push_str(&event.provider_symbol.to_string());
-        let tlg_prov_span = event.provider_symbol.span();
 
         // metadata size: u16 = size_of::<_TlgMeta>() as u16
         self.meta_type_tree.add_path(U16_PATH);
@@ -175,9 +166,10 @@ impl EventGenerator {
 
         // always-present args for the helper function's call site
         self.func_call_tree
-            // tlg_prov_var
-            .push_span(tlg_prov_span)
-            .add_ident(&self.tlg_prov_var)
+            // &PROVIDER
+            .add_punct("&")
+            .push_span(event.provider_symbol.span())
+            .add(event.provider_symbol.clone())
             .pop_span()
             // , tlg::meta_as_bytes(&_tlg_meta)
             .add_punct(",")
@@ -385,11 +377,11 @@ impl EventGenerator {
             .push_span(event.level.context)
             .add_const_from_tokens(TLG_LEVEL_CONST, LEVEL_PATH, event.level.tokens)
             .pop_span()
-            // if !tlg_prov_var.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
+            // if !PROVIDER.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
             .add_ident("if")
             .add_punct("!")
-            .push_span(tlg_prov_span)
-            .add_ident(&self.tlg_prov_var)
+            .push_span(event.provider_symbol.span())
+            .add(event.provider_symbol)
             .pop_span()
             .add_punct(".")
             .add_ident("enabled")

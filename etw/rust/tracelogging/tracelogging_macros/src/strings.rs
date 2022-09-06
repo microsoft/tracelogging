@@ -94,7 +94,6 @@ pub const OUTTYPE_ENUMS: &[&str] = &[
     "Xml",
 ];
 
-pub const TLG_PROV_PREFIX: &str = "_TLG_PROV_";
 pub const TLG_LEVEL_CONST: &str = "_TLG_LEVEL";
 pub const TLG_KEYWORD_CONST: &str = "_TLG_KEYWORD";
 pub const TLG_TAG_CONST: &str = "_TLG_TAG";

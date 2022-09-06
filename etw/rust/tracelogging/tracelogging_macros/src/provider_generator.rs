@@ -12,7 +12,6 @@ pub struct ProviderGenerator {
     tree1: Tree,
     tree2: Tree,
     tree3: Tree,
-    tlg_prov_symbol: String,
 }
 
 impl ProviderGenerator {
@@ -22,7 +21,6 @@ impl ProviderGenerator {
             tree1: Tree::new(span),
             tree2: Tree::new(span),
             tree3: Tree::new(span),
-            tlg_prov_symbol: String::new(),
         };
     }
 
@@ -48,10 +46,6 @@ impl ProviderGenerator {
         meta[1] = (meta.len() >> 8) as u8;
 
         let id_fields = provider.id.to_fields();
-
-        self.tlg_prov_symbol.clear();
-        self.tlg_prov_symbol.push_str(TLG_PROV_PREFIX);
-        self.tlg_prov_symbol.push_str(&provider.symbol.to_string());
 
         let prov_tokens = self
             .prov_tree
@@ -90,18 +84,6 @@ impl ProviderGenerator {
                     )
                     .drain(),
             )
-            .add_punct(";")
-            // const _TLG_PROVIDER: &::tracelogging::Provider = &PROVIDER'
-            .add_ident("static")
-            .push_span(provider.symbol.span())
-            .add_ident(&self.tlg_prov_symbol)
-            .pop_span()
-            .add_punct(":")
-            .add_punct("&")
-            .add_path(PROVIDER_PATH)
-            .add_punct("=")
-            .add_punct("&")
-            .add(provider.symbol)
             .add_punct(";")
             .drain()
             .collect();
