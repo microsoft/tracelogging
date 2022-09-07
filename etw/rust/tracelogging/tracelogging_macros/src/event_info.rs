@@ -216,11 +216,16 @@ impl EventInfo {
 
                 if !field_has_metadata {
                     // No metadata, so don't try to parse a field name.
-                } else if let Some((field_name, _)) = option_parser.next_string_literal(
+                } else if let Some((field_name, field_span)) = option_parser.next_string_literal(
                     RequiredNotLast,
                     "expected field name (must be a string literal, e.g. \"field name\")",
                 ) {
                     field.name = field_name;
+                    if field.name.contains('\0') {
+                        option_parser
+                            .errors()
+                            .add(field_span, "field name must not contain '\\0'");
+                    }
                 }
 
                 let field_accepts_tag;

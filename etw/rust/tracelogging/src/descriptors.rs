@@ -16,13 +16,18 @@ pub struct EventDescriptor {
     pub id: u16,
 
     /// Set version to 0 unless the event has a manually-assigned stable id.
-    /// If the event does have a manually-assigned stable id, start the event
-    /// with version 0, then increment the version for each breaking change to
-    /// the event (e.g. changes to the field names, types, or semantics).
+    /// If the event does have a manually-assigned stable id, start the version
+    /// at 0, then increment the version for each breaking change to the event
+    /// (e.g. changes to the field names, types, or semantics).
     pub version: u8,
 
-    /// For TraceLogging events, channel should usually be set to 11.
-    /// For non-TraceLogging events, channel should usually be set to 0.
+    /// For TraceLogging events, channel should usually be set to
+    /// [Channel::TraceLogging] (11). TraceLogging events with channel set to a value
+    /// other than 11 might not decode correctly if they are collected on a system
+    /// running Windows 8.1 or before.
+    ///
+    /// For non-TraceLogging events, channel should usually be set to
+    /// [Channel::TraceClassic] (0).
     pub channel: Channel,
 
     /// Event severity level: 1=critical, 2=error, 3=warning, 4=info, 5=verbose.

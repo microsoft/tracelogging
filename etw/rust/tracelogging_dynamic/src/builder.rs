@@ -45,20 +45,26 @@ use crate::provider::Provider;
 ///     adds an [InType::U8] field to the event. The default format for [InType::U8] is
 ///     [OutType::Unsigned], so if you use `add_u8(..., OutType::Default, ...), the field
 ///     will be decoded as an unsigned decimal integer. However, if you specify
-///     [OutType::String], the field will be formatted as a char, and if you specify
+///     [OutType::String], the field will be formatted as a char, or if you specify
 ///     [OutType::Hex], the field will be formatted as a hexadecimal integer.
+///     - Note that [OutType::Default] has a special encoding that saves 1 byte per
+///       field, so prefer [OutType::Default] over other [OutType] values in cases where
+///       they both do the same thing.
 ///   - field_tag is a 28-bit provider-defined value that will be included in the
 ///     metadata of the field. Use 0 if you are not using field tags.
-/// - As needed, configure other event options by calling `builder.id_version(id, ver)`,
-///   `builder.channel(channel)`, `builder.opcode(opcode)`, or `builder.task(task)`.
+/// - If appropriate, configure other event options by calling:
+///   - `builder.id_version(id, ver)`
+///   - `builder.channel(channel)`
+///   - `builder.opcode(opcode)`
+///   - `builder.task(task)`
 /// - Call `builder.write(provider, activity_id, related_id)` to
 ///   send the event to ETW.
 ///   - `activity_id` is an optional 128-bit value that can be used during trace
 ///     analysis to group and correlate events. If `None`, the current thread's
 ///     thread-local activity id will be used as the event's activity id.
 ///   - `related_id` is an optional 128-bit value that indicates the parent of a
-///     newly-started activity. This should be specified for activity-start events and
-///     should be `None` for other events.
+///     newly-started activity. This should be specified for
+///     activity-[start](Opcode::Start) events and should be `None` for other events.
 ///
 /// # Event Size Limits
 ///
@@ -105,7 +111,7 @@ impl EventBuilder {
     /// event.
     ///
     /// name is the event name. It should be short and unique. It must not contain any
-    /// '\0' bytes.
+    /// `'\0'` bytes.
     ///
     /// level indicates the severity of the event. Use Verbose if unsure.
     ///

@@ -49,10 +49,9 @@ impl Guid {
         return g;
     }
 
-    /// Returns a GUID generated from a case-insensitive hash of the specified
-    /// trace provider name using the same algorithm as is used by many ETW
-    /// tools and APIs. Given the same name, it will always generate the same
-    /// GUID.
+    /// Returns a GUID generated from a case-insensitive hash of the specified trace
+    /// provider name. The hash uses the same algorithm as many other ETW tools and APIs.
+    /// Given the same name, it will always generate the same GUID.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(

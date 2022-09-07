@@ -17,7 +17,8 @@ use crate::guid::Guid;
 pub enum NativeImplementation {
     /// Crate compiled for other configuration (no logging is performed).
     Other,
-    /// Crate compiled for Windows (ETW) configuration (logging performed via ETW APIs).
+    /// Crate compiled for Windows (ETW) configuration (logging is performed via ETW
+    /// APIs).
     Windows,
 }
 

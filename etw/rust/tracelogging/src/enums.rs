@@ -32,8 +32,14 @@ impl Channel {
 
     /// Channel for non-TraceLogging events.
     pub const TraceClassic: Channel = Channel(0);
+
     /// Channel for TraceLogging events.
+    ///
+    /// TraceLogging events with channel set to a value other than
+    /// [TraceLogging](Channel::TraceLogging) (11) might not decode correctly if they are
+    /// collected on a system running Windows 8.1 or before.
     pub const TraceLogging: Channel = Channel(11);
+
     /// Channel for events from machine-generated manifests.
     pub const ProviderMetadata: Channel = Channel(12);
 }
@@ -129,17 +135,17 @@ impl Opcode {
         return self.0;
     }
 
-    /// Normal event. May have activity_id set if it is part of an activity.
+    /// Normal event. The event may set activity_id if it is part of an activity.
     pub const Info: Opcode = Opcode(0);
-    /// Event indicates the beginning of an activity. The event should set
-    /// related_id to the id of the parent activity and set activity_id to the
-    /// id of the newly-started activity. All subsequent events that use the
-    /// new activity_id will be considered as part of this activity, up to the
-    /// corresponding Stop event.
+    /// Event indicates the beginning of an activity. The event should set related_id to
+    /// the id of the parent activity and should set activity_id to the id of the
+    /// newly-started activity. All subsequent events that use the new activity_id will
+    /// be considered as part of this activity, up to the corresponding
+    /// [Stop](Opcode::Stop) event.
     pub const Start: Opcode = Opcode(1);
     /// Event indicates the end of an activity. The event should set activity_id
     /// to the id of the activity that is ending and should use the same level
-    /// and keyword as used for the corresponding Start event.
+    /// and keyword as were used for the corresponding [Start](Opcode::Start) event.
     pub const Stop: Opcode = Opcode(2);
     /// Data Collection Start event
     pub const DC_Start: Opcode = Opcode(3);
@@ -352,11 +358,13 @@ impl InType {
     /// [OutType::DateTimeUtc].
     pub const SystemTime: InType = InType(18);
 
-    /// TlgInSID = Security ID win Windows
+    /// TlgInSID = Security ID in Windows
     /// [SID](https://docs.microsoft.com/windows/win32/api/winnt/ns-winnt-sid)
     /// format.
     ///
-    /// Note: Expected size (sid_length) is `8 + 4 * sid.as_bytes()[1]`.
+    /// Note: Expected size is
+    /// [`GetSidLength(sid_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
+    /// = `sid_bytes[1] * 4 + 8`.
     pub const Sid: InType = InType(19);
 
     /// TlgInHEXINT32 = 32-bit integer formatted as hex.
@@ -481,18 +489,19 @@ impl From<InType> for u8 {
     }
 }
 
-/// Data formatting hints that may be used or ignored by decoders.
+/// Data formatting hint that may be used or ignored by decoders.
 ///
 /// Each field of an event has an [InType] (specifies the field's binary
 /// encoding) and an [OutType] (formatting hint for the decoder).
 ///
 /// If a field has an OutType set and the decoder supports the field's
 /// combination of InType + OutType then the decoder will use the OutType as a
-/// formatting hint when decoding the field. For example, a field with
-/// [InType::U8] and [OutType::Default] is formatted as decimal. If the field sets
-/// [OutType::Hex] and the decoder supports U8+Hex then the field would be formatted as
-/// hexadecimal. If the field sets [OutType::String] and the decoder
-/// supports U8+String then it would be formatted as a CP1252 CHAR.
+/// formatting hint when decoding the field.
+///
+/// For example, a field with [InType::U8] and [OutType::Default] is formatted as
+/// decimal. If the field sets [OutType::Hex] and the decoder supports U8+Hex then the
+/// field would be formatted as hexadecimal. If the field sets [OutType::String] and the
+/// decoder supports U8+String then it would be formatted as a CP1252 CHAR.
 ///
 /// If the OutType is [OutType::Default] or is not supported by the decoder then the
 /// field receives a default formatting based on the field's InType.
@@ -541,8 +550,7 @@ impl OutType {
     /// [InType::U32].
     pub const IPv4: OutType = OutType(8);
     /// TlgOutIPV6 = field should be formatted as an IPv6 address. Use with
-    /// [InType::Binary],
-    /// BinaryC.
+    /// [InType::Binary] or [InType::BinaryC].
     pub const IPv6: OutType = OutType(9);
     /// TlgOutSOCKETADDRESS = field should be formatted as a sockaddr. Use with
     /// [InType::Binary] or [InType::BinaryC].

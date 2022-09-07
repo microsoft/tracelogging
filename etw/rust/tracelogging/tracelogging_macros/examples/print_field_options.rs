@@ -137,11 +137,13 @@ impl ToMarkdown for FieldOption {
             FieldStrategy::StrZ => {
                 self.normal_field(&mut s, self.value_type, true, "strz");
             }
-            FieldStrategy::Counted if matches!(self.intype, InType::BinaryC) => {
-                self.normal_field(&mut s, self.value_type, true, "binaryc");
-            }
             FieldStrategy::Counted => {
-                self.normal_field(&mut s, self.value_type, true, "");
+                let note = if matches!(self.intype, InType::BinaryC) {
+                    "binaryc"
+                } else {
+                    ""
+                };
+                self.normal_field(&mut s, self.value_type, self.value_array_count == 0, note);
             }
             FieldStrategy::Slice => {
                 self.normal_field(&mut s, self.value_type, true, "");

@@ -15,14 +15,13 @@
 //! Vista or later. The events can be decoded on Windows 10 or later.
 //!
 //! This implementation of TraceLogging uses macros to generate event metadata at
-//! compile-time, improving runtime performance and minimizing dependencies. To make this
-//! metadata generation possible, the event schema (event name, field names, and field
-//! types) must be specified at compile-time (e.g. event name and field names must be
-//! string literals, not variables).
+//! compile-time, improving runtime performance and minimizing dependencies. To enable
+//! compile-time metadata generation, the event schema must be specified at compile-time.
+//! For example, event name and field names must be string literals, not variables.
 //!
 //! # Overview
 //!
-//! - Use [`define_provider!`] to create a static item for your [Provider], e.g.
+//! - Use [`define_provider!`] to create a static symbol for your [Provider], e.g.
 //!
 //!   `define_provider!(MY_PROVIDER, "MyCompany.MyComponent");`
 //!
@@ -30,9 +29,10 @@
 //!
 //!   `unsafe { MY_PROVIDER.register(); }`
 //!
-//!   - Safety: [Provider::register] is unsafe because a registered provider **must** be
-//!     properly unregistered before your component unloads. Since the provider is
-//!     static, Rust will not automatically drop it.
+//!   - Safety: [Provider::register] is unsafe because all providers registered by a DLL
+//!     **must** be properly unregistered before the DLL unloads. Since the provider is
+//!     static, Rust will not automatically drop it. If you are writing an EXE, this is
+//!     not a safety issue because the process exits before the EXE unloads.
 //!
 //! - As needed, use [`write_event!`] to send events to ETW.
 //!
@@ -53,7 +53,7 @@
 //! // Register the provider at module initialization. If you don't register (or if
 //! // register fails) then MY_PROVIDER.enabled() will always return false, the
 //! // write_event macro will be a no-op, and MY_PROVIDER.unregister() will be a no-op.
-//! // Safety: MUST call MY_PROVIDER.unregister() before module unload.
+//! // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
 //! unsafe { MY_PROVIDER.register(); }
 //!
 //! // As necessary, call write_event to send events to ETW.
@@ -74,15 +74,20 @@
 //!
 //! # Notes
 //!
-//! Field value expressions will only be evaluated if an ETW logging session is listening
-//! to the provider for events with the specified level and keyword.
+//! Field value expressions will only be evaluated if the event is enabled, i.e. only if
+//! one or more ETW logging sessions are listening to the provider with filters that
+//! include the level and keyword of the event.
 //!
 //! ETW events are limited in size (event size = headers + metadata + data). Windows will
 //! ignore any event that is larger than 64KB and will ignore any event that is larger
 //! than the buffer size of the recording session.
 //!
-//! Collect the events using Windows SDK tools like traceview or tracelog. Decode the
-//! events using Windows SDK tools like traceview or tracefmt.
+//! Collect the events using Windows SDK tools like
+//! [traceview](https://docs.microsoft.com/windows-hardware/drivers/devtest/traceview) or
+//! [tracelog](https://docs.microsoft.com/windows-hardware/drivers/devtest/tracelog).
+//! Decode the events using Windows SDK tools like
+//! [traceview](https://docs.microsoft.com/windows-hardware/drivers/devtest/traceview) or
+//! [tracefmt](https://docs.microsoft.com/windows-hardware/drivers/devtest/tracefmt).
 //! For example, to collect events from a provider that was defined as
 //! `define_provider!(MY_PROVIDER, "MyCompany.MyComponent")`:
 //!
@@ -121,10 +126,9 @@
 /// ```
 ///
 /// **Note:** The provider starts out unregistered. You must call
-/// `MY_PROVIDER.register();` to open the provider before using it, and you must call
-/// `MY_PROVIDER.unregister();` to close the provider before your component unloads.
-/// With the exception of [Provider::register], all operations on an unregistered
-/// provider are no-ops (they will do nothing and return immediately).
+/// `MY_PROVIDER.register();` to open the provider before using it. With the exception
+/// of [Provider::register], all operations on an unregistered provider are no-ops (they
+/// will do nothing and return immediately).
 ///
 /// # Example
 ///
@@ -133,7 +137,7 @@
 ///
 /// tlg::define_provider!(MY_PROVIDER, "MyCompany.MyComponent");
 ///
-/// // Safety: Must call MY_PROVIDER.unregister() before module unload.
+/// // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
 /// unsafe { MY_PROVIDER.register(); }
 ///
 /// let message = "We're low on ice cream.";
@@ -155,7 +159,7 @@
 ///
 /// - `PROVIDER_SYMBOL`
 ///
-///   The token that will be used to refer to the provider, for use with
+///   The token that will be used to refer to the provider. This is used with
 ///   [`write_event!`] and with [Provider] methods like [Provider::register].
 ///
 /// - `"ProviderName"`
@@ -170,10 +174,11 @@
 ///
 /// - `id("GUID")`
 ///
-///   Specifies the ETW provider id (also known as the Control GUID). If the `id` option
-///   is not specified, the provider's id will be `Guid::from_name(provider_name)`. Most
-///   providers should use the automatically-generated id so most providers do not need
-///   the `id` option.
+///   Specifies the ETW provider id, also known as the ETW Control GUID). If the `id`
+///   option is not specified, the provider's id will be
+///   `Guid::from_name(provider_name)`. Most providers should use the
+///   automatically-generated id so most providers do not need to specify the `id`
+///   option.
 ///
 ///   Example: `id("80c257fb-c6bc-4538-a4c4-c7b863d46a8c")`
 ///
@@ -181,15 +186,14 @@
 ///
 ///   Specifies the ETW
 ///   [provider group](https://docs.microsoft.com/windows/win32/etw/provider-traits) id.
-///   Most providers do not join a provider group so most providers do not need the
-///   `group_id` option.
+///   Most providers do not join a provider group so most providers do not need to
+///   specify the `group_id` option.
 ///
 ///   Example: `group_id("f73b8292-f610-4fa7-ba62-708353d162c4")`
 ///
 /// - `debug()`
 ///
-///   Enables a diagnostic dump of the expanded macro during compilation (for
-///   non-production debugging purposes only).
+///   For non-production diagnostics: prints the expanded macro during compilation.
 #[cfg(feature = "macros")]
 pub use tracelogging_macros::define_provider;
 
@@ -216,7 +220,7 @@ pub use tracelogging_macros::define_provider;
 /// - `u32_slice("FieldName", &int_vals[..])`
 /// - `str8("FieldName", str_val)`
 /// - `str8_json("FieldName", json_str_val)`
-/// - `struct("FieldName" { str8("NestedField", str_val) })`
+/// - `struct("FieldName", { str8("NestedField", str_val), ... })`
 /// - [and many more...](#normal-field-types)
 ///
 /// # Overview
@@ -240,14 +244,13 @@ pub use tracelogging_macros::define_provider;
 /// not a variable. When invoking [`write_event!`], use the original symbol, not a
 /// reference or alias.
 ///
-/// **Note:** The field values are evaluated and the event is sent to ETW only if the
-/// one or more ETW logging sessions are listening to the provider with filters that
-/// include the level and keyword of the event.
+/// **Note:** The field value expressions are evaluated and the event is sent to ETW only
+/// if the event is enabled, i.e. only if one or more ETW logging sessions are listening
+/// to the provider with filters that include the level and keyword of the event.
 ///
-/// The `write_event!` macro returns a `u32` value with a Win32 result code. If the
-/// no ETW logging sessions are listening for the event, `write_event!` immediately
-/// returns 0 (`ERROR_SUCCESS`). Otherwise, it returns the value returned by the
-/// underlying Windows
+/// The `write_event!` macro returns a `u32` value with a Win32 result code. If no ETW
+/// logging sessions are listening for the event, `write_event!` immediately returns 0
+/// (`ERROR_SUCCESS`). Otherwise, it returns the value returned by the underlying Windows
 /// [EventWriteTransfer](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventwritetransfer)
 /// API. Since most components treat logging APIs as fire-and-forget, this value should
 /// normally be ignored in production code. It is generally used only for debugging and
@@ -287,7 +290,7 @@ pub use tracelogging_macros::define_provider;
 ///
 /// tlg::define_provider!(MY_PROVIDER, "MyCompany.MyComponent");
 ///
-/// // Safety: Must call MY_PROVIDER.unregister() before module unload.
+/// // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
 /// unsafe { MY_PROVIDER.register(); }
 ///
 /// let message = "We're low on ice cream.";
@@ -375,8 +378,8 @@ pub use tracelogging_macros::define_provider;
 ///
 ///   Specifies the related activity id to use for the event.
 ///
-///   This value is normally set for the activity-start event to record the parent
-///   activity of the newly-started activity. This is normally left unset for all other
+///   This value is normally set for the activity-[start](Opcode::Start) event to record the
+///   parent activity of the newly-started activity. This is normally left unset for other
 ///   events.
 ///
 ///   If not specified, the event will not have any related activity id. If specified,
@@ -387,10 +390,10 @@ pub use tracelogging_macros::define_provider;
 ///   Specifies the task attribute for the event.
 ///
 ///   Task is a 16-bit value with provider-defined semantics. Task is typically used to
-///   indicate event semantics, with one or more events using a particular task value to
-///   indicate that the event has the specified semantics. For example,
-///   "IPv4-Packet-Sent" and "IPv6-Packet-Sent" events might be assigned the same task
-///   value.
+///   indicate semantic event identity, with one or more events using a particular task
+///   value to indicate that the event has the specified semantics. For example, task
+///   `47` might be assigned semantics "Packet Sent", and then the "IPv4-Packet-Sent" and
+///   "IPv6-Packet-Sent" events might both be set to use task `47`.
 ///
 ///   If the `task` option is not specified then the event's task will be 0. If the task
 ///   is specified it must be a constant `u16` value.
@@ -402,8 +405,8 @@ pub use tracelogging_macros::define_provider;
 ///   A tag is a 28-bit provider-defined value that is available when the event is
 ///   decoded. The tag's semantics are provider-defined, e.g. the "MyCompany.MyComponent"
 ///   provider might define tag value `0x1` to mean the event contains high-priority
-///   information. Most providers do not use tags so most events do not need the `tag`
-///   option.
+///   information. Most providers do not use tags so most events do not need to specify
+///   the `tag` option.
 ///
 ///   If the `tag` option is not specified the event's tag will be 0. If specified, the
 ///   tag must be a constant `u32` value in the range 0 to 0x0FFFFFFF.
@@ -414,7 +417,7 @@ pub use tracelogging_macros::define_provider;
 ///   that indicates changes in the event schema or semantics.
 ///
 ///   Most providers use the event name for event identification so most events do not
-///   need to use the `id_version` option.
+///   need to specify the `id_version` option.
 ///
 ///   The version should start at 0 and should be incremented each time a breaking change
 ///   is made to the event, e.g. when a field is removed or a field changes type.
@@ -428,8 +431,8 @@ pub use tracelogging_macros::define_provider;
 ///
 ///   Specifies the channel attribute for the event.
 ///
-///   Most events use the default (TraceLogging) channel so most events do not need the
-///   `channel` option.
+///   Most events use the default channel (TraceLogging) so most events do not need to
+///   specify the `channel` option.
 ///
 ///   If the `channel` option is not specified the event's channel will be
 ///   [Channel::TraceLogging]. If the channel is specified it must be a constant
@@ -437,20 +440,20 @@ pub use tracelogging_macros::define_provider;
 ///
 /// - `debug()`
 ///
-///   Enables a diagnostic dump of the expanded macro during compilation (for
-///   non-production debugging purposes only).
+///   For non-production diagnostics: prints the expanded macro during compilation.
 ///
 /// ## Fields
 ///
-/// Event content is provided in fields.
+/// Event content is provided in fields. Each field is added to the event with a field
+/// type.
 ///
-/// There are three categories of fields:
+/// There are three categories of field types:
 ///
-/// - [Normal fields](#normal-fields) add a field to the event with a simple value such
-///   as an integer, float, string, slice of i32, [etc](#normal-field-types).
-/// - [Struct fields](#struct-fields) add a field to the event that contains a group of
-///   normal fields.
-/// - [Raw fields](#raw-fields) directly add unchecked data (field content) and/or
+/// - [Normal field types](#normal-fields) add a field to the event with a value such as
+///   an integer, float, string, slice of i32, [etc.](#normal-field-types)
+/// - [The struct field type](#struct-fields) adds a field to the event that contains a group
+///   of other fields.
+/// - [Raw field types](#raw-fields) directly add unchecked data (field content) and/or
 ///   metadata (field name and type information) to the event. They are used in advanced
 ///   scenarios to optimize event generation or to log complex data types that the other
 ///   field categories cannot handle.
@@ -463,9 +466,9 @@ pub use tracelogging_macros::define_provider;
 /// **Normal field syntax:** `TYPE("NAME", VALUE_REF, tag(TAG), format(FORMAT))`
 ///
 /// - `TYPE` controls the expected type of the `VALUE_REF` expression,
-///   the encoding that the field will have in the event, and default format that the
-///   field will have when it is decoded. Valid TYPEs include
-///   `u32`, `str8`, `str16`, `f32_slice` and [many others](#normal-field-types).
+///   the ETW encoding that the field will use in the event, and default format that the
+///   field will have when it is decoded. TYPEs include `u32`, `str8`, `str16`,
+///   `f32_slice` and [many others](#normal-field-types).
 ///
 /// - `"NAME"` is a string literal that specifies the name of the field.
 ///
@@ -558,8 +561,8 @@ pub use tracelogging_macros::define_provider;
 /// | `i64_hex_slice` | `&[i64]` | `Hex64`
 /// | `ipv4` | `&[u8; 4]` | `U32 + IPv4`
 /// | `ipv4_slice` | `&[[u8; 4]]` | `U32 + IPv4`
-/// | `ipv6` | `&[[u8; 16]]` | `Binary + IPv6`
-/// | `ipv6c` [^binaryc] | `&[[u8; 16]]` | `BinaryC + IPv6`
+/// | `ipv6` | `&[u8; 16]` | `Binary + IPv6`
+/// | `ipv6c` [^binaryc] | `&[u8; 16]` | `BinaryC + IPv6`
 /// | `isize` | `&isize` | `ISize`
 /// | `isize_slice` | `&[isize]` | `ISize`
 /// | `isize_hex` | `&isize` | `HexSize`
@@ -633,21 +636,24 @@ pub use tracelogging_macros::define_provider;
 /// `SystemTime` value is a date after 30827, the logged `FILETIME` value will be the end
 /// of 30827.
 ///
-/// [^strz] The `strz` types accept a slice that may or may not be `0`-terminated. The
-/// `write_event!` will add a `'\0'` if the slice does not have one. However, the
-/// `write_event!` must scan the provided value to find the position of the first `0`.
-/// Because this adds a small overhead to the logging process, consider using `str` types
-/// (counted strings) instead of `strz` types (`0`-terminated strings).
+/// [^strz] The `strz` types indicate that the field should use a `0`-terminated ETW
+/// encoding. The provided field value does not need to be `0`-terminated (the
+/// `write_event!` macro will add a `'\0'` if the slice does not have one). To properly
+/// encode the field, `write_event!` must scan the provided value to find the position of
+/// the first `0`. Because this adds a small overhead to the logging process, prefer the
+/// `str` types (counted strings) over the `strz` types (`0`-terminated strings) unless
+/// your scenario specifically requires the `0`-terminated ETW encoding.
 ///
 /// [^sid] The `win_sid` type requires an input value that is at least
-/// [GetSidLength](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
-/// bytes long. `write_event!` will panic if the value is less than that size.
+/// [`GetSidLength(sid_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
+/// =  `sid_bytes[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
+/// less than that size.
 ///
 /// ### Struct fields
 ///
 /// A struct is a group of fields that are logically considered a single field.
 ///
-/// Structs field have type `struct`, a name, and a set of nested fields enclosed in
+/// Struct fields have type `struct`, a name, and a set of nested fields enclosed in
 /// braces `{ ... }`. They may optionally specify a tag.
 ///
 /// **Struct field syntax:** `struct("NAME", tag(TAG), { FIELDS... })`
@@ -712,7 +718,7 @@ pub use tracelogging_macros::define_provider;
 ///
 /// Each raw field type has unique syntax and capabilities. However, in all cases,
 /// the `format` and `tag` options have the same significance as in normal fields and may
-/// be omitted if not needed. If omitted, `tag` defaults to 0 and `format` defaults to
+/// be omitted if not needed. If omitted, `tag` defaults to `0` and `format` defaults to
 /// [OutType::Default].
 ///
 /// Raw field data is always specified as `&[u8]`. The provided VALUE_BYTES must include
@@ -730,23 +736,23 @@ pub use tracelogging_macros::define_provider;
 ///   The `raw_field` type allows you to add a variable-sized array field with direct
 ///   control over the field's contents. VALUE_BYTES is specified as `&[u8]` and you can
 ///   specify any [InType]. Note that the provided VALUE_BYTES must include the entire
-///   array, including the array size, which is a `u16` element count immediately before
-///   the field values.
+///   array, including the array element count, which is a `u16` element count
+///   immediately before the field values.
 ///
 /// - `raw_meta("NAME", INTYPE, format(FORMAT), tag(TAG))`
 ///
 ///   The `raw_meta` type allows you to add a field definition (name, intype, format,
 ///   tag) without immediately adding the field's data. This allows you to specify
-///   multiple `raw_meta` fields provide the data for all of the fields via one or more
-///   `raw_data` fields (before or after the corresponding `raw_meta` fields).
+///   multiple `raw_meta` fields and then provide the data for all of the fields via one
+///   or more `raw_data` fields before or after the corresponding `raw_meta` fields.
 ///
 /// - `raw_meta_slice("NAME", INTYPE, format(FORMAT), tag(TAG))`
 ///
 ///   The `raw_meta_slice` type allows you to add a variable-length array field
 ///   definition (name, type, format, tag) without immediately adding the array's data.
-///   This allows you to specify multiple `raw_meta` fields provide the data for all of
-///   the fields via one or more `raw_data` fields (before or after the corresponding
-///   `raw_meta` fields).
+///   This allows you to specify multiple `raw_meta` fields and then provide the data for
+///   all of the fields via one or more `raw_data` fields (before or after the
+///   corresponding `raw_meta` fields).
 ///
 /// - `raw_struct("NAME", FIELD_COUNT, tag(TAG))`
 ///
@@ -777,16 +783,16 @@ pub use tracelogging_macros::define_provider;
 ///
 ///   The `raw_data` type allows you to add data to the event without specifying any
 ///   field. This should be used together with `raw_meta` or `raw_meta_slice` fields,
-///   where the `raw_meta` or `raw_meta_slice` fields declare the field names and types,
+///   where the `raw_meta` or `raw_meta_slice` fields declare the field names and types
 ///   and the `raw_data` field(s) provide the corresponding data (including any array
-///   sizes).
+///   element counts).
 ///
 ///   Note that TraceLogging events contain separate sections for metadata and data.
-///   The `raw_meta` fields add to the compile-time-constant metadata section, and the
+///   The `raw_meta` fields add to the compile-time-constant metadata section and the
 ///   `raw_data` fields add to the runtime-variable data section. As a result, it doesn't
 ///   matter whether the `raw_data` comes before or after the corresponding `raw_meta`.
 ///   In addition, you can use one `raw_data` to supply the data for any number of
-///   fields, or you can use multiple `raw_data` fields to supply the data for one field.
+///   fields or you can use multiple `raw_data` fields to supply the data for one field.
 ///
 /// Example:
 ///

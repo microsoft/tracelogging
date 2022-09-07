@@ -14,7 +14,7 @@ use tracelogging::_internal::ProviderContext;
 #[allow(unused_imports)] // For docs
 use crate::EventBuilder;
 
-/// Represents a connection for writing dynamic tracelogging (manifest-free) events to
+/// Represents a connection for writing dynamic TraceLogging (manifest-free) events to
 /// ETW.
 ///
 /// # Overview
@@ -102,6 +102,9 @@ pub struct Provider {
 
 impl Provider {
     /// Returns the current thread's thread-local activity id.
+    /// (Calls
+    /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// with control code `EVENT_ACTIVITY_CTRL_GET_ID`.)
     ///
     /// The thread-local activity id will be used if [EventBuilder::write] is called with
     /// an `activity_id` of `None`.
@@ -115,6 +118,9 @@ impl Provider {
     }
 
     /// Sets the current thread's thread-local activity id. Returns the previous value.
+    /// (Calls
+    /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// with control code `EVENT_ACTIVITY_CTRL_GET_SET_ID`.)
     ///
     /// The thread-local activity id will be used if [EventBuilder::write] is called with
     /// an `activity_id` of `None`.
@@ -131,8 +137,10 @@ impl Provider {
         return activity_id;
     }
 
-    /// Generates a new 128-bit value suitable for use as an `activity_id` with
-    /// [EventBuilder::write].
+    /// Generates and returns a new 128-bit value suitable for use as an activity id.
+    /// (Calls
+    /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// with control code `EVENT_ACTIVITY_CREATE_ID`.)
     ///
     /// The returned value is not a true GUID/UUID since it is not globally-unique. The
     /// returned value is locally-unique: it is guaranteed to be unique from all other
