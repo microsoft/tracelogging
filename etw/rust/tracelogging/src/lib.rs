@@ -624,29 +624,33 @@ pub use tracelogging_macros::define_provider;
 /// | `win_systemtime_utc` | `&[u16; 8]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
 /// | `win_systemtime_utc_slice` | `&[[u16; 8]]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
 ///
-/// [^binaryc]: The `Binary` and `BinaryC` types are the same except that `BinaryC` uses
-/// a newer ETW encoding. The new encoding avoids the extra `FieldName.Length` field
-/// that sometimes shows up for `binary` fields. This new encoding requires updated
-/// decoder support and may not be supported by all decoders.
+/// [^binaryc]: The `...` and `...c` types are the same except that the `...c` types use
+/// a newer `InType::BinaryC` ETW encoding. The `BinaryC` encoding avoids the extra
+/// `FieldName.Length` field that sometimes shows up for `InType::Binary` fields. This
+/// new encoding requires updated decoder support so it may not work with older ETW
+/// decoding tools.
 ///
-/// [^cstr]: The `cstr` types use a `0`-terminated string encoding in the event. If the
-/// provided field value contains any `'\0'` characters then the event will include the
-/// value up to the first `'\0'`; otherwise the event will include the entire value.
-/// There is a small runtime overhead to locate the first `0` in the string, so prefer
-/// the `str` types (counted strings) over the `cstr` types (`0`-terminated strings)
-/// unless you specifically need the `0`-terminated ETW encoding.
+/// [^cstr]: The `cstrN` types use a `0`-terminated `InType::CStrN` string encoding in
+/// the event. If the provided field value contains any `'\0'` characters then the event
+/// will include the value up to the first `'\0'`; otherwise the event will include the
+/// entire value. There is a small runtime overhead for locating the first `0` in the
+/// string. To avoid the overhead and to ensure you log your entire string (including any
+/// `'\0'` characters), prefer the `str` types (counted strings) over the `cstr` types
+/// (`0`-terminated strings) unless you specifically need a `0`-terminated ETW encoding.
 ///
-/// [^systemtime]: When logging `systemtime` values, `write_event!` will convert the
-/// provided Rust `SystemTime` value into a Win32 `FILETIME` with saturation if the
-/// value is out of the range that `FILETIME` can represent: if the `SystemTime` value is
-/// a date before 1601, the logged `FILETIME` value will be the start of 1601, and if the
-/// `SystemTime` value is a date after 30827, the logged `FILETIME` value will be the end
-/// of 30827.
+/// [^systemtime]: When logging `systemtime` types, `write_event!` will convert the
+/// provided `std::time::SystemTime` value into a Win32
+/// [`FILETIME`](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime),
+/// saturating if the value is out of the range that
+/// [`FileTimeToSystemTime`](https://docs.microsoft.com/windows/win32/api/timezoneapi/nf-timezoneapi-filetimetosystemtime)
+/// can handle: if the `SystemTime` value is a date before 1601, the logged `FILETIME`
+/// value will be the start of 1601, and if the `SystemTime` value is a date after 30827,
+/// the logged `FILETIME` value will be the end of 30827.
 ///
 /// [^sid]: The `win_sid` type requires an input byte-slice value that is at least
 /// [`GetSidLength(value_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
 /// =  `value_bytes[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
-/// less than that size.
+/// smaller than that size.
 ///
 /// ### Struct fields
 ///
