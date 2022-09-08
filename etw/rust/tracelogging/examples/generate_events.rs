@@ -70,16 +70,16 @@ fn main() {
             }),
         }),
 
-        str8("str8", "counted utf-8"),          // str8 and strz8 expect &[u8] containing utf-8
-        strz8("strz8", "nul-terminated utf-8"), // strz8 is nul-terminated in event, but input doesn't need to be nul-terminated.
-        str8_cp1252("str8_cp1252", "counted cp1252"), // str8_cp1252 and strz8_cp1252 expect &[u8] containing ANSI text.
-        strz8_cp1252("strz8_cp1252", "nul-terminated cp1252"),
-        str16("str16", &[65, 66, 67]),    // str16 and strz16 expect &[u16] containing utf-16
-        strz16("strz16", &[65, 66, 67]),
+        str8("str8", "counted utf-8"),          // str8 and cstr8 expect &[u8] containing utf-8
+        cstr8("cstr8", "nul-terminated utf-8"), // cstr8 is nul-terminated in event, but input doesn't need to be nul-terminated.
+        str8_cp1252("str8_cp1252", "counted cp1252"), // str8_cp1252 and cstr8_cp1252 expect &[u8] containing ANSI text.
+        cstr8_cp1252("cstr8_cp1252", "nul-terminated cp1252"),
+        str16("str16", &[65, 66, 67]),    // str16 and cstr16 expect &[u16] containing utf-16
+        cstr16("cstr16", &[65, 66, 67]),
 
-        // str8, strz8, str16, strz16 all come in json and xml flavors.
+        // str8, cstr8, str16, cstr16 all come in json and xml flavors.
         str8_json("str8_json", "\"json\""),
-        strz16_xml("strz16_xml", &[b'<' as u16, b'x' as u16, b'm' as u16, b'l' as u16, b'/' as u16, b'>' as u16]),
+        cstr16_xml("cstr16_xml", &[b'<' as u16, b'x' as u16, b'm' as u16, b'l' as u16, b'/' as u16, b'>' as u16]),
 
         str8("str8", "str8_val"),   // AsRef unwraps &str --> &[u8]
         str8("string", &string),    // AsRef unwraps &String --> &[u8]

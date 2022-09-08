@@ -37,6 +37,8 @@ pub const OPCODE_ENUMS: &[&str] = &[
 pub const INTYPE_ENUMS: &[&str] = &[
     "Binary",
     "Bool32",
+    "CStr16",
+    "CStr8",
     "CountedBinary",
     "F32",
     "F64",
@@ -54,8 +56,6 @@ pub const INTYPE_ENUMS: &[&str] = &[
     "Sid",
     "Str16",
     "Str8",
-    "StrZ16",
-    "StrZ8",
     "Struct",
     "SystemTime",
     "U16",
@@ -182,11 +182,11 @@ pub const DATADESC_FROM_SID_PATH: &[&str] = &[
     "EventDataDescriptor",
     "from_sid",
 ];
-pub const DATADESC_FROM_STRZ_PATH: &[&str] = &[
+pub const DATADESC_FROM_CSTR_PATH: &[&str] = &[
     "tracelogging",
     "_internal",
     "EventDataDescriptor",
-    "from_strz",
+    "from_cstr",
 ];
 pub const DATADESC_FROM_SLICE_PATH: &[&str] = &[
     "tracelogging",

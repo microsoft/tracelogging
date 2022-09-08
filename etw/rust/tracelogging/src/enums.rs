@@ -247,14 +247,14 @@ impl InType {
     /// Default format: [OutType::String]
     ///
     /// Other usable formats: [OutType::Xml], [OutType::Json].
-    pub const StrZ16: InType = InType(1);
+    pub const CStr16: InType = InType(1);
 
     /// TlgInANSISTRING = NUL-terminated 8-bit string, assumed to be encoded as CP1252.
     ///
     /// Default format: [OutType::String]
     ///
     /// Other usable formats: [OutType::Xml], [OutType::Json], [OutType::Utf8].
-    pub const StrZ8: InType = InType(2);
+    pub const CStr8: InType = InType(2);
 
     /// TlgInINT8 = 8-bit signed integer.
     ///
@@ -556,12 +556,12 @@ impl OutType {
     /// [InType::Binary] or [InType::BinaryC].
     pub const SocketAddress: OutType = OutType(10);
     /// TlgOutXML = field should be formatted as XML. Use with [InType::Str16],
-    /// [InType::Str8], [InType::StrZ16], and [InType::StrZ8] types. Implies UTF-8 when
-    /// used with [InType::Str8] or [InType::StrZ8].
+    /// [InType::Str8], [InType::CStr16], and [InType::CStr8] types. Implies UTF-8 when
+    /// used with [InType::Str8] or [InType::CStr8].
     pub const Xml: OutType = OutType(11);
     /// TlgOutJSON = field should be formatted as JSON. Use with [InType::Str16],
-    /// [InType::Str8], [InType::StrZ16], and [InType::StrZ8] types. Implies UTF-8 when
-    /// used with [InType::Str8] or [InType::StrZ8].
+    /// [InType::Str8], [InType::CStr16], and [InType::CStr8] types. Implies UTF-8 when
+    /// used with [InType::Str8] or [InType::CStr8].
     pub const Json: OutType = OutType(12);
     /// TlgOutWIN32ERROR = field should be formatted as a Win32 result code. Use with
     /// [InType::U32].
@@ -582,7 +582,7 @@ impl OutType {
     /// [InType::FileTime] or [InType::SystemTime].
     pub const DateTimeCultureInsensitive: OutType = OutType(33);
     /// TlgOutUTF8 = field should be decoded as UTF-8. Use with [InType::Str8] or
-    /// [InType::StrZ8].
+    /// [InType::CStr8].
     pub const Utf8: OutType = OutType(35);
     /// TlgOutPKCS7_WITH_TYPE_INFO = field should be decoded as a PKCS7 packet followed
     /// by TLG type info. Use with [InType::Binary] or [InType::BinaryC].

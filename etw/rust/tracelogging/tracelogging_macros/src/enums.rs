@@ -12,8 +12,8 @@ pub enum EnumToken {
 #[derive(Clone, Copy)]
 pub enum InType {
     Invalid = 0,
-    StrZ16 = 1,
-    StrZ8 = 2,
+    CStr16 = 1,
+    CStr8 = 2,
     I8 = 3,
     U8 = 4,
     I16 = 5,

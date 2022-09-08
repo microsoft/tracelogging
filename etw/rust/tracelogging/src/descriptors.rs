@@ -168,7 +168,7 @@ impl<'a> EventDataDescriptor<'a> {
     /// Returns an EventDataDescriptor for a nul-terminated string.
     /// Sets the reserved field to 0.
     /// Returned descriptor does not include the nul-termination.
-    pub fn from_strz<'v: 'a, T: Copy + Default + Eq>(mut value: &'v [T]) -> Self {
+    pub fn from_cstr<'v: 'a, T: Copy + Default + Eq>(mut value: &'v [T]) -> Self {
         let mut value_len = value.len();
 
         const MAX_LEN: usize = 65535;

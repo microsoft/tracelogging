@@ -553,13 +553,13 @@ impl EventGenerator {
                 self.add_data_desc_for_arg_n(DATADESC_FROM_SID_PATH);
             }
 
-            FieldStrategy::StrZ => {
+            FieldStrategy::CStr => {
                 // Prototype: , _tlg_argN: &[value_type]
                 // Call site: , AsRef::<[value_type]>::as_ref(value_tokens...)
                 self.add_func_slice_arg(field.option, field.type_name_span, field.value_tokens);
 
-                // EventDataDescriptor::from_strz(_tlg_argN),
-                self.add_data_desc_for_arg_n(DATADESC_FROM_STRZ_PATH);
+                // EventDataDescriptor::from_cstr(_tlg_argN),
+                self.add_data_desc_for_arg_n(DATADESC_FROM_CSTR_PATH);
 
                 self.data_desc_init_tree
                     // EventDataDescriptor::from_value<value_type>(&0),

@@ -535,6 +535,13 @@ pub use tracelogging_macros::define_provider;
 /// | `char16_slice` | `&[u16]` | [`U16`](InType::U16) + [`String`](OutType::String)
 /// | `codepointer` | `&usize` | [`HexSize`](InType::HexSize) + [`CodePointer`](OutType::CodePointer)
 /// | `codepointer_slice` | `&[usize]` | [`HexSize`](InType::HexSize) + [`CodePointer`](OutType::CodePointer)
+/// | `cstr8` [^cstr] | `&[u8]` | [`CStr8`](InType::CStr8) + [`Utf8`](OutType::Utf8)
+/// | `cstr8_cp1252` [^cstr] | `&[u8]` | [`CStr8`](InType::CStr8)
+/// | `cstr8_json` [^cstr] | `&[u8]` | [`CStr8`](InType::CStr8) + [`Json`](OutType::Json)
+/// | `cstr8_xml` [^cstr] | `&[u8]` | [`CStr8`](InType::CStr8) + [`Xml`](OutType::Xml)
+/// | `cstr16` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16)
+/// | `cstr16_json` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16) + [`Json`](OutType::Json)
+/// | `cstr16_xml` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16) + [`Xml`](OutType::Xml)
 /// | `f32` | `&f32` | [`F32`](InType::F32)
 /// | `f32_slice` | `&[f32]` | [`F32`](InType::F32)
 /// | `f64` | `&f64` | [`F64`](InType::F64)
@@ -582,13 +589,6 @@ pub use tracelogging_macros::define_provider;
 /// | `str16` | `&[u16]` | [`Str16`](InType::Str16)
 /// | `str16_json` | `&[u16]` | [`Str16`](InType::Str16) + [`Json`](OutType::Json)
 /// | `str16_xml` | `&[u16]` | [`Str16`](InType::Str16) + [`Xml`](OutType::Xml)
-/// | `strz8` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Utf8`](OutType::Utf8)
-/// | `strz8_cp1252` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8)
-/// | `strz8_json` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Json`](OutType::Json)
-/// | `strz8_xml` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Xml`](OutType::Xml)
-/// | `strz16` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16)
-/// | `strz16_json` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16) + [`Json`](OutType::Json)
-/// | `strz16_xml` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16) + [`Xml`](OutType::Xml)
 /// | `systemtime` [^systemtime] | `&std::time::SystemTime` | [`FileTime`](InType::FileTime)
 /// | `tid` | `&u32` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
 /// | `tid_slice` | `&[u32]` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
@@ -624,29 +624,28 @@ pub use tracelogging_macros::define_provider;
 /// | `win_systemtime_utc` | `&[u16; 8]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
 /// | `win_systemtime_utc_slice` | `&[[u16; 8]]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
 ///
-/// [^binaryc] The `Binary` and `BinaryC` types are the same except that `BinaryC` uses a
-/// newer ETW encoding. The new encoding avoids the extra `FieldName.Length` field
+/// [^binaryc]: The `Binary` and `BinaryC` types are the same except that `BinaryC` uses
+/// a newer ETW encoding. The new encoding avoids the extra `FieldName.Length` field
 /// that sometimes shows up for `binary` fields. This new encoding requires updated
 /// decoder support and may not be supported by all decoders.
 ///
-/// [^systemtime] When logging `systemtime` values, `write_event!` will convert the
+/// [^cstr]: The `cstr` types use a `0`-terminated string encoding in the event. If the
+/// provided field value contains any `'\0'` characters then the event will include the
+/// value up to the first `'\0'`; otherwise the event will include the entire value.
+/// There is a small runtime overhead to locate the first `0` in the string, so prefer
+/// the `str` types (counted strings) over the `cstr` types (`0`-terminated strings)
+/// unless you specifically need the `0`-terminated ETW encoding.
+///
+/// [^systemtime]: When logging `systemtime` values, `write_event!` will convert the
 /// provided Rust `SystemTime` value into a Win32 `FILETIME` with saturation if the
 /// value is out of the range that `FILETIME` can represent: if the `SystemTime` value is
 /// a date before 1601, the logged `FILETIME` value will be the start of 1601, and if the
 /// `SystemTime` value is a date after 30827, the logged `FILETIME` value will be the end
 /// of 30827.
 ///
-/// [^strz] The `strz` types indicate that the field should use a `0`-terminated ETW
-/// encoding. The provided field value does not need to be `0`-terminated (the
-/// `write_event!` macro will add a `'\0'` if the slice does not have one). To properly
-/// encode the field, `write_event!` must scan the provided value to find the position of
-/// the first `0`. Because this adds a small overhead to the logging process, prefer the
-/// `str` types (counted strings) over the `strz` types (`0`-terminated strings) unless
-/// your scenario specifically requires the `0`-terminated ETW encoding.
-///
-/// [^sid] The `win_sid` type requires an input byte-slice value that is at least
-/// [`GetSidLength(value)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
-/// =  `value[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
+/// [^sid]: The `win_sid` type requires an input byte-slice value that is at least
+/// [`GetSidLength(value_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
+/// =  `value_bytes[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
 /// less than that size.
 ///
 /// ### Struct fields
@@ -724,7 +723,7 @@ pub use tracelogging_macros::define_provider;
 /// Raw field data is always specified as `&[u8]`. The provided VALUE_BYTES must include
 /// the entire field, including prefix (e.g. `u16` byte count prefix required on
 /// "Counted" fields like [InType::Binary] and [InType::Str8]) or suffix (e.g. `'\0'`
-/// termination required on [InType::StrZ8] fields).
+/// termination required on [InType::CStr8] fields).
 ///
 /// - `raw_field("NAME", INTYPE, VALUE_BYTES, format(FORMAT), tag(TAG))`
 ///

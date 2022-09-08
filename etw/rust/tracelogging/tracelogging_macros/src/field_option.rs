@@ -11,8 +11,8 @@ pub enum FieldStrategy {
     SystemTime,
     /// meta = scalar; data = from_sid
     Sid,
-    /// meta = scalar; data = from_strz + nul
-    StrZ,
+    /// meta = scalar; data = from_cstr + nul
+    CStr,
     /// meta = scalar; data = counted_size + from_counted
     Counted,
     /// meta = array; data = slice_count + from_slice, adds bit to intype.
@@ -41,7 +41,7 @@ impl FieldStrategy {
             FieldStrategy::Scalar
             | FieldStrategy::SystemTime
             | FieldStrategy::Sid
-            | FieldStrategy::StrZ
+            | FieldStrategy::CStr
             | FieldStrategy::Counted
             | FieldStrategy::Struct
             | FieldStrategy::RawStruct
@@ -75,7 +75,7 @@ impl FieldStrategy {
             | FieldStrategy::RawField
             | FieldStrategy::RawFieldSlice => 1,
 
-            | FieldStrategy::StrZ       // 1 for data, 1 for nul termination.
+            | FieldStrategy::CStr       // 1 for data, 1 for nul termination.
             | FieldStrategy::Counted    // 1 for size, 1 for data.
             | FieldStrategy::Slice => 2,// 1 for size, 1 for data.
         }

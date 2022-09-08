@@ -134,8 +134,8 @@ impl ToMarkdown for FieldOption {
             FieldStrategy::Sid => {
                 self.normal_field(&mut s, self.value_type, true, "sid");
             }
-            FieldStrategy::StrZ => {
-                self.normal_field(&mut s, self.value_type, true, "strz");
+            FieldStrategy::CStr => {
+                self.normal_field(&mut s, self.value_type, true, "cstr");
             }
             FieldStrategy::Counted => {
                 let note = if matches!(self.intype, InType::BinaryC) {
@@ -239,8 +239,8 @@ fn parse_int(str: &[u8], pos: usize) -> ParseResult {
 fn intype_to_string(value: InType) -> &'static str {
     return match value {
         InType::Invalid => "Invalid",
-        InType::StrZ16 => "StrZ16",
-        InType::StrZ8 => "StrZ8",
+        InType::CStr16 => "CStr16",
+        InType::CStr8 => "CStr8",
         InType::I8 => "I8",
         InType::U8 => "U8",
         InType::I16 => "I16",

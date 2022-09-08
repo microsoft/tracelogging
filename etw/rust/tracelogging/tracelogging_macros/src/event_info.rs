@@ -236,7 +236,7 @@ impl EventInfo {
                     FieldStrategy::Scalar
                     | FieldStrategy::SystemTime
                     | FieldStrategy::Sid
-                    | FieldStrategy::StrZ
+                    | FieldStrategy::CStr
                     | FieldStrategy::Counted
                     | FieldStrategy::Slice => {
                         field_accepts_tag = true;

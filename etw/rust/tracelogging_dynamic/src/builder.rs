@@ -257,7 +257,7 @@ impl EventBuilder {
         return self;
     }
 
-    /// Adds a StrZ16 field (nul-terminated UTF16-LE) from a `&[u16]` value.
+    /// Adds a CStr16 field (nul-terminated UTF16-LE) from a `&[u16]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
     /// If the string contains no `'\0'` chars, one will be added automatically.
@@ -269,7 +269,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str16` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz16(
+    pub fn add_cstr16(
         &mut self,
         field_name: &str,
         field_value: impl AsRef<[u16]>,
@@ -277,11 +277,11 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_scalar(field_name, InType::StrZ16, out_type, field_tag)
-            .raw_add_data_strz(field_value.as_ref());
+            .raw_add_meta_scalar(field_name, InType::CStr16, out_type, field_tag)
+            .raw_add_data_cstr(field_value.as_ref());
     }
 
-    /// Adds a StrZ16 variable-length array field (nul-terminated UTF16-LE) from an
+    /// Adds a CStr16 variable-length array field (nul-terminated UTF16-LE) from an
     /// iterator-of-`&[u16]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
@@ -294,7 +294,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str16_sequence` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz16_sequence<T: IntoIterator>(
+    pub fn add_cstr16_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -305,13 +305,13 @@ impl EventBuilder {
         T::Item: AsRef<[u16]>,
     {
         return self
-            .raw_add_meta_vcount(field_name, InType::StrZ16, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::CStr16, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
-                this.raw_add_data_strz(value.as_ref());
+                this.raw_add_data_cstr(value.as_ref());
             });
     }
 
-    /// Adds a StrZ8 field (nul-terminated 8-bit string) from a `&[u8]` value.
+    /// Adds a CStr8 field (nul-terminated 8-bit string) from a `&[u8]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
     /// If the string contains no `'\0'` chars, one will be added automatically.
@@ -323,7 +323,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str8` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz8(
+    pub fn add_cstr8(
         &mut self,
         field_name: &str,
         field_value: impl AsRef<[u8]>,
@@ -331,11 +331,11 @@ impl EventBuilder {
         field_tag: u32,
     ) -> &mut Self {
         return self
-            .raw_add_meta_scalar(field_name, InType::StrZ8, out_type, field_tag)
-            .raw_add_data_strz(field_value.as_ref());
+            .raw_add_meta_scalar(field_name, InType::CStr8, out_type, field_tag)
+            .raw_add_data_cstr(field_value.as_ref());
     }
 
-    /// Adds a StrZ8 variable-length array field (nul-terminated 8-bit string) from an
+    /// Adds a CStr8 variable-length array field (nul-terminated 8-bit string) from an
     /// iterator-of-`&[u8]` value.
     ///
     /// If the string contains characters after a `'\0'`, they will be discarded.
@@ -348,7 +348,7 @@ impl EventBuilder {
     /// as a nul-terminated string instead of as a counted string. In most cases
     /// you should prefer `add_str8_sequence` and use this method only if you specifically
     /// need the nul-terminated encoding.
-    pub fn add_strz8_sequence<T: IntoIterator>(
+    pub fn add_cstr8_sequence<T: IntoIterator>(
         &mut self,
         field_name: &str,
         field_values: T,
@@ -359,9 +359,9 @@ impl EventBuilder {
         T::Item: AsRef<[u8]>,
     {
         return self
-            .raw_add_meta_vcount(field_name, InType::StrZ8, out_type, field_tag)
+            .raw_add_meta_vcount(field_name, InType::CStr8, out_type, field_tag)
             .raw_add_data_range(field_values, |this, value| {
-                this.raw_add_data_strz(value.as_ref());
+                this.raw_add_data_cstr(value.as_ref());
             });
     }
 
@@ -1071,9 +1071,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_strz16` except that the ETW field will be encoded
+    /// This is the same as `add_cstr16` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz16` only if you specifically
+    /// you should prefer this method and use `add_cstr16` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str16(
         &mut self,
@@ -1092,9 +1092,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String.
     /// Other useful out_type values: Xml, Json.
     ///
-    /// This is the same as `add_strz16_sequence` except that the ETW field will be encoded
+    /// This is the same as `add_cstr16_sequence` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz16_sequence` only if you specifically
+    /// you should prefer this method and use `add_cstr16_sequence` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str16_sequence<T: IntoIterator>(
         &mut self,
@@ -1118,9 +1118,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_strz8` except that the ETW field will be encoded
+    /// This is the same as `add_cstr8` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz8` only if you specifically
+    /// you should prefer this method and use `add_cstr8` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str8(
         &mut self,
@@ -1139,9 +1139,9 @@ impl EventBuilder {
     /// If out_type is Default, field will format as String (CP1252, not UTF-8).
     /// Other useful out_type values: Xml, Json, Utf8 (all of which decode as UTF-8).
     ///
-    /// This is the same as `add_strz8_sequence` except that the ETW field will be encoded
+    /// This is the same as `add_cstr8_sequence` except that the ETW field will be encoded
     /// as a counted string instead of as a nul-terminated string. In most cases
-    /// you should prefer this method and use `add_strz8_sequence` only if you specifically
+    /// you should prefer this method and use `add_cstr8_sequence` only if you specifically
     /// need the nul-terminated encoding.
     pub fn add_str8_sequence<T: IntoIterator>(
         &mut self,
@@ -1384,7 +1384,7 @@ impl EventBuilder {
         return self.raw_add_data_slice(&value[0..sid_length]);
     }
 
-    fn raw_add_data_strz<T: Copy + Default + Eq>(&mut self, value: &[T]) -> &mut Self {
+    fn raw_add_data_cstr<T: Copy + Default + Eq>(&mut self, value: &[T]) -> &mut Self {
         let zero = T::default();
         let mut nul_pos = 0;
         while nul_pos != value.len() {
