@@ -362,7 +362,7 @@ impl InType {
     /// [SID](https://docs.microsoft.com/windows/win32/api/winnt/ns-winnt-sid)
     /// format.
     ///
-    /// Note: Expected size is
+    /// Note: Expected size of value is
     /// [`GetSidLength(sid_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
     /// = `sid_bytes[1] * 4 + 8`.
     pub const Sid: InType = InType(19);

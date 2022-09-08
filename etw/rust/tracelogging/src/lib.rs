@@ -174,7 +174,7 @@
 ///
 /// - `id("GUID")`
 ///
-///   Specifies the ETW provider id, also known as the ETW Control GUID). If the `id`
+///   Specifies the ETW provider id, also known as the ETW Control GUID. If the `id`
 ///   option is not specified, the provider's id will be
 ///   `Guid::from_name(provider_name)`. Most providers should use the
 ///   automatically-generated id so most providers do not need to specify the `id`
@@ -523,106 +523,106 @@ pub use tracelogging_macros::define_provider;
 ///
 /// | Field Type | Rust Type | ETW Type
 /// |------------|-----------|---------
-/// | `binary` | `&[u8]` | `Binary`
-/// | `binaryc` [^binaryc] | `&[u8]` | `BinaryC`
-/// | `bool8` | `&bool` | `U8 + Boolean`
-/// | `bool8_slice` | `&[bool]` | `U8 + Boolean`
-/// | `bool32` | `&i32` | `Bool32`
-/// | `bool32_slice` | `&[i32]` | `Bool32`
-/// | `char8_cp1252` | `&u8` | `U8 + String`
-/// | `char8_cp1252_slice` | `&[u8]` | `U8 + String`
-/// | `char16` | `&u16` | `U16 + String`
-/// | `char16_slice` | `&[u16]` | `U16 + String`
-/// | `codepointer` | `&usize` | `HexSize + CodePointer`
-/// | `codepointer_slice` | `&[usize]` | `HexSize + CodePointer`
-/// | `f32` | `&f32` | `F32`
-/// | `f32_slice` | `&[f32]` | `F32`
-/// | `f64` | `&f64` | `F64`
-/// | `f64_slice` | `&[f64]` | `F64`
-/// | `guid` | `&tracelogging::Guid` | `Guid`
-/// | `guid_slice` | `&[tracelogging::Guid]` | `Guid`
-/// | `hresult` | `&i32` | `I32 + HResult`
-/// | `hresult_slice` | `&[i32]` | `I32 + HResult`
-/// | `i8` | `&i8` | `I8`
-/// | `i8_slice` | `&[i8]` | `I8`
-/// | `i8_hex` | `&i8` | `U8 + Hex`
-/// | `i8_hex_slice` | `&[i8]` | `U8 + Hex`
-/// | `i16` | `&i16` | `I16`
-/// | `i16_slice` | `&[i16]` | `I16`
-/// | `i16_hex` | `&i16` | `U16 + Hex`
-/// | `i16_hex_slice` | `&[i16]` | `U16 + Hex`
-/// | `i32` | `&i32` | `I32`
-/// | `i32_slice` | `&[i32]` | `I32`
-/// | `i32_hex` | `&i32` | `Hex32`
-/// | `i32_hex_slice` | `&[i32]` | `Hex32`
-/// | `i64` | `&i64` | `I64`
-/// | `i64_slice` | `&[i64]` | `I64`
-/// | `i64_hex` | `&i64` | `Hex64`
-/// | `i64_hex_slice` | `&[i64]` | `Hex64`
-/// | `ipv4` | `&[u8; 4]` | `U32 + IPv4`
-/// | `ipv4_slice` | `&[[u8; 4]]` | `U32 + IPv4`
-/// | `ipv6` | `&[u8; 16]` | `Binary + IPv6`
-/// | `ipv6c` [^binaryc] | `&[u8; 16]` | `BinaryC + IPv6`
-/// | `isize` | `&isize` | `ISize`
-/// | `isize_slice` | `&[isize]` | `ISize`
-/// | `isize_hex` | `&isize` | `HexSize`
-/// | `isize_hex_slice` | `&[isize]` | `HexSize`
-/// | `pid` | `&u32` | `U32 + Pid`
-/// | `pid_slice` | `&[u32]` | `U32 + Pid`
-/// | `pointer` | `&usize` | `HexSize`
-/// | `pointer_slice` | `&[usize]` | `HexSize`
-/// | `port` | `&u16` | `U16 + Port`
-/// | `port_slice` | `&[u16]` | `U16 + Port`
-/// | `socketaddress` | `&[u8]` | `Binary + SocketAddress`
-/// | `socketaddressc` [^binaryc] | `&[u8]` | `BinaryC + SocketAddress`
-/// | `str8` | `&[u8]` | `Str8 + Utf8`
-/// | `str8_cp1252` | `&[u8]` | `Str8`
-/// | `str8_json` | `&[u8]` | `Str8 + Json`
-/// | `str8_xml` | `&[u8]` | `Str8 + Xml`
-/// | `str16` | `&[u16]` | `Str16`
-/// | `str16_json` | `&[u16]` | `Str16 + Json`
-/// | `str16_xml` | `&[u16]` | `Str16 + Xml`
-/// | `strz8` [^strz] | `&[u8]` | `StrZ8 + Utf8`
-/// | `strz8_cp1252` [^strz] | `&[u8]` | `StrZ8`
-/// | `strz8_json` [^strz] | `&[u8]` | `StrZ8 + Json`
-/// | `strz8_xml` [^strz] | `&[u8]` | `StrZ8 + Xml`
-/// | `strz16` [^strz] | `&[u16]` | `StrZ16`
-/// | `strz16_json` [^strz] | `&[u16]` | `StrZ16 + Json`
-/// | `strz16_xml` [^strz] | `&[u16]` | `StrZ16 + Xml`
-/// | `systemtime` [^systemtime] | `&std::time::SystemTime` | `FileTime`
-/// | `tid` | `&u32` | `U32 + Tid`
-/// | `tid_slice` | `&[u32]` | `U32 + Tid`
-/// | `u8` | `&u8` | `U8`
-/// | `u8_slice` | `&[u8]` | `U8`
-/// | `u8_hex` | `&u8` | `U8 + Hex`
-/// | `u8_hex_slice` | `&[u8]` | `U8 + Hex`
-/// | `u16` | `&u16` | `U16`
-/// | `u16_slice` | `&[u16]` | `U16`
-/// | `u16_hex` | `&u16` | `U16 + Hex`
-/// | `u16_hex_slice` | `&[u16]` | `U16 + Hex`
-/// | `u32` | `&u32` | `U32`
-/// | `u32_slice` | `&[u32]` | `U32`
-/// | `u32_hex` | `&u32` | `Hex32`
-/// | `u32_hex_slice` | `&[u32]` | `Hex32`
-/// | `u64` | `&u64` | `U64`
-/// | `u64_slice` | `&[u64]` | `U64`
-/// | `u64_hex` | `&u64` | `Hex64`
-/// | `u64_hex_slice` | `&[u64]` | `Hex64`
-/// | `usize` | `&usize` | `USize`
-/// | `usize_slice` | `&[usize]` | `USize`
-/// | `usize_hex` | `&usize` | `HexSize`
-/// | `usize_hex_slice` | `&[usize]` | `HexSize`
-/// | `win_error` | `&u32` | `U32 + Win32Error`
-/// | `win_error_slice` | `&[u32]` | `U32 + Win32Error`
-/// | `win_filetime` | `&i64` | `FileTime`
-/// | `win_filetime_slice` | `&[i64]` | `FileTime`
-/// | `win_ntstatus` | `&i32` | `Hex32 + NtStatus`
-/// | `win_ntstatus_slice` | `&[i32]` | `Hex32 + NtStatus`
-/// | `win_sid` [^sid] | `&[u8]` | `Sid`
-/// | `win_systemtime` | `&[u16; 8]` | `SystemTime`
-/// | `win_systemtime_slice` | `&[[u16; 8]]` | `SystemTime`
-/// | `win_systemtime_utc` | `&[u16; 8]` | `SystemTime + DateTimeUtc`
-/// | `win_systemtime_utc_slice` | `&[[u16; 8]]` | `SystemTime + DateTimeUtc`
+/// | `binary` | `&[u8]` | [`Binary`](InType::Binary)
+/// | `binaryc` [^binaryc] | `&[u8]` | [`BinaryC`](InType::BinaryC)
+/// | `bool8` | `&bool` | [`U8`](InType::U8) + [`Boolean`](OutType::Boolean)
+/// | `bool8_slice` | `&[bool]` | [`U8`](InType::U8) + [`Boolean`](OutType::Boolean)
+/// | `bool32` | `&i32` | [`Bool32`](InType::Bool32)
+/// | `bool32_slice` | `&[i32]` | [`Bool32`](InType::Bool32)
+/// | `char8_cp1252` | `&u8` | [`U8`](InType::U8) + [`String`](OutType::String)
+/// | `char8_cp1252_slice` | `&[u8]` | [`U8`](InType::U8) + [`String`](OutType::String)
+/// | `char16` | `&u16` | [`U16`](InType::U16) + [`String`](OutType::String)
+/// | `char16_slice` | `&[u16]` | [`U16`](InType::U16) + [`String`](OutType::String)
+/// | `codepointer` | `&usize` | [`HexSize`](InType::HexSize) + [`CodePointer`](OutType::CodePointer)
+/// | `codepointer_slice` | `&[usize]` | [`HexSize`](InType::HexSize) + [`CodePointer`](OutType::CodePointer)
+/// | `f32` | `&f32` | [`F32`](InType::F32)
+/// | `f32_slice` | `&[f32]` | [`F32`](InType::F32)
+/// | `f64` | `&f64` | [`F64`](InType::F64)
+/// | `f64_slice` | `&[f64]` | [`F64`](InType::F64)
+/// | `guid` | `&tracelogging::Guid` | [`Guid`](InType::Guid)
+/// | `guid_slice` | `&[tracelogging::Guid]` | [`Guid`](InType::Guid)
+/// | `hresult` | `&i32` | [`I32`](InType::I32) + [`HResult`](OutType::HResult)
+/// | `hresult_slice` | `&[i32]` | [`I32`](InType::I32) + [`HResult`](OutType::HResult)
+/// | `i8` | `&i8` | [`I8`](InType::I8)
+/// | `i8_slice` | `&[i8]` | [`I8`](InType::I8)
+/// | `i8_hex` | `&i8` | [`U8`](InType::U8) + [`Hex`](OutType::Hex)
+/// | `i8_hex_slice` | `&[i8]` | [`U8`](InType::U8) + [`Hex`](OutType::Hex)
+/// | `i16` | `&i16` | [`I16`](InType::I16)
+/// | `i16_slice` | `&[i16]` | [`I16`](InType::I16)
+/// | `i16_hex` | `&i16` | [`U16`](InType::U16) + [`Hex`](OutType::Hex)
+/// | `i16_hex_slice` | `&[i16]` | [`U16`](InType::U16) + [`Hex`](OutType::Hex)
+/// | `i32` | `&i32` | [`I32`](InType::I32)
+/// | `i32_slice` | `&[i32]` | [`I32`](InType::I32)
+/// | `i32_hex` | `&i32` | [`Hex32`](InType::Hex32)
+/// | `i32_hex_slice` | `&[i32]` | [`Hex32`](InType::Hex32)
+/// | `i64` | `&i64` | [`I64`](InType::I64)
+/// | `i64_slice` | `&[i64]` | [`I64`](InType::I64)
+/// | `i64_hex` | `&i64` | [`Hex64`](InType::Hex64)
+/// | `i64_hex_slice` | `&[i64]` | [`Hex64`](InType::Hex64)
+/// | `ipv4` | `&[u8; 4]` | [`U32`](InType::U32) + [`IPv4`](OutType::IPv4)
+/// | `ipv4_slice` | `&[[u8; 4]]` | [`U32`](InType::U32) + [`IPv4`](OutType::IPv4)
+/// | `ipv6` | `&[u8; 16]` | [`Binary`](InType::Binary) + [`IPv6`](OutType::IPv6)
+/// | `ipv6c` [^binaryc] | `&[u8; 16]` | [`BinaryC`](InType::BinaryC) + [`IPv6`](OutType::IPv6)
+/// | `isize` | `&isize` | [`ISize`](InType::ISize)
+/// | `isize_slice` | `&[isize]` | [`ISize`](InType::ISize)
+/// | `isize_hex` | `&isize` | [`HexSize`](InType::HexSize)
+/// | `isize_hex_slice` | `&[isize]` | [`HexSize`](InType::HexSize)
+/// | `pid` | `&u32` | [`U32`](InType::U32) + [`Pid`](OutType::Pid)
+/// | `pid_slice` | `&[u32]` | [`U32`](InType::U32) + [`Pid`](OutType::Pid)
+/// | `pointer` | `&usize` | [`HexSize`](InType::HexSize)
+/// | `pointer_slice` | `&[usize]` | [`HexSize`](InType::HexSize)
+/// | `port` | `&u16` | [`U16`](InType::U16) + [`Port`](OutType::Port)
+/// | `port_slice` | `&[u16]` | [`U16`](InType::U16) + [`Port`](OutType::Port)
+/// | `socketaddress` | `&[u8]` | [`Binary`](InType::Binary) + [`SocketAddress`](OutType::SocketAddress)
+/// | `socketaddressc` [^binaryc] | `&[u8]` | [`BinaryC`](InType::BinaryC) + [`SocketAddress`](OutType::SocketAddress)
+/// | `str8` | `&[u8]` | [`Str8`](InType::Str8) + [`Utf8`](OutType::Utf8)
+/// | `str8_cp1252` | `&[u8]` | [`Str8`](InType::Str8)
+/// | `str8_json` | `&[u8]` | [`Str8`](InType::Str8) + [`Json`](OutType::Json)
+/// | `str8_xml` | `&[u8]` | [`Str8`](InType::Str8) + [`Xml`](OutType::Xml)
+/// | `str16` | `&[u16]` | [`Str16`](InType::Str16)
+/// | `str16_json` | `&[u16]` | [`Str16`](InType::Str16) + [`Json`](OutType::Json)
+/// | `str16_xml` | `&[u16]` | [`Str16`](InType::Str16) + [`Xml`](OutType::Xml)
+/// | `strz8` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Utf8`](OutType::Utf8)
+/// | `strz8_cp1252` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8)
+/// | `strz8_json` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Json`](OutType::Json)
+/// | `strz8_xml` [^strz] | `&[u8]` | [`StrZ8`](InType::StrZ8) + [`Xml`](OutType::Xml)
+/// | `strz16` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16)
+/// | `strz16_json` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16) + [`Json`](OutType::Json)
+/// | `strz16_xml` [^strz] | `&[u16]` | [`StrZ16`](InType::StrZ16) + [`Xml`](OutType::Xml)
+/// | `systemtime` [^systemtime] | `&std::time::SystemTime` | [`FileTime`](InType::FileTime)
+/// | `tid` | `&u32` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
+/// | `tid_slice` | `&[u32]` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
+/// | `u8` | `&u8` | [`U8`](InType::U8)
+/// | `u8_slice` | `&[u8]` | [`U8`](InType::U8)
+/// | `u8_hex` | `&u8` | [`U8`](InType::U8) + [`Hex`](OutType::Hex)
+/// | `u8_hex_slice` | `&[u8]` | [`U8`](InType::U8) + [`Hex`](OutType::Hex)
+/// | `u16` | `&u16` | [`U16`](InType::U16)
+/// | `u16_slice` | `&[u16]` | [`U16`](InType::U16)
+/// | `u16_hex` | `&u16` | [`U16`](InType::U16) + [`Hex`](OutType::Hex)
+/// | `u16_hex_slice` | `&[u16]` | [`U16`](InType::U16) + [`Hex`](OutType::Hex)
+/// | `u32` | `&u32` | [`U32`](InType::U32)
+/// | `u32_slice` | `&[u32]` | [`U32`](InType::U32)
+/// | `u32_hex` | `&u32` | [`Hex32`](InType::Hex32)
+/// | `u32_hex_slice` | `&[u32]` | [`Hex32`](InType::Hex32)
+/// | `u64` | `&u64` | [`U64`](InType::U64)
+/// | `u64_slice` | `&[u64]` | [`U64`](InType::U64)
+/// | `u64_hex` | `&u64` | [`Hex64`](InType::Hex64)
+/// | `u64_hex_slice` | `&[u64]` | [`Hex64`](InType::Hex64)
+/// | `usize` | `&usize` | [`USize`](InType::USize)
+/// | `usize_slice` | `&[usize]` | [`USize`](InType::USize)
+/// | `usize_hex` | `&usize` | [`HexSize`](InType::HexSize)
+/// | `usize_hex_slice` | `&[usize]` | [`HexSize`](InType::HexSize)
+/// | `win_error` | `&u32` | [`U32`](InType::U32) + [`Win32Error`](OutType::Win32Error)
+/// | `win_error_slice` | `&[u32]` | [`U32`](InType::U32) + [`Win32Error`](OutType::Win32Error)
+/// | `win_filetime` | `&i64` | [`FileTime`](InType::FileTime)
+/// | `win_filetime_slice` | `&[i64]` | [`FileTime`](InType::FileTime)
+/// | `win_ntstatus` | `&i32` | [`Hex32`](InType::Hex32) + [`NtStatus`](OutType::NtStatus)
+/// | `win_ntstatus_slice` | `&[i32]` | [`Hex32`](InType::Hex32) + [`NtStatus`](OutType::NtStatus)
+/// | `win_sid` [^sid] | `&[u8]` | [`Sid`](InType::Sid)
+/// | `win_systemtime` | `&[u16; 8]` | [`SystemTime`](InType::SystemTime)
+/// | `win_systemtime_slice` | `&[[u16; 8]]` | [`SystemTime`](InType::SystemTime)
+/// | `win_systemtime_utc` | `&[u16; 8]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
+/// | `win_systemtime_utc_slice` | `&[[u16; 8]]` | [`SystemTime`](InType::SystemTime) + [`DateTimeUtc`](OutType::DateTimeUtc)
 ///
 /// [^binaryc] The `Binary` and `BinaryC` types are the same except that `BinaryC` uses a
 /// newer ETW encoding. The new encoding avoids the extra `FieldName.Length` field
@@ -644,9 +644,9 @@ pub use tracelogging_macros::define_provider;
 /// `str` types (counted strings) over the `strz` types (`0`-terminated strings) unless
 /// your scenario specifically requires the `0`-terminated ETW encoding.
 ///
-/// [^sid] The `win_sid` type requires an input value that is at least
-/// [`GetSidLength(sid_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
-/// =  `sid_bytes[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
+/// [^sid] The `win_sid` type requires an input byte-slice value that is at least
+/// [`GetSidLength(value)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
+/// =  `value[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
 /// less than that size.
 ///
 /// ### Struct fields

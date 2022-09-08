@@ -200,21 +200,29 @@ impl ToMarkdown for FieldOption {
             s.push(']');
         }
 
-        s.push_str("` | `");
+        s.push_str("` | ");
 
-        s.push_str(intype_to_string(self.intype));
+        push_enum_value(s, "InType", intype_to_string(self.intype));
         if !matches!(self.outtype, OutType::Default) {
             s.push_str(" + ");
-            s.push_str(outtype_to_string(self.outtype));
+            push_enum_value(s, "OutType", outtype_to_string(self.outtype));
         }
-
-        s.push('`');
     }
 }
 
 struct ParseResult {
     end_pos: usize,
     value: u32,
+}
+
+fn push_enum_value(s: &mut String, enum_name: &str, enum_value: &str) {
+    s.push_str("[`");
+    s.push_str(enum_value);
+    s.push_str("`](");
+    s.push_str(enum_name);
+    s.push_str("::");
+    s.push_str(enum_value);
+    s.push(')');
 }
 
 fn parse_int(str: &[u8], pos: usize) -> ParseResult {
