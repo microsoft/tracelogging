@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "tracelogging",
-    "tracelogging/tracelogging_macros",
     "tracelogging_dynamic",
+    "tracelogging_macros",
 ]
 
 [profile.release]

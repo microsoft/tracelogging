@@ -15,7 +15,7 @@ etw = [] # Logging is enabled if windows && etw.
 macros = ["dep:tracelogging_macros"]
 
 [dependencies]
-tracelogging_macros = { path = "tracelogging_macros", optional = true }
+tracelogging_macros = { path = "../tracelogging_macros", optional = true }
 
 [dev-dependencies]
 windows = ">= 0.39"
