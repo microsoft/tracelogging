@@ -120,7 +120,7 @@ pub struct EventDataDescriptor<'a> {
 impl<'a> EventDataDescriptor<'a> {
     /// Returns an EventDataDescriptor initialized with the specified slice's bytes and
     /// the specified value in the reserved field.
-    pub fn from_raw_bytes<'v: 'a>(value: &'v [u8], reserved: u32) -> Self {
+    pub fn from_raw_bytes(value: &'a [u8], reserved: u32) -> Self {
         return Self {
             ptr: value.as_ptr() as usize as u64,
             size: value.len() as u32,
@@ -131,7 +131,7 @@ impl<'a> EventDataDescriptor<'a> {
 
     /// Returns an EventDataDescriptor initialized with the specified value's bytes.
     /// Sets the reserved field to 0.
-    pub fn from_value<'v: 'a, T: Copy>(value: &'v T) -> Self {
+    pub fn from_value<T: Copy>(value: &'a T) -> Self {
         return Self {
             ptr: value as *const T as usize as u64,
             size: size_of::<T>() as u32,
@@ -143,7 +143,7 @@ impl<'a> EventDataDescriptor<'a> {
     /// Returns an EventDataDescriptor for a sid.
     /// Sets the reserved field to 0.
     /// Requires value.len() >= sid_length(value).
-    pub fn from_sid<'v: 'a>(mut value: &'v [u8]) -> Self {
+    pub fn from_sid(mut value: &'a [u8]) -> Self {
         let value_len = value.len();
 
         debug_assert!(4 <= value_len, "add_sid(value) requires value.len() >= 4");
@@ -168,7 +168,7 @@ impl<'a> EventDataDescriptor<'a> {
     /// Returns an EventDataDescriptor for a nul-terminated string.
     /// Sets the reserved field to 0.
     /// Returned descriptor does not include the nul-termination.
-    pub fn from_cstr<'v: 'a, T: Copy + Default + Eq>(mut value: &'v [T]) -> Self {
+    pub fn from_cstr<T: Copy + Default + Eq>(mut value: &'a [T]) -> Self {
         let mut value_len = value.len();
 
         const MAX_LEN: usize = 65535;
@@ -198,7 +198,7 @@ impl<'a> EventDataDescriptor<'a> {
 
     /// Returns an EventDataDescriptor for a counted field (string or binary).
     /// Sets the reserved field to 0.
-    pub fn from_counted<'v: 'a, T: Copy>(mut value: &'v [T]) -> Self {
+    pub fn from_counted<T: Copy>(mut value: &'a [T]) -> Self {
         let value_len = value.len();
 
         let max_len = 65535 / size_of::<T>();
@@ -216,7 +216,7 @@ impl<'a> EventDataDescriptor<'a> {
 
     /// Returns an EventDataDescriptor for variable-length array field.
     /// Sets the reserved field to 0.
-    pub fn from_slice<'v: 'a, T: Copy + 'v>(mut value: &'v [T]) -> Self {
+    pub fn from_slice<T: Copy>(mut value: &'a [T]) -> Self {
         let value_len = value.len();
 
         const MAX_LEN: usize = 65535;
