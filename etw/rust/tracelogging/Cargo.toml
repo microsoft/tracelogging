@@ -1,0 +1,22 @@
+[package]
+name = "tracelogging"
+version = "0.1.0"
+edition = "2021"
+authors = ["Microsoft"]
+license = "MIT"
+description = "TraceLogging for Rust"
+repository = "https://github.com/microsoft/tracelogging"
+readme = "../README.md"
+rust-version = "1.63"
+
+[features]
+default = ["etw", "macros"]
+etw = [] # Logging is enabled if windows && etw.
+macros = ["dep:tracelogging_macros"]
+
+[dependencies]
+tracelogging_macros = { path = "../tracelogging_macros", optional = true }
+
+[dev-dependencies]
+windows = ">= 0.39"
+uuid  = ">= 1.1"
