@@ -28,4 +28,4 @@ default = ["etw"]
 etw = ["tracelogging/etw"] # Logging is enabled if windows && etw.
 
 [dependencies]
-tracelogging = { path = "../tracelogging", default-features = false }
+tracelogging = { default-features = false, version = ">= 0.1.0", path = "../tracelogging" }

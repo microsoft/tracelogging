@@ -48,7 +48,6 @@ pub fn write_event2(_arg_tokens: TokenStream) -> TokenStream {
 // the source code for needed modules.
 
 #[allow(dead_code)]
-#[path = "../../tracelogging/src/guid.rs"]
 mod guid;
 
 mod enums;
