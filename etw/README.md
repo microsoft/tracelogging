@@ -23,10 +23,10 @@ included with the Windows OS and the Windows SDK. The technology includes:
 
 This project provides additional support for TraceLogging developers:
 
-- [TraceLoggingDynamic for C++](cpp/traceloggingdynamic/README.md) provides support for generating
+- [TraceLoggingDynamic for C++](cpp/traceloggingdynamic) provides support for generating
   runtime-dynamic events from C++ code.
-- [TraceLoggingDynamic for C#](cs/traceloggingdynamic/README.md) provides support for generating
+- [TraceLoggingDynamic for C#](cs/traceloggingdynamic) provides support for generating
   runtime-dynamic events from C# code.
-- [TraceLoggingDynamic for Python](python/traceloggingdynamic/README.md) provides support for generating
+- [TraceLoggingDynamic for Python](python/traceloggingdynamic) provides support for generating
   runtime-dynamic events from Python3 code.
-- [TraceLogging for Rust](rust/README.md) provides support for generating events from Rust code.
+- [TraceLogging for Rust](rust) provides support for generating events from Rust code.
