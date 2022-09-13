@@ -2,6 +2,12 @@
 name = "tracelogging_macros"
 version = "0.1.0"
 edition = "2021"
+authors = ["Microsoft"]
+license = "MIT"
+description = "TraceLogging for Rust Proc Macros"
+repository = "https://github.com/microsoft/tracelogging"
+readme = "README.md"
+rust-version = "1.63"
 
 [lib]
 proc-macro = true

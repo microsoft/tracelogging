@@ -39,6 +39,10 @@ tlg::write_event!(
 MY_PROVIDER.unregister();
 ```
 
+The `tracelogging` crate depends on the
+[`tracelogging_macros`](tracelogging_macros) crate which implements the
+`define_provider!` and `write_event!` macros.
+
 ## tracelogging_dynamic
 
 The [`tracelogging_dynamic`](tracelogging_dynamic) crate provides a way to log
@@ -83,3 +87,6 @@ if provider.enabled(my_event_level, my_event_keyword) {
         .write(&provider, None, None);
 }
 ```
+
+The `tracelogging_dynamic` crate depends on the
+[`tracelogging`](tracelogging) crate which implements underlying API support.

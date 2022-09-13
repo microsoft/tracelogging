@@ -5,8 +5,22 @@ edition = "2021"
 authors = ["Microsoft"]
 license = "MIT"
 description = "TraceLoggingDynamic for Rust"
+keywords = [
+    "etw",
+    "tracelogging",
+    "trace",
+    "logging",
+    "windows",
+]
+categories = [
+    "api-bindings",
+    "development-tools::debugging",
+    "development-tools::profiling",
+    "no-std",
+    "os::windows-apis",
+]
 repository = "https://github.com/microsoft/tracelogging"
-readme = "../README.md"
+readme = "README.md"
 rust-version = "1.63"
 
 [features]
