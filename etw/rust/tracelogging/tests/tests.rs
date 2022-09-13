@@ -6,8 +6,6 @@
 use tracelogging as tlg;
 use tracelogging::_internal as tli;
 
-tlg::define_provider!(PROV, "TraceLoggingDynamicTest");
-
 #[allow(clippy::unusual_byte_groupings)]
 #[test]
 fn guid() {
@@ -277,6 +275,8 @@ impl Drop for Unregister {
 
 #[test]
 fn define_provider() {
+    tlg::define_provider!(PROV, "TraceLoggingDynamicTest");
+
     fn callback(
         _s: &tlg::Guid,
         _c: u32,
@@ -344,6 +344,7 @@ fn define_provider() {
 #[test]
 #[should_panic]
 fn provider_panic() {
+    tlg::define_provider!(PROV, "TraceLoggingDynamicTest");
     let _u = Unregister(&PROV);
     unsafe { PROV.register() };
     unsafe { PROV.register() };
@@ -351,6 +352,8 @@ fn provider_panic() {
 
 #[test]
 fn write_event() {
+    tlg::define_provider!(PROV, "TraceLoggingDynamicTest");
+
     let _u = Unregister(&PROV);
     unsafe { PROV.register() };
 

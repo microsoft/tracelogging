@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use core::convert::TryInto;
 use core::fmt;
 use core::str::from_utf8;
 
@@ -73,25 +74,9 @@ impl Guid {
             }
         }
 
-        let v = hasher.finish();
-        return Guid::from_bytes_le(&[
-            v[0],
-            v[1],
-            v[2],
-            v[3],
-            v[4],
-            v[5],
-            v[6],
-            (v[7] & 0x0F) | 0x50,
-            v[8],
-            v[9],
-            v[10],
-            v[11],
-            v[12],
-            v[13],
-            v[14],
-            v[15],
-        ]);
+        let mut v = hasher.finish();
+        v[7] = (v[7] & 0x0F) | 0x50;
+        return Guid::from_bytes_le(v[0..16].try_into().unwrap());
     }
 
     /// Creates a GUID from field values.
