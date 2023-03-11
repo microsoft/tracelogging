@@ -161,14 +161,12 @@ fn tag_encode() {
 fn filetime_from_systemtime() {
     let epoch = std::time::SystemTime::UNIX_EPOCH;
     let d100 = std::time::Duration::from_secs(100);
-    let after = epoch + d100;
-    let before = epoch - d100;
     assert_eq!(
-        tlg::filetime_from_systemtime!(after),
+        tlg::filetime_from_systemtime!(epoch + d100),
         tli::filetime_from_duration_after_1970(d100)
     );
     assert_eq!(
-        tlg::filetime_from_systemtime!(before),
+        tlg::filetime_from_systemtime!(epoch - d100),
         tli::filetime_from_duration_before_1970(d100)
     );
 }
