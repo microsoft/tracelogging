@@ -158,18 +158,85 @@ fn tag_encode() {
 }
 
 #[test]
-fn filetime_from_duration_since_1970() {
+fn filetime_from_systemtime() {
+    let epoch = std::time::SystemTime::UNIX_EPOCH;
+    let d100 = std::time::Duration::from_secs(100);
+    let after = epoch + d100;
+    let before = epoch - d100;
+    assert_eq!(
+        tlg::filetime_from_systemtime!(after),
+        tli::filetime_from_duration_after_1970(d100)
+    );
+    assert_eq!(
+        tlg::filetime_from_systemtime!(before),
+        tli::filetime_from_duration_before_1970(d100)
+    );
+}
+
+#[test]
+fn filetime_from_duration_after_1970() {
     use core::time::Duration;
-    use tli::filetime_from_duration_since_1970 as ft_from_dur;
+    use tli::filetime_from_duration_after_1970 as ft_from_dur_after;
     const FT_PER_SEC: i64 = 10000000;
-    let ft_1601_2 = FT_PER_SEC * 2;
     let ft_1970 = 0x19DB1DED53E8000;
     let ft_30828_2 = 0x7FFF35F4F06C8000 - FT_PER_SEC * 2;
     let n000 = Duration::ZERO;
     let n001 = Duration::from_nanos(1);
     let n099 = Duration::from_nanos(99);
-    let neg_max_2 = Duration::from_secs(0x2B6109100 - 2); // time between 1601+2s and 1970
     let pos_max_2 = Duration::from_secs(0xD408314C00 - 2); // time between 1970 and 30828-2s
+
+    // Adding to 1970
+
+    // Test each second starting 2 seconds before boundary to 2 seconds after.
+    for seconds in 0..4 {
+        let dur_s = Duration::from_secs(seconds);
+        let ft_s = (10000000 * seconds) as i64;
+
+        // Test each tick starting 2 ticks before second to 2 ticks after.
+        for ticks in 0..4 {
+            let dur_ticks = Duration::from_nanos(ticks * 100);
+            let ft_ticks = ticks as i64;
+
+            assert_eq!(
+                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
+                ft_from_dur_after(pos_max_2 + dur_s + dur_ticks + n099)
+            );
+            assert_eq!(
+                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
+                ft_from_dur_after(pos_max_2 + dur_s + dur_ticks + n001)
+            );
+            assert_eq!(
+                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
+                ft_from_dur_after(pos_max_2 + dur_s + dur_ticks + n000)
+            );
+
+            assert_eq!(
+                ft_clamp(ft_1970 + ft_s + ft_ticks),
+                ft_from_dur_after(dur_s + dur_ticks + n099)
+            );
+            assert_eq!(
+                ft_clamp(ft_1970 + ft_s + ft_ticks),
+                ft_from_dur_after(dur_s + dur_ticks + n001)
+            );
+            assert_eq!(
+                ft_clamp(ft_1970 + ft_s + ft_ticks),
+                ft_from_dur_after(dur_s + dur_ticks + n000)
+            );
+        }
+    }
+}
+
+#[test]
+fn filetime_from_duration_before_1970() {
+    use core::time::Duration;
+    use tli::filetime_from_duration_before_1970 as ft_from_dur_before;
+    const FT_PER_SEC: i64 = 10000000;
+    let ft_1601_2 = FT_PER_SEC * 2;
+    let ft_1970 = 0x19DB1DED53E8000;
+    let n000 = Duration::ZERO;
+    let n001 = Duration::from_nanos(1);
+    let n099 = Duration::from_nanos(99);
+    let neg_max_2 = Duration::from_secs(0x2B6109100 - 2); // time between 1601+2s and 1970
 
     // Subtracting from 1970
 
@@ -186,68 +253,28 @@ fn filetime_from_duration_since_1970() {
             // Test rounding down at T-0.99, T-0.01, and T-0.00.
             assert_eq!(
                 ft_clamp(ft_1601_2 - ft_s - ft_ticks - 1),
-                ft_from_dur(neg_max_2 + dur_s + dur_ticks + n099, false)
+                ft_from_dur_before(neg_max_2 + dur_s + dur_ticks + n099)
             );
             assert_eq!(
                 ft_clamp(ft_1601_2 - ft_s - ft_ticks - 1),
-                ft_from_dur(neg_max_2 + dur_s + dur_ticks + n001, false)
+                ft_from_dur_before(neg_max_2 + dur_s + dur_ticks + n001)
             );
             assert_eq!(
                 ft_clamp(ft_1601_2 - ft_s - ft_ticks),
-                ft_from_dur(neg_max_2 + dur_s + dur_ticks + n000, false)
+                ft_from_dur_before(neg_max_2 + dur_s + dur_ticks + n000)
             );
 
             assert_eq!(
                 ft_clamp(ft_1970 - ft_s - ft_ticks - 1),
-                ft_from_dur(dur_s + dur_ticks + n099, false)
+                ft_from_dur_before(dur_s + dur_ticks + n099)
             );
             assert_eq!(
                 ft_clamp(ft_1970 - ft_s - ft_ticks - 1),
-                ft_from_dur(dur_s + dur_ticks + n001, false)
+                ft_from_dur_before(dur_s + dur_ticks + n001)
             );
             assert_eq!(
                 ft_clamp(ft_1970 - ft_s - ft_ticks),
-                ft_from_dur(dur_s + dur_ticks + n000, false)
-            );
-        }
-    }
-
-    // Adding to 1970
-
-    // Test each second starting 2 seconds before boundary to 2 seconds after.
-    for seconds in 0..4 {
-        let dur_s = Duration::from_secs(seconds);
-        let ft_s = (10000000 * seconds) as i64;
-
-        // Test each tick starting 2 ticks before second to 2 ticks after.
-        for ticks in 0..4 {
-            let dur_ticks = Duration::from_nanos(ticks * 100);
-            let ft_ticks = ticks as i64;
-
-            assert_eq!(
-                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
-                ft_from_dur(pos_max_2 + dur_s + dur_ticks + n099, true)
-            );
-            assert_eq!(
-                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
-                ft_from_dur(pos_max_2 + dur_s + dur_ticks + n001, true)
-            );
-            assert_eq!(
-                ft_clamp(ft_30828_2 + ft_s + ft_ticks),
-                ft_from_dur(pos_max_2 + dur_s + dur_ticks + n000, true)
-            );
-
-            assert_eq!(
-                ft_clamp(ft_1970 + ft_s + ft_ticks),
-                ft_from_dur(dur_s + dur_ticks + n099, true)
-            );
-            assert_eq!(
-                ft_clamp(ft_1970 + ft_s + ft_ticks),
-                ft_from_dur(dur_s + dur_ticks + n001, true)
-            );
-            assert_eq!(
-                ft_clamp(ft_1970 + ft_s + ft_ticks),
-                ft_from_dur(dur_s + dur_ticks + n000, true)
+                ft_from_dur_before(dur_s + dur_ticks + n000)
             );
         }
     }

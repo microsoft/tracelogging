@@ -13,6 +13,11 @@ fn provider() {
         Guid::from_u128(&0xb7aa4d18_240c_5f41_5852_817dbf477472)
     );
 
+    assert_eq!(
+        filetime_from_systemtime!(std::time::SystemTime::UNIX_EPOCH),
+        0x19DB1DED53E8000
+    );
+
     let new_aid1 = Provider::create_activity_id();
     let new_aid2 = Provider::create_activity_id();
 

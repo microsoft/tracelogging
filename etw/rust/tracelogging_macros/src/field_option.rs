@@ -7,7 +7,7 @@ use crate::enums::{InType, OutType};
 pub enum FieldStrategy {
     /// meta = scalar; data = from_value
     Scalar,
-    /// meta = scalar; data = from_value(filetime_from_duration_since_1970)
+    /// meta = scalar; data = from_value(filetime_from_duration_***_1970)
     SystemTime,
     /// meta = scalar; data = from_sid
     Sid,

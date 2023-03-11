@@ -494,32 +494,26 @@ impl EventGenerator {
                     )
                     .add_group_curly(
                         self.tree2
-                            // Ok(_tlg_dur) => filetime_from_duration_since_1970(_tlg_dur, true),
+                            // Ok(_tlg_dur) => filetime_from_duration_after_1970(_tlg_dur),
                             .add_path(RESULT_OK_PATH)
                             .add_group_paren(self.tree3.add_ident(TLG_DUR_VAR).drain())
                             .add_punct("=>")
                             .add_path_call(
-                                FILETIME_FROM_DURATION_PATH,
-                                self.tree3
-                                    .add_ident(TLG_DUR_VAR)
-                                    .add_punct(",")
-                                    .add_ident("true")
-                                    .drain(),
+                                FILETIME_FROM_DURATION_AFTER_PATH,
+                                self.tree3.add_ident(TLG_DUR_VAR).drain(),
                             )
                             .add_punct(",")
-                            // Err(_tlg_dur) => filetime_from_duration_since_1970(_tlg_dur.duration(), false),
+                            // Err(_tlg_dur) => filetime_from_duration_before_1970(_tlg_dur.duration()),
                             .add_path(RESULT_ERR_PATH)
                             .add_group_paren(self.tree3.add_ident(TLG_DUR_VAR).drain())
                             .add_punct("=>")
                             .add_path_call(
-                                FILETIME_FROM_DURATION_PATH,
+                                FILETIME_FROM_DURATION_BEFORE_PATH,
                                 self.tree3
                                     .add_ident(TLG_DUR_VAR)
                                     .add_punct(".")
                                     .add_ident("duration")
                                     .add_group_paren([])
-                                    .add_punct(",")
-                                    .add_ident("false")
                                     .drain(),
                             )
                             .add_punct(",")

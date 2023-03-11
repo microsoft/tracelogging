@@ -59,40 +59,61 @@ pub const fn tag_encode<const SIZE: usize>(tag: u32) -> [u8; SIZE] {
     return result;
 }
 
-/// Returns the filetime corresponding to a duration returned by
+/// Returns the filetime corresponding to a duration returned by a successful call to
 /// `systemtime.duration_since(SystemTime::UNIX_EPOCH)`.
-/// The positive parameter should be true if duration_since returned Ok, false if Err.
 /// ```
 /// # use tracelogging::_internal as tli;
 /// # use std::time::SystemTime;
 /// let systemtime = SystemTime::now();
 /// let filetime = match systemtime.duration_since(SystemTime::UNIX_EPOCH) {
-///     Ok(dur) => tli::filetime_from_duration_since_1970(dur, true),
-///     Err(err) => tli::filetime_from_duration_since_1970(err.duration(), false),
+///     Ok(dur) => tli::filetime_from_duration_after_1970(dur),
+///     Err(err) => tli::filetime_from_duration_before_1970(err.duration()),
 /// };
 /// ```
-pub const fn filetime_from_duration_since_1970(duration: Duration, positive: bool) -> i64 {
-    const FILETIME_MIN: u64 = 0; // FileTimeToSystemTime does not support negative FILETIMEs.
+pub const fn filetime_from_duration_after_1970(duration: Duration) -> i64 {
     const FILETIME_MAX: u64 = 0x7FFF35F4F06C7FFF; // Highest value supported by FileTimetoSystemTime
+    const UNIX_EPOCH_FILETIME: u64 = 0x19DB1DED53E8000;
+    const FILETIME_PER_SECOND: u64 = 10000000;
+    const NANOS_PER_FILETIME: u32 = 100;
+    const SECS_MAX_POS: u64 = (FILETIME_MAX - UNIX_EPOCH_FILETIME) / FILETIME_PER_SECOND;
+
+    let secs_1970 = duration.as_secs();
+    let nanos_1970 = duration.subsec_nanos();
+
+    let filetime_result = if secs_1970 <= SECS_MAX_POS {
+        UNIX_EPOCH_FILETIME
+            .wrapping_add(secs_1970.wrapping_mul(FILETIME_PER_SECOND))
+            .wrapping_add((nanos_1970 / NANOS_PER_FILETIME) as u64)
+    } else {
+        FILETIME_MAX
+    } as i64;
+
+    return filetime_result;
+}
+
+/// Returns the filetime corresponding to a duration returned by a failed call to
+/// `systemtime.duration_since(SystemTime::UNIX_EPOCH)`.
+/// ```
+/// # use tracelogging::_internal as tli;
+/// # use std::time::SystemTime;
+/// let systemtime = SystemTime::now();
+/// let filetime = match systemtime.duration_since(SystemTime::UNIX_EPOCH) {
+///     Ok(dur) => tli::filetime_from_duration_after_1970(dur),
+///     Err(err) => tli::filetime_from_duration_before_1970(err.duration()),
+/// };
+/// ```
+pub const fn filetime_from_duration_before_1970(duration: Duration) -> i64 {
+    const FILETIME_MIN: u64 = 0; // FileTimeToSystemTime does not support negative FILETIMEs.
     const UNIX_EPOCH_FILETIME: u64 = 0x19DB1DED53E8000;
     const FILETIME_PER_SECOND: u64 = 10000000;
     const NANOS_MAX: u32 = 1000000000; // subsec_nanos() won't exceed this value.
     const NANOS_PER_FILETIME: u32 = 100;
-    const SECS_MAX_POS: u64 = (FILETIME_MAX - UNIX_EPOCH_FILETIME) / FILETIME_PER_SECOND;
     const SECS_MAX_NEG: u64 = (UNIX_EPOCH_FILETIME - FILETIME_MIN) / FILETIME_PER_SECOND - 1;
 
     let secs_1970 = duration.as_secs();
     let nanos_1970 = duration.subsec_nanos();
 
-    let filetime_result = if positive {
-        if secs_1970 <= SECS_MAX_POS {
-            UNIX_EPOCH_FILETIME
-                .wrapping_add(secs_1970.wrapping_mul(FILETIME_PER_SECOND))
-                .wrapping_add((nanos_1970 / NANOS_PER_FILETIME) as u64)
-        } else {
-            FILETIME_MAX
-        }
-    } else if secs_1970 <= SECS_MAX_NEG {
+    let filetime_result = if secs_1970 <= SECS_MAX_NEG {
         // We get rounding inconsistency if we round a negative value. Avoid doing that.
         // filetime_result
         // = EPOCH - (SECONDS*FPS + NANOS/NPF)

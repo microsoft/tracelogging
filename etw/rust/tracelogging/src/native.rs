@@ -367,7 +367,7 @@ impl ProviderContextInner {
         filter_data: usize,
         outer_context: usize,
     ) {
-        (&mut *(outer_context as *mut Self)).outer_callback_impl(
+        (*(outer_context as *mut Self)).outer_callback_impl(
             source_id,
             event_control_code,
             level,
