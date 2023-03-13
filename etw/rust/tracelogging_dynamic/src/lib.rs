@@ -112,7 +112,7 @@
 //! ```
 
 // Re-exports from tracelogging:
-pub use tracelogging::filetime_from_systemtime;
+pub use tracelogging::win_filetime_from_systemtime;
 pub use tracelogging::Channel;
 pub use tracelogging::Guid;
 pub use tracelogging::InType;

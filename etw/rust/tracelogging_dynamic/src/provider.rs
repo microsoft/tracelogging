@@ -538,3 +538,17 @@ impl ProviderOptions {
         return self;
     }
 }
+
+impl fmt::Debug for ProviderOptions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let callback_ptr = match self.callback_fn {
+            None => core::ptr::null(),
+            Some(p) => p as *const (),
+        };
+        return write!(
+            f,
+            "ProviderOptions {{ group_id: \"{:?}\", callback_fn: {:?}, callback_context: {:x} }}",
+            self.group_id, callback_ptr, self.callback_context
+        );
+    }
+}

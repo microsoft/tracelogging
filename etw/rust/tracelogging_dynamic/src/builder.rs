@@ -76,6 +76,7 @@ use crate::provider::Provider;
 /// an error.
 ///
 /// Most ETW decoding tools are unable to decode an event with more than 128 fields.
+#[derive(Debug)]
 pub struct EventBuilder {
     meta: Vec<u8>,
     data: Vec<u8>,
@@ -857,10 +858,18 @@ impl EventBuilder {
             });
     }
 
-    /// Adds a FileTime field from an `i64` value.
+    /// Adds a
+    /// [FILETIME](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+    /// field from an `i64` value.
     ///
     /// If out_type is Default, field will format as DateTime.
     /// Other useful out_type values: DateTimeCultureInsensitive, DateTimeUtc.
+    ///
+    /// You can use
+    /// [`win_filetime_from_systemtime!`](crate::win_filetime_from_systemtime) macro to
+    /// convert
+    /// [`std::time::SystemTime`](https://doc.rust-lang.org/std/time/struct.SystemTime.html)
+    /// values into `i64` FILETIME values.
     pub fn add_filetime(
         &mut self,
         field_name: &str,
@@ -873,10 +882,18 @@ impl EventBuilder {
             .raw_add_data_value(&field_value);
     }
 
-    /// Adds a FileTime variable-length array field from an iterator-of-`&i64` value.
+    /// Adds a
+    /// [FILETIME](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+    /// variable-length array field from an iterator-of-`&i64` value.
     ///
     /// If out_type is Default, field will format as DateTime.
     /// Other useful out_type values: DateTimeCultureInsensitive, DateTimeUtc.
+    ///
+    /// You can use
+    /// [`win_filetime_from_systemtime!`](crate::win_filetime_from_systemtime) macro to
+    /// convert
+    /// [`std::time::SystemTime`](https://doc.rust-lang.org/std/time/struct.SystemTime.html)
+    /// values into `i64` FILETIME values.
     pub fn add_filetime_sequence<'a>(
         &mut self,
         field_name: &str,
