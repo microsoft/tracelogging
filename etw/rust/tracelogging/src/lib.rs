@@ -871,11 +871,14 @@ pub use native::NATIVE_IMPLEMENTATION;
 pub use provider::Provider;
 pub mod _internal;
 
-/// Converts a [std::time::SystemTime] into a Win32
+/// Converts a
+/// [`std::time::SystemTime`](https://doc.rust-lang.org/std/time/struct.SystemTime.html)
+/// value into a Windows
 /// [FILETIME](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
-/// (represented as `i64`), suitable for use in a win_filetime field.
+/// (represented as `i64`). The resulting value can be used with
+/// [`write_event!`] via the `win_filetime` field type.
 #[macro_export]
-macro_rules! filetime_from_systemtime {
+macro_rules! win_filetime_from_systemtime {
     ($time:expr) => {
         match $time.duration_since(::std::time::SystemTime::UNIX_EPOCH) {
             Ok(dur) => ::tracelogging::_internal::filetime_from_duration_after_1970(dur),

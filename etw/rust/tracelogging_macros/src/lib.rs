@@ -6,7 +6,7 @@
 //! Implements the macros that are exported by the tracelogging crate.
 
 extern crate proc_macro;
-use proc_macro::{Literal, Span, TokenStream, TokenTree};
+use proc_macro::{Span, TokenStream};
 
 use crate::event_generator::EventGenerator;
 use crate::event_info::EventInfo;
@@ -29,18 +29,6 @@ pub fn write_event(arg_tokens: TokenStream) -> TokenStream {
         Err(error_tokens) => error_tokens,
         Ok(prov) => EventGenerator::new(call_site).generate(prov),
     };
-}
-
-/// For testing: `define_provider2!(ignored)` --> nothing
-#[proc_macro]
-pub fn define_provider2(_arg_tokens: TokenStream) -> TokenStream {
-    return TokenStream::new();
-}
-
-/// For testing: `write_event2!(ignored)` --> `0`
-#[proc_macro]
-pub fn write_event2(_arg_tokens: TokenStream) -> TokenStream {
-    return TokenTree::Literal(Literal::u32_unsuffixed(0)).into();
 }
 
 // The tracelogging crate depends on the tracelogging_macros crate so the

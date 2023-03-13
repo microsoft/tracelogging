@@ -1,8 +1,6 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
-//extern crate alloc;
-
 use core::pin::Pin;
 use tracelogging_dynamic::*;
 
@@ -14,7 +12,7 @@ fn provider() {
     );
 
     assert_eq!(
-        filetime_from_systemtime!(std::time::SystemTime::UNIX_EPOCH),
+        win_filetime_from_systemtime!(std::time::SystemTime::UNIX_EPOCH),
         0x19DB1DED53E8000
     );
 
@@ -52,10 +50,13 @@ fn provider() {
         assert_eq!(callback_context, 0xDEADBEEF);
     }
 
-    Provider::options()
-        .group_id(&Guid::zero())
-        .callback(my_callback, 1)
-        .group_id(&Guid::zero());
+    println!(
+        "{:?}",
+        Provider::options()
+            .group_id(&Guid::zero())
+            .callback(my_callback, 1)
+            .group_id(&Guid::zero())
+    );
 
     let mut provider = Box::pin(Provider::new());
     assert_eq!(provider.name(), "");
@@ -134,6 +135,7 @@ fn builder() {
     let mut p = Provider::new(); // Temporary that will be shadowed.
     let mut p = unsafe { Pin::new_unchecked(&mut p) };
     let mut b = EventBuilder::new();
+    println!("{:?}", b);
 
     unsafe {
         p.as_mut()
