@@ -871,6 +871,21 @@ pub use native::NATIVE_IMPLEMENTATION;
 pub use provider::Provider;
 pub mod _internal;
 
+/// Converts a [std::time::SystemTime] into a Win32
+/// [FILETIME](https://learn.microsoft.com/en-us/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+/// (represented as `i64`), suitable for use in a win_filetime field.
+#[macro_export]
+macro_rules! filetime_from_systemtime {
+    ($time:expr) => {
+        match $time.duration_since(::std::time::SystemTime::UNIX_EPOCH) {
+            Ok(dur) => ::tracelogging::_internal::filetime_from_duration_after_1970(dur),
+            Err(err) => {
+                ::tracelogging::_internal::filetime_from_duration_before_1970(err.duration())
+            }
+        }
+    };
+}
+
 mod descriptors;
 mod enums;
 mod guid;

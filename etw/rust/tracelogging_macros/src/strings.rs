@@ -154,10 +154,15 @@ pub const TAG_ENCODE_PATH: &[&str] = &["tracelogging", "_internal", "tag_encode"
 pub const TAG_SIZE_PATH: &[&str] = &["tracelogging", "_internal", "tag_size"];
 pub const COUNTED_SIZE_PATH: &[&str] = &["tracelogging", "_internal", "counted_size"];
 pub const SLICE_COUNT_PATH: &[&str] = &["tracelogging", "_internal", "slice_count"];
-pub const FILETIME_FROM_DURATION_PATH: &[&str] = &[
+pub const FILETIME_FROM_DURATION_AFTER_PATH: &[&str] = &[
     "tracelogging",
     "_internal",
-    "filetime_from_duration_since_1970",
+    "filetime_from_duration_after_1970",
+];
+pub const FILETIME_FROM_DURATION_BEFORE_PATH: &[&str] = &[
+    "tracelogging",
+    "_internal",
+    "filetime_from_duration_before_1970",
 ];
 
 pub const EVENTDESC_PATH: &[&str] = &["tracelogging", "_internal", "EventDescriptor"];
