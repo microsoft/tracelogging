@@ -270,21 +270,23 @@ impl ProviderContextInner {
     }
 
     fn unregister(&mut self) -> u32 {
+        let result;
+
         let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
         if was_busy {
-            panic!("provider.unregister called simultaneously with another call to register or unregister.");
-        }
-
-        let result;
-        if self.reg_handle == 0 {
             result = 0;
         } else {
-            result = unsafe { EventUnregister(self.reg_handle) };
-            self.level = -1;
-            self.reg_handle = 0;
+            if self.reg_handle == 0 {
+                result = 0;
+            } else {
+                result = unsafe { EventUnregister(self.reg_handle) };
+                self.level = -1;
+                self.reg_handle = 0;
+            }
+
+            self.busy.swap(false, atomic::Ordering::Release);
         }
 
-        self.busy.swap(false, atomic::Ordering::Release);
         return result;
     }
 

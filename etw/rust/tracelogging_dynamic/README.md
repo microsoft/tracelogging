@@ -1,7 +1,7 @@
 # TraceLogging Dynamic for Rust
 
-The `tracelogging_dynamic` crate provides a way to log
-TraceLogging events when the event schema is not known at compile-time.
+The `tracelogging_dynamic` crate provides a way to log TraceLogging events when
+the event schema is not known at compile-time.
 
 This implementation is less user-friendly and has higher runtime costs than the
 implementation in the `tracelogging` crate. This implementation should only be used
@@ -13,13 +13,13 @@ facilities to a dynamic upper layer.
 use tracelogging_dynamic as tld;
 
 // Pinning is required because the register() method sets up a callback with ETW.
-let mut provider = Box::pin(tld::Provider::new());
+let provider =
+    Box::pin(tld::Provider::new("MyCompany.MyComponent", &tld::Provider::options()));
 
-// Register the provider with name "MyCompany.MyComponent". If you don't register (or
-// if register fails) then enabled() will always return false and write() will be a
-// no-op.
+// Register the provider. If you don't register (or if register fails) then enabled()
+// will always return false and write() will be a no-op.
 unsafe {
-    provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
+    provider.as_ref().register();
 }
 
 // If provider is not enabled for a given level + keyword, the write() call will do

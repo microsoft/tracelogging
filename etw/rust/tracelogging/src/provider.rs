@@ -148,12 +148,6 @@ impl Provider {
     /// Returns 0 for success or a Win32 error from `EventUnregister` for failure. The
     /// return value is for diagnostic purposes only and should generally be ignored in
     /// retail builds.
-    ///
-    /// # Preconditions
-    /// - For a given provider object, a call on one thread to the provider's `register`
-    ///   or `unregister` method must not occur at the same time as a call to the
-    ///   provider's `register` or `unregister` method on any other thread. Verified at
-    ///   runtime, failure = panic.
     pub fn unregister(&self) -> u32 {
         return self.context.unregister();
     }
@@ -164,9 +158,9 @@ impl Provider {
     ///
     /// - Provider must not already be registered. Verified at runtime, failure = panic.
     /// - For a given provider object, a call on one thread to the provider's `register`
-    ///   or `unregister` method must not occur at the same time as a call to the
-    ///   provider's `register` or `unregister` method on any other thread. Verified at
-    ///   runtime, failure = panic.
+    ///   method must not occur at the same time as a call to the same provider's
+    ///   `register` or `unregister` method on any other thread. Verified at runtime,
+    ///   failure = panic.
     ///
     /// # Safety
     ///
@@ -195,9 +189,9 @@ impl Provider {
     ///
     /// - Provider must not already be registered. Verified at runtime, failure = panic.
     /// - For a given provider object, a call on one thread to the provider's `register`
-    ///   or `unregister` method must not occur at the same time as a call to the
-    ///   provider's `register` or `unregister` method on any other thread. Verified at
-    ///   runtime, failure = panic.
+    ///   method must not occur at the same time as a call to the same provider's
+    ///   `register` or `unregister` method on any other thread. Verified at runtime,
+    ///   failure = panic.
     ///
     /// # Safety
     ///

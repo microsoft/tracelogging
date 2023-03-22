@@ -20,15 +20,8 @@ use crate::EventBuilder;
 /// # Overview
 ///
 /// - Create a pinned Provider object, e.g.
-///   `let mut provider = Box::pin(Provider::new());`.
-///   - See below for ways to pin the provider without a heap allocation.
-/// - Call `unsafe { provider.as_mut().register(provider_name, options); }` to open the
-///     connection to ETW.
-///   - `register` is unsafe because a registered provider **must** be properly
-///     unregistered. This automatically happens when the provider is dropped so this
-///     normally isn't an issue unless the provider is declared as a static variable.
-///   - Since the `register` method requires a `Pin<&mut>`, you'll usually need to use
-///    `as_mut()` when calling it.
+///   - `let provider = pin!(Provider::new("MyCompany.MyComponent", &tld::Provider::options()));`
+///   - `let provider = Box::pin(Provider::new("MyCompany.MyComponent", &tld::Provider::options()));`
 ///   - The provider name should be short and human-readable but should be unique enough
 ///     to not collide with the names of other providers. You'll typically want to
 ///     include a company or organization in the provider name to ensure uniqueness. For
@@ -36,6 +29,12 @@ use crate::EventBuilder;
 ///   - You'll usually just use default `&Provider::options()` for the options parameter.
 ///     For advanced scenarios, you can use the options parameter to specify a provider
 ///     group id or a provider enable callback.
+/// - Call `unsafe { provider.as_ref().register(); }` to open the connection to ETW.
+///   - `register` is unsafe because a registered provider **must** be properly
+///     unregistered. This automatically happens when the provider is dropped so this
+///     normally isn't an issue unless the provider is declared as a static variable.
+///   - Since the `register` method requires a `Pin`, you'll usually need to use `as_ref()`
+///     when calling it.
 /// - Use an [EventBuilder] to construct and write events as needed.
 /// - The provider will automatically unregister when it is dropped. You can manually call
 ///   `unregister()` if you want to unregister sooner or if the provider is static.
@@ -49,32 +48,20 @@ use crate::EventBuilder;
 ///
 /// ```
 /// use tracelogging_dynamic as tld;
-/// let mut provider = Box::pin(tld::Provider::new());
+/// let provider = Box::pin(tld::Provider::new("MyCompany.MyComponent", &tld::Provider::options()));
 /// unsafe {
-///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
+///     provider.as_ref().register();
 /// }
 /// ```
 ///
-/// ## On the stack (unsafe pinning):
+/// ## On the stack (safe pinning):
 ///
 /// ```
-/// use core::pin::Pin;
-/// use tracelogging_dynamic as tld;
-/// let mut provider = tld::Provider::new(); // Temporary that will be shadowed.
-/// let mut provider = unsafe { Pin::new_unchecked(&mut provider) };
-/// unsafe {
-///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
-/// }
-/// ```
-///
-/// ## On the stack (safe pinning, requires unstable Rust):
-///
-/// ```ignore
 /// use core::pin::pin;
 /// use tracelogging_dynamic as tld;
-/// let mut provider = pin!(tld::Provider::new());
+/// let provider = pin!(tld::Provider::new("MyCompany.MyComponent", &tld::Provider::options()));
 /// unsafe {
-///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
+///     provider.as_ref().register();
 /// }
 /// ```
 ///
@@ -87,17 +74,19 @@ use crate::EventBuilder;
 /// use tracelogging_dynamic as tld;
 /// # use core::pin::Pin;
 /// # struct MyPinnableStruct { provider: tld::Provider };
-/// # let mut my_pinned_struct = MyPinnableStruct { provider: tld::Provider::new() };
-/// # let mut my_pinned_struct = unsafe { Pin::new_unchecked(&mut my_pinned_struct) };
-/// let mut provider = unsafe { my_pinned_struct.map_unchecked_mut(|s| &mut s.provider) };
+/// # let mut my_pinned_struct = MyPinnableStruct { provider: tld::Provider::new("MyCompany.MyComponent", &tld::Provider::options()) };
+/// # let mut my_pinned_struct = unsafe { Pin::new_unchecked(&my_pinned_struct) };
+/// let provider = unsafe { my_pinned_struct.map_unchecked(|s| &s.provider) };
 /// unsafe {
-///     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
+///     provider.as_ref().register();
 /// }
 /// ```
 pub struct Provider {
     pub(crate) context: ProviderContext,
     pub(crate) meta: Vec<u8>, // provider metadata
     id: Guid,
+    callback_fn: Option<ProviderEnableCallback>,
+    callback_context: usize,
 }
 
 impl Provider {
@@ -183,32 +172,93 @@ impl Provider {
         return ProviderOptions::new();
     }
 
-    /// Creates a new unregistered provider.
+    /// Creates a new unregistered provider using `Guid::from_name(name)` as the provider
+    /// id.
     ///
     /// Use `register()` to register the provider. If the provider is not registered,
     /// `enabled()` will return false and `EventBuilder::write()` will be a no-op.
-    pub const fn new() -> Self {
+    ///
+    /// `name` must be less than 32KB and must not contain `'\0'`. It should be short,
+    /// human-readable, and unique enough to not conflict with names of other providers.
+    /// The provider name will typically include a company name and a component name,
+    /// e.g. "MyCompany.MyComponent".
+    ///
+    /// `options` can usually be `&Provider::options()`. If the provider needs to
+    /// join a provider group, use `Provider::options().group_id(provider_group_id)`.
+    /// If the provider needs to specify a custom provider enable callback, use
+    /// `Provider::options().callback(callback_fn, callback_context)`.
+    pub fn new(name: &str, options: &ProviderOptions) -> Self {
+        return Self::new_with_id(name, options, &Guid::from_name(name));
+    }
+
+    /// Creates a new unregistered provider using the specified custom provider id.
+    ///
+    /// Use `register()` to register the provider. If the provider is not registered,
+    /// `enabled()` will return false and `EventBuilder::write()` will be a no-op.
+    ///
+    /// `name` must be less than 32KB and must not contain `'\0'`. It should be short,
+    /// human-readable, and unique enough to not conflict with names of other providers.
+    /// The provider name will typically include a company name and a component name,
+    /// e.g. "MyCompany.MyComponent".
+    ///
+    /// `options` can usually be `&Provider::options()`. If the provider needs to
+    /// join a provider group, use `Provider::options().group_id(provider_group_id)`.
+    /// If the provider needs to specify a custom provider enable callback, use
+    /// `Provider::options().callback(callback_fn, callback_context)`.
+    ///
+    /// `id` is the provider id. Since the provider id and the provider name are tightly
+    /// coupled, the provider id should usually be generated from the name using
+    /// `Guid::from_name(name)`.
+    pub fn new_with_id(name: &str, options: &ProviderOptions, id: &Guid) -> Self {
+        assert!(
+            name.len() < 32768,
+            "provider name.len() must be less than 32KB"
+        );
+        debug_assert!(!name.contains('\0'), "provider name must not contain '\\0'");
+
+        const GROUP_TRAIT_LEN: u16 = 2 + 1 + 16;
+        let name_len = name.len() as u16;
+        let traits_len = if options.group_id.is_some() {
+            GROUP_TRAIT_LEN
+        } else {
+            0
+        };
+        let meta_len = 2 + name_len + 1 + traits_len;
+        let mut meta = Vec::with_capacity(meta_len as usize);
+
+        meta.extend_from_slice(&meta_len.to_le_bytes());
+        meta.extend_from_slice(name.as_bytes());
+        meta.push(0);
+
+        if traits_len != 0 {
+            meta.extend_from_slice(&GROUP_TRAIT_LEN.to_le_bytes());
+            meta.push(1); // EtwProviderTraitTypeGroup
+            meta.extend_from_slice(&options.group_id.unwrap().to_bytes_le());
+        }
+
+        debug_assert_eq!(
+            meta.len(),
+            meta_len as usize,
+            "Bug: Incorrect meta length reservation"
+        );
+
         return Self {
             context: ProviderContext::new(),
-            meta: Vec::new(),
-            id: Guid::zero(),
+            meta,
+            id: *id,
+            callback_fn: options.callback_fn,
+            callback_context: options.callback_context,
         };
     }
 
     /// Returns this provider's name.
     pub fn name(&self) -> &str {
-        let name = if self.meta.is_empty() {
-            ""
-        } else {
-            let mut name_end = 2;
-            while self.meta[name_end] != 0 {
-                name_end += 1;
-            }
+        let mut name_end = 2;
+        while self.meta[name_end] != 0 {
+            name_end += 1;
+        }
 
-            from_utf8(&self.meta[2..name_end]).unwrap()
-        };
-
-        return name;
+        return from_utf8(&self.meta[2..name_end]).unwrap();
     }
 
     /// Returns this provider's id (GUID).
@@ -233,16 +283,11 @@ impl Provider {
     /// Use `provider.unregister()` if you want to unregister the provider before it goes
     /// out of scope. The provider automatically unregisters when it is dropped so most
     /// users do  not need to call `unregister` directly.
-    ///
-    /// # Preconditions
-    /// - A call on one thread to any `register` or `unregister` method must not occur at
-    ///   the same time as a call to any `register` or `unregister` method on any other
-    ///   thread. Verified at runtime, failure = panic.
     pub fn unregister(&self) -> u32 {
         return self.context.unregister();
     }
 
-    /// Registers the provider using `Guid::from_name(name)` as the provider id.
+    /// Registers the provider, connecting it to the Windows ETW system.
     ///
     /// This method will panic if the provider is already registered. You must call
     /// [Provider::unregister()] before you can re-register a provider.
@@ -251,16 +296,6 @@ impl Provider {
     /// `register`. Refer to the documentation for [Provider] for examples of how to pin
     /// the provider. Once you have a pinned `provider`, you'll use
     /// `provider.as_mut().register(...)` to register it.
-    ///
-    /// `name` must be less than 32KB and must not contain `'\0'`. It should be short,
-    /// human-readable, and unique enough to not conflict with names of other providers.
-    /// The provider name will typically include a company name and a component name,
-    /// e.g. "MyCompany.MyComponent".
-    ///
-    /// `options` can usually be `&Provider::options()`. If the provider needs to
-    /// join a provider group, use `Provider::options().group_id(provider_group_id)`.
-    /// If the provider needs to specify a custom provider enable callback, use
-    /// `Provider::options().callback(callback_fn, callback_context)`.
     ///
     /// Returns 0 for success or a Win32 error from
     /// [EventRegister](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister)
@@ -272,9 +307,10 @@ impl Provider {
     /// # Preconditions
     ///
     /// - Provider must not already be registered. Verified at runtime, failure = panic.
-    /// - A call on one thread to any `register` or `unregister` method must not occur at
-    ///   the same time as a call to any `register` or `unregister` method on any other
-    ///   thread. Verified at runtime, failure = panic.
+    /// - For a given provider object, a call on one thread to the provider's `register`
+    ///   method must not occur at the same time as a call to the same provider's
+    ///   `register` or `unregister` method on any other thread. Verified at runtime,
+    ///   failure = panic.
     ///
     /// # Safety
     ///
@@ -292,141 +328,18 @@ impl Provider {
     /// - Once registered, you may not move-out of the provider variable until the
     ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
     ///   for clarity.)
-    pub unsafe fn register(self: Pin<&mut Self>, name: &str, options: &ProviderOptions) -> u32 {
-        return self.register_impl(name, options, &Guid::from_name(name));
-    }
-
-    /// Registers the provider using the specified custom provider id.
-    ///
-    /// This method will panic if the provider is already registered. You must call
-    /// [Provider::unregister()] before you can re-register a provider.
-    ///
-    /// Since the provider manages an ETW callback, it must be pinned before you can call
-    /// `register`. Refer to the documentation for [Provider] for examples of how to pin
-    /// the provider. Once you have a pinned `provider`, you'll use
-    /// `provider.as_mut().register(...)` to register it.
-    ///
-    /// `name` must be less than 32KB and must not contain `'\0'`. It should be short,
-    /// human-readable, and unique enough to not conflict with names of other providers.
-    /// The provider name will typically include a company name and a component name,
-    /// e.g. "MyCompany.MyComponent".
-    ///
-    /// `options` can usually be `&Provider::options()`. If the provider needs to
-    /// join a provider group, use `Provider::options().group_id(provider_group_id)`.
-    /// If the provider needs to specify a custom provider enable callback, use
-    /// `Provider::options().callback(callback_fn, callback_context)`.
-    ///
-    /// `id` is the provider id. Since the provider id and the provider name are tightly
-    /// coupled, the provider id should usually be generated from the name using
-    /// `Guid::from_name(name)`.
-    ///
-    /// Returns 0 for success or a Win32 error from
-    /// [EventRegister](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister)
-    /// for failure. The return value is for diagnostic purposes only and should
-    /// generally be ignored in retail builds: if `register_with_id` fails then
-    /// [Provider::enabled()] will always return `false`, [Provider::unregister()] will
-    /// be a no-op, and [EventBuilder::write()] will be a no-op.
-    ///
-    /// # Preconditions
-    ///
-    /// - Provider must not already be registered. Verified at runtime, failure = panic.
-    /// - A call on one thread to any `register` or `unregister` method must not occur at
-    ///   the same time as a call to any `register` or `unregister` method on any other
-    ///   thread. Verified at runtime, failure = panic.
-    ///
-    /// # Safety
-    ///
-    /// - If the provider is in a DLL, it **must** be unregistered before the DLL unloads.
-    ///
-    ///   [Provider::unregister] is called automatically when the provider is dropped so
-    ///   this generally isn't an issue unless the provider is declared as a static variable.
-    ///
-    ///   If a provider variable is registered by a DLL and the DLL unloads without dropping
-    ///   the variable, the process may subsequently crash. This occurs because `register`
-    ///   enables an ETW callback into the calling DLL and `unregister` ensures that the
-    ///   callback is disabled. If the module unloads without disabling the callback, the
-    ///   process will crash the next time that ETW tries to invoke the callback.
-    ///
-    /// - Once registered, you may not move-out of the provider variable until the
-    ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
-    ///   for clarity.)
-    pub unsafe fn register_with_id(
-        self: Pin<&mut Self>,
-        name: &str,
-        options: &ProviderOptions,
-        id: &Guid,
-    ) -> u32 {
-        return self.register_impl(name, options, id);
-    }
-
-    fn register_impl(
-        self: Pin<&mut Self>,
-        name: &str,
-        options: &ProviderOptions,
-        id: &Guid,
-    ) -> u32 {
-        assert!(
-            name.len() < 32768,
-            "provider name.len() must be less than 32KB"
-        );
-        debug_assert!(!name.contains('\0'), "provider name must not contain '\\0'");
-
-        // Safety: we do not move-out of *self_mut.
-        let self_mut = unsafe { self.get_unchecked_mut() };
-
-        const GROUP_TRAIT_LEN: u16 = 2 + 1 + 16;
-        let name_len = name.len() as u16;
-        let traits_len = if options.group_id.is_some() {
-            GROUP_TRAIT_LEN
-        } else {
-            0
-        };
-        let meta_len = 2 + name_len + 1 + traits_len;
-        self_mut.meta.clear();
-        self_mut.meta.reserve(meta_len as usize);
-
-        self_mut.meta.extend_from_slice(&meta_len.to_le_bytes());
-        self_mut.meta.extend_from_slice(name.as_bytes());
-        self_mut.meta.push(0);
-
-        if traits_len != 0 {
-            self_mut
-                .meta
-                .extend_from_slice(&GROUP_TRAIT_LEN.to_le_bytes());
-            self_mut.meta.push(1); // EtwProviderTraitTypeGroup
-            self_mut
-                .meta
-                .extend_from_slice(&options.group_id.unwrap().to_bytes_le());
-        }
-
-        debug_assert_eq!(
-            self_mut.meta.len(),
-            meta_len as usize,
-            "Bug: Incorrect meta length reservation"
-        );
-        self_mut.id = *id;
-
-        // Safety: register and register_with_id are unsafe and their Safety conditions
-        // match the safety conditions of context.register.
-        let result = unsafe {
-            self_mut
-                .context
-                .register(&self_mut.id, options.callback_fn, options.callback_context)
-        };
+    pub unsafe fn register(self: Pin<&Self>) -> u32 {
+        let result = self
+            .context
+            .register(&self.id, self.callback_fn, self.callback_context);
         if result == 0 {
-            self_mut.context.set_information(
+            self.context.set_information(
                 2, // EventProviderSetTraits
-                &self_mut.meta[..],
+                &self.meta[..],
             );
         }
 
         return result;
-    }
-}
-
-impl Default for Provider {
-    fn default() -> Self {
-        return Self::new();
     }
 }
 
@@ -449,11 +362,11 @@ impl fmt::Debug for Provider {
 /// ```
 /// # use core::pin::Pin;
 /// # use tracelogging_dynamic as tld;
-/// # let mut provider = Box::pin(tld::Provider::new());
+/// let mut provider = Box::pin(tld::Provider::new(
+///     "MyCompany.MyComponent",
+///     &tld::Provider::options()));
 /// unsafe {
-///     provider.as_mut().register(
-///         "MyCompany.MyComponent",
-///         &tld::Provider::options());
+///     provider.as_ref().register();
 /// }
 /// ```
 ///
@@ -461,11 +374,11 @@ impl fmt::Debug for Provider {
 /// ```
 /// # use core::pin::Pin;
 /// # use tracelogging_dynamic as tld;
-/// # let mut provider = Box::pin(tld::Provider::new());
+/// let provider = Box::pin(tld::Provider::new(
+///     "MyCompany.MyComponent",
+///     tld::Provider::options().group_id(&tld::Guid::from_name("MyCompany.GroupName"))));
 /// unsafe {
-///     provider.as_mut().register(
-///         "MyCompany.MyComponent",
-///         tld::Provider::options().group_id(&tld::Guid::from_name("MyCompany.GroupName")));
+///     provider.as_ref().register();
 /// }
 /// ```
 ///
@@ -486,11 +399,11 @@ impl fmt::Debug for Provider {
 ///     assert_eq!(callback_context, 0xDEADBEEF);
 /// }
 ///
-/// # let mut provider = Box::pin(tld::Provider::new());
+/// let provider = Box::pin(tld::Provider::new(
+///     "MyCompany.MyComponent",
+///     tld::Provider::options().callback(my_callback, 0xDEADBEEF)));
 /// unsafe {
-///     provider.as_mut().register(
-///         "MyCompany.MyComponent",
-///         tld::Provider::options().callback(my_callback, 0xDEADBEEF));
+///     provider.as_ref().register();
 /// }
 /// ```
 #[derive(Clone, Copy, Default)]

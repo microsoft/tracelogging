@@ -26,15 +26,14 @@
 //! # Overview
 //!
 //! - Create a pinned [Provider] object, e.g.
-//!
-//!   `let mut provider = Box::pin(Provider::new());`
-//!
-//!   - See the documentation for the [Provider] class for ways to pin the provider
-//!     without a heap allocation.
+
+//!   - `let provider = pin!(Provider::new("MyCompany.MyComponent", &tld::Provider::options()));`
+
+//!   - `let provider = Box::pin(Provider::new("MyCompany.MyComponent", &tld::Provider::options()));`
 //!
 //! - Call [Provider::register] to open the connection to ETW, e.g.
 //!
-//!   `unsafe { provider.as_mut().register(provider_name, options); }`
+//!   `unsafe { provider.as_ref().register(); }`
 //!
 //!   - Safety: [Provider::register] is unsafe because a registered provider **must** be
 //!     properly unregistered. This happens automatically when the provider is dropped,
@@ -53,13 +52,14 @@
 //! use tracelogging_dynamic as tld;
 //!
 //! // Pinning is required because the register() method sets up a callback with ETW.
-//! let mut provider = Box::pin(tld::Provider::new());
+//! let provider = Box::pin(tld::Provider::new(
+//!     "MyCompany.MyComponent",
+//!     &tld::Provider::options()));
 //!
-//! // Register the provider with name "MyCompany.MyComponent". If you don't register (or
-//! // if register fails) then enabled() will always return false and write() will be a
-//! // no-op.
+//! // Register the provider. If you don't register (or if register fails) then enabled()
+//! // will always return false and write() will be a  no-op.
 //! unsafe {
-//!     provider.as_mut().register("MyCompany.MyComponent", &tld::Provider::options());
+//!     provider.as_ref().register();
 //! }
 //!
 //! // If provider is not enabled for a given level + keyword, the write() call will do
