@@ -14,14 +14,14 @@
 //! (Event Tracing for Windows). The events can be generated and collected on Windows
 //! Vista or later. The events can be decoded on Windows 10 or later.
 //!
-//! This "dynamic" implementation of TraceLogging supports more functionality than the
+//! This "dynamic" implementation of TraceLogging is more flexible than the
 //! implementation in the [`tracelogging`] crate. For example, it supports
 //! runtime-defined schema and can easily log arrays of strings. However, it is harder to
-//! use, has higher runtime costs, and has additional runtime dependencies than the
-//! `tracelogging` crate. This dynamic implementation is intended for use only when the
-//! set of events cannot be determined at compile-time. For example,
-//! `traceloggingdynamic` might be used to implement a middle-layer library providing
-//! ETW support to a scripting language like JavaScript or Perl.
+//! use, it has higher runtime costs, and it depends on the `alloc` crate. This dynamic
+//! implementation is intended for use only when the set of events cannot be determined
+//! at compile-time. For example, `traceloggingdynamic` might be used to implement a
+//! middle-layer library providing ETW support to a scripting language like JavaScript or
+//! Python. In other cases, use the [`tracelogging`] crate instead of this crate.
 //!
 //! # Overview
 //!
@@ -112,7 +112,6 @@
 //! ```
 
 // Re-exports from tracelogging:
-pub use tracelogging::win_filetime_from_systemtime;
 pub use tracelogging::Channel;
 pub use tracelogging::Guid;
 pub use tracelogging::InType;
@@ -127,6 +126,42 @@ pub use tracelogging::NATIVE_IMPLEMENTATION;
 pub use builder::EventBuilder;
 pub use provider::Provider;
 pub use provider::ProviderOptions;
+
+pub mod changelog;
+
+/// Converts a
+/// [`std::time::SystemTime`](https://doc.rust-lang.org/std/time/struct.SystemTime.html)
+/// into a Windows
+/// [`FILETIME`](https://learn.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime)
+/// `i64` value.
+///
+/// This macro will convert the provided `SystemTime` value into a Win32
+/// [`FILETIME`](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime),
+/// saturating if the value is out of the range that
+/// [`FileTimeToSystemTime`](https://docs.microsoft.com/windows/win32/api/timezoneapi/nf-timezoneapi-filetimetosystemtime)
+/// can handle: if the `SystemTime` value is a date before year 1601, the returned
+/// `FILETIME` value will be the start of 1601, and if the `SystemTime` value is a date
+/// after year 30827, the returned `FILETIME` value will be the end of 30827.
+///
+/// The returned `i64` value can be used with [`EventBuilder::add_filetime`] and
+/// [`EventBuilder::add_filetime_sequence`].
+///
+/// Note: `win_filetime_from_systemtime` is implemented as a macro because this crate is
+/// `[no_std]`. Implementing this via a function would require this crate to reference
+/// `std::time::SystemTimeError`.
+#[macro_export]
+macro_rules! win_filetime_from_systemtime {
+    // Keep in sync with tracelogging::win_filetime_from_systemtime.
+    // The implementation is duplicated to allow for different doc comments.
+    ($time:expr) => {
+        match $time.duration_since(::std::time::SystemTime::UNIX_EPOCH) {
+            Ok(dur) => ::tracelogging::_internal::filetime_from_duration_after_1970(dur),
+            Err(err) => {
+                ::tracelogging::_internal::filetime_from_duration_before_1970(err.duration())
+            }
+        }
+    };
+}
 
 extern crate alloc;
 mod builder;
