@@ -1,6 +1,6 @@
 [package]
 name = "tracelogging_dynamic"
-version = "1.0.3"
+version = "1.1.0"
 edition = "2021"
 authors = ["Microsoft"]
 license = "MIT"
@@ -28,4 +28,4 @@ default = ["etw"]
 etw = ["tracelogging/etw"] # Logging is enabled if windows && etw.
 
 [dependencies]
-tracelogging = { default-features = false, version = "= 1.0.3", path = "../tracelogging" }
+tracelogging = { default-features = false, version = "= 1.1.0", path = "../tracelogging" }

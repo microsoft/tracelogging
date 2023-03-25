@@ -3,14 +3,14 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
-/// # v1.0.3 (2023-03-23, Breaking)
+/// # v1.1.0 (2023-03-24, Breaking)
 /// - **Breaking:** Move [`Provider`] configuration parameters from
 ///   [`Provider::register`] to [`Provider::new`]. This allows
 ///   [`Provider::register`] to be an immutable operation, making the
 ///   `Provider` type easier to use in multi-threaded scenarios.
 /// - Relax multithreading precondition on [`Provider::unregister`]. Now,
 ///   only [`Provider::register`] has special preconditions.
-pub mod v1_0_3 {}
+pub mod v1_1_0 {}
 
 /// # v1.0.2 (2023-03-13, Breaking)
 /// - **Breaking:** Rename the `filetime_from_systemtime` macro to
