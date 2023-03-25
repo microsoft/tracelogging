@@ -1,2 +1,4 @@
 build
 .vscode
+/etw/rust/target/
+/etw/rust/Cargo.lock

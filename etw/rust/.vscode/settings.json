@@ -1,5 +1,0 @@
-{
-    "rust-analyzer.diagnostics.disabled": [
-        "unresolved-module", // https://github.com/rust-lang/rust-analyzer/issues/9173
-    ]
-}

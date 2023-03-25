@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use core::pin::pin;
 use core::pin::Pin;
 use tracelogging_dynamic::*;
 
@@ -58,53 +59,48 @@ fn provider() {
             .group_id(&Guid::zero())
     );
 
-    let mut provider = Box::pin(Provider::new());
-    assert_eq!(provider.name(), "");
-    assert_eq!(provider.id(), &Guid::zero());
+    let provider = Box::pin(Provider::new(
+        "MyCompany.MyComponent",
+        Provider::options().group_id(&Guid::zero()),
+    ));
+    assert_eq!(provider.name(), "MyCompany.MyComponent");
+    assert_eq!(provider.id(), &Guid::from_name("MyCompany.MyComponent"));
 
     unsafe {
-        provider.as_mut().register(
-            "MyCompany.MyComponent",
-            Provider::options().group_id(&Guid::zero()),
-        )
+        provider.as_ref().register();
     };
     assert_eq!(provider.name(), "MyCompany.MyComponent");
     assert_eq!(provider.id(), &Guid::from_name("MyCompany.MyComponent"));
 
-    let mut provider = Provider::new(); // Temporary that will be shadowed.
-    let mut provider = unsafe { Pin::new_unchecked(&mut provider) };
-    assert_eq!(provider.name(), "");
-    assert_eq!(provider.id(), &Guid::zero());
+    let provider = pin!(Provider::new_with_id("Hello", &Provider::options(), &aid1));
+    assert_eq!(provider.name(), "Hello");
+    assert_eq!(provider.id(), &aid1);
 
-    unsafe {
-        provider
-            .as_mut()
-            .register_with_id("Hello", &Provider::options(), &aid1)
-    };
+    unsafe { provider.as_ref().register() };
     assert_eq!(provider.name(), "Hello");
     assert_eq!(provider.id(), &aid1);
 
     provider.unregister();
 
-    //let mut provider = core::pin::pin!(Provider::new());
-    //provider.as_mut().register("MyCompany.MyComponent", &Provider::options());
+    let provider = pin!(Provider::new("MyCompany.MyComponent", &Provider::options()));
+    unsafe {
+        provider.as_ref().register();
+    };
 
     struct HasProvider {
         provider: Provider,
     }
 
     let mut my_pinned_struct = HasProvider {
-        provider: Provider::new(),
+        provider: Provider::new(
+            "MyCompany.MyComponent",
+            Provider::options().callback(my_callback, 0xDEADBEEF),
+        ),
     };
     let my_pinned_struct = unsafe { Pin::new_unchecked(&mut my_pinned_struct) };
 
-    let mut provider = unsafe { my_pinned_struct.map_unchecked_mut(|s| &mut s.provider) };
-    unsafe {
-        provider.as_mut().register(
-            "MyCompany.MyComponent",
-            Provider::options().callback(my_callback, 0xDEADBEEF),
-        )
-    };
+    let provider = unsafe { my_pinned_struct.map_unchecked_mut(|s| &mut s.provider) };
+    unsafe { provider.as_ref().register() };
 
     _ = provider.enabled(Level::Verbose, 0x123);
 
@@ -114,14 +110,13 @@ fn provider() {
     let aid = Provider::create_activity_id();
     let rid = Provider::current_thread_activity_id();
 
-    unsafe {
-        provider.as_mut().register(
-            "TraceLoggingDynamicTest",
-            Provider::options()
-                .callback(my_callback, 0xDEADBEEF)
-                .group_id(&Guid::from_name("TraceLoggingDynamicTestGroup")),
-        )
-    };
+    let provider = pin!(Provider::new(
+        "TraceLoggingDynamicTest",
+        Provider::options()
+            .callback(my_callback, 0xDEADBEEF)
+            .group_id(&Guid::from_name("TraceLoggingDynamicTestGroup")),
+    ));
+    unsafe { provider.as_ref().register() };
     b.reset("GroupEvent-Start", Level::Verbose, 0x1, 0)
         .opcode(Opcode::Start)
         .write(&provider, Some(&aid), Some(&rid));
@@ -132,15 +127,12 @@ fn provider() {
 
 #[test]
 fn builder() {
-    let mut p = Provider::new(); // Temporary that will be shadowed.
-    let mut p = unsafe { Pin::new_unchecked(&mut p) };
+    let p = Provider::new("TraceLoggingDynamicTest", &Provider::options()); // Temporary that will be shadowed.
+    let p = unsafe { Pin::new_unchecked(&p) };
     let mut b = EventBuilder::new();
     println!("{:?}", b);
 
-    unsafe {
-        p.as_mut()
-            .register("TraceLoggingDynamicTest", &Provider::options())
-    };
+    unsafe { p.as_ref().register() };
 
     b.reset("Default", Level::Verbose, 0x1, 0)
         .write(&p, None, None);
