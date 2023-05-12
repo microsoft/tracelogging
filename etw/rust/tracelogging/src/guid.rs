@@ -3,6 +3,7 @@
 
 use core::convert::TryInto;
 use core::fmt;
+use core::mem;
 use core::str::from_utf8;
 
 /// [GUID](https://docs.microsoft.com/windows/win32/api/guiddef/ns-guiddef-guid)
@@ -95,7 +96,7 @@ impl Guid {
         };
     }
 
-    /// Creates a GUID from bytes in RFC (big-endian) byte order.
+    /// Creates a GUID from bytes in big-endian (RFC) byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -112,7 +113,7 @@ impl Guid {
         };
     }
 
-    /// Creates a GUID from bytes in Windows (little-endian) byte order.
+    /// Creates a GUID from bytes in little-endian byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -242,7 +243,12 @@ impl Guid {
         return (self.data1, self.data2, self.data3, self.data4);
     }
 
-    /// Returns the bytes of the GUID in RFC byte order (big-endian).
+    /// Returns this implementation's in-memory byte representation.
+    pub const fn as_bytes_raw(&self) -> &[u8; 16] {
+        return unsafe { mem::transmute(&self) };
+    }
+
+    /// Returns the bytes of the GUID in big-endian (RFC) byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -271,7 +277,7 @@ impl Guid {
         ];
     }
 
-    /// Returns the bytes of the GUID in Windows byte order (little-endian).
+    /// Returns the bytes of the GUID in little-endian byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(

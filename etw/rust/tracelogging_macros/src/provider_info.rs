@@ -21,6 +21,7 @@ impl ProviderInfo {
         arg_tokens: TokenStream,
     ) -> Result<ProviderInfo, TokenStream> {
         let mut prov_id_set = false;
+        let mut group_name_set = false;
         let mut errors = Errors::new();
         let mut root_parser = Parser::new(&mut errors, arg_span, arg_tokens);
         let mut prov = ProviderInfo {
@@ -78,6 +79,23 @@ impl ProviderInfo {
                         errors.add(option_name_ident.span(), "group_id already set");
                     }
                     prov.group_id.insert(Guid::zero())
+                }
+                "group_name" | "groupname" => {
+                    if group_name_set {
+                        errors.add(option_name_ident.span(), "group_name already set");
+                    }
+                    if let Some((id_str, id_span)) = option_args_parser
+                        .next_string_literal(RequiredLast, "expected \"groupname\"")
+                    {
+                        for ch in id_str.chars() {
+                            if !ch.is_ascii_lowercase() && !ch.is_ascii_digit() {
+                                option_args_parser.errors().add(id_span, "group_name must contain only lowercase ASCII letters and ASCII digits");
+                                break;
+                            }
+                        }
+                        group_name_set = !id_str.is_empty();
+                    }
+                    continue;
                 }
                 _ => {
                     errors.add(
