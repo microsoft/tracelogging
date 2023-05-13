@@ -104,9 +104,9 @@ impl EventGenerator {
                     .add_ident(TLG_PROV_VAR)
                     .add_punct(".")
                     .add_ident("raw_meta")
-                    .add_group_paren(self.tree2.drain())
+                    .add_group_paren([])
                     .add_punct(",")
-                    .add(Literal::u32_unsuffixed(
+                    .add_literal(Literal::u32_unsuffixed(
                         EVENT_DATA_DESCRIPTOR_TYPE_PROVIDER_METADATA,
                     ))
                     .drain(),
@@ -119,7 +119,7 @@ impl EventGenerator {
                     // _tlg_meta, 1
                     .add_ident(TLG_META_VAR)
                     .add_punct(",")
-                    .add(Literal::u32_unsuffixed(
+                    .add_literal(Literal::u32_unsuffixed(
                         EVENT_DATA_DESCRIPTOR_TYPE_EVENT_METADATA,
                     ))
                     .drain(),
@@ -168,9 +168,7 @@ impl EventGenerator {
         self.func_call_tree
             // &PROVIDER
             .add_punct("&")
-            .push_span(event.provider_symbol.span())
-            .add(event.provider_symbol.clone())
-            .pop_span()
+            .add_token(event.provider_symbol.clone())
             // , tlg::meta_as_bytes(&_tlg_meta)
             .add_punct(",")
             .add_path_call(
@@ -285,7 +283,7 @@ impl EventGenerator {
                         self.tree2
                             .add_path(U16_PATH)
                             .add_punct(";")
-                            .add(Literal::u16_unsuffixed(self.lengths_count))
+                            .add_literal(Literal::u16_unsuffixed(self.lengths_count))
                             .drain(),
                     )
                     .add_punct("=")
@@ -355,7 +353,7 @@ impl EventGenerator {
             // Build up "0u64 | _TLG_KEYWORD0 | _TLG_KEYWORD1 ..." in tree1.
 
             // tree1 += "0u64"
-            self.tree1.add(Literal::u64_suffixed(0));
+            self.tree1.add_literal(Literal::u64_suffixed(0));
 
             for (n, keyword) in event.keywords.drain(..).enumerate() {
                 // event_tree += "const _TLG_KEYWORDn: u64 = KEYWORDSn;"
@@ -380,9 +378,7 @@ impl EventGenerator {
             // if !PROVIDER.enabled(_TLG_LEVEL, _TLG_KEYWORD) { 0 }
             .add_ident("if")
             .add_punct("!")
-            .push_span(event.provider_symbol.span())
-            .add(event.provider_symbol)
-            .pop_span()
+            .add_token(event.provider_symbol)
             .add_punct(".")
             .add_ident("enabled")
             .add_group_paren(
@@ -392,7 +388,7 @@ impl EventGenerator {
                     .add_ident(TLG_KEYWORD_CONST)
                     .drain(),
             )
-            .add_group_curly(self.tree1.add(Literal::u32_suffixed(0)).drain())
+            .add_group_curly(self.tree1.add_literal(Literal::u32_suffixed(0)).drain())
             // else { enabled_tree... }
             .add_ident("else")
             .add_group_curly(self.enabled_tree.drain());
@@ -565,7 +561,7 @@ impl EventGenerator {
                     .add_group_paren(
                         self.tree1
                             .add_punct("&")
-                            .add(Literal::u8_unsuffixed(0))
+                            .add_literal(Literal::u8_unsuffixed(0))
                             .drain(),
                     )
                     .add_punct(",");
@@ -650,7 +646,7 @@ impl EventGenerator {
                     .add_ident(TLG_LENGTHS_VAR)
                     .add_group_square(
                         self.tree2
-                            .add(Literal::u16_unsuffixed(self.lengths_count))
+                            .add_literal(Literal::u16_unsuffixed(self.lengths_count))
                             .drain(),
                     )
                     .drain(),
@@ -801,13 +797,13 @@ impl EventGenerator {
         self.meta_init_tree
             .add_punct(".")
             .add_ident("as_int")
-            .add_group_paren(self.tree1.drain());
+            .add_group_paren([]);
 
         // | flags
         if flags != 0 {
             self.meta_init_tree
                 .add_punct("|")
-                .add(Literal::u8_unsuffixed(flags));
+                .add_literal(Literal::u8_unsuffixed(flags));
         }
 
         self.meta_init_tree.pop_span();
@@ -837,7 +833,7 @@ impl EventGenerator {
             .add_ident("const")
             .add_ident("_")
             .add_punct(":")
-            .add_group_paren(self.tree1.drain())
+            .add_group_paren([])
             .add_punct("=")
             .add_path(ASSERT_PATH)
             .add_punct("!")
@@ -846,9 +842,9 @@ impl EventGenerator {
                     .push_span(expression.context)
                     .add_ident(self.tag_n.current())
                     .add_punct("<=")
-                    .add(Literal::u32_unsuffixed(0x0FFFFFFF))
+                    .add_literal(Literal::u32_unsuffixed(0x0FFFFFFF))
                     .add_punct(",")
-                    .add(Literal::string("tag must not be greater than 0x0FFFFFFF"))
+                    .add_literal(Literal::string("tag must not be greater than 0x0FFFFFFF"))
                     .pop_span()
                     .drain(),
             )
@@ -888,13 +884,13 @@ impl EventGenerator {
                 self.tree1
                     .add_path(U8_PATH)
                     .add_punct(";")
-                    .add(Literal::usize_unsuffixed(self.meta_buffer.len()))
+                    .add_literal(Literal::usize_unsuffixed(self.meta_buffer.len()))
                     .drain(),
             );
             self.meta_init_tree
                 .add_punct(",")
                 .add_punct("*")
-                .add(Literal::byte_string(&self.meta_buffer[..]));
+                .add_literal(Literal::byte_string(&self.meta_buffer[..]));
             self.meta_buffer.clear();
         }
     }

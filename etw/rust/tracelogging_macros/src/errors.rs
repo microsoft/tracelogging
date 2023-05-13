@@ -2,7 +2,6 @@
 // Licensed under the MIT license.
 
 use proc_macro::*;
-use std::vec;
 
 pub struct Errors {
     error_tokens: Vec<TokenTree>,
@@ -19,15 +18,20 @@ impl Errors {
         return self.error_tokens.is_empty();
     }
 
-    pub fn drain(&mut self) -> vec::Drain<TokenTree> {
-        return self.error_tokens.drain(..);
+    pub fn into_items(mut self) -> TokenStream {
+        return self.error_tokens.drain(..).collect();
+    }
+
+    pub fn into_expression(mut self) -> TokenStream {
+        self.error_tokens.push(Literal::u32_unsuffixed(0).into());
+        return TokenTree::from(Group::new(
+            Delimiter::Brace,
+            self.error_tokens.drain(..).collect(),
+        ))
+        .into();
     }
 
     pub fn add(&mut self, pos: Span, error_message: &str) {
-        if !self.error_tokens.is_empty() {
-            self.add_token(pos, Punct::new(';', Spacing::Alone));
-        }
-
         self.add_token(pos, Punct::new(':', Spacing::Joint));
         self.add_token(pos, Punct::new(':', Spacing::Alone));
         self.add_token(pos, Ident::new("core", pos));
@@ -42,6 +46,7 @@ impl Errors {
                 TokenStream::from_iter([TokenTree::Literal(Literal::string(error_message))]),
             ),
         );
+        self.add_token(pos, Punct::new(';', Spacing::Alone));
     }
 
     fn add_token(&mut self, pos: Span, token: impl Into<TokenTree>) {

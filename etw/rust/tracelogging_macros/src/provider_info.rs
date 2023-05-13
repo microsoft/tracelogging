@@ -126,7 +126,7 @@ impl ProviderInfo {
         return if errors.is_empty() {
             Ok(prov)
         } else {
-            Err(errors.drain().collect())
+            Err(errors.into_items())
         };
     }
 }
