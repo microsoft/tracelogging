@@ -145,7 +145,7 @@ impl EventGenerator {
             .add_punct(":")
             .add_punct("&")
             .add_path(EVENTDESC_PATH)
-            // , activity_id: Option<&Guid>
+            // , activity_id: Option<&[u8; 16]>
             .add_punct(",")
             .add_ident(TLG_ACTIVITY_ID_VAR)
             .add_punct(":")
@@ -160,7 +160,7 @@ impl EventGenerator {
                     .drain(),
             )
             .add_punct(">")
-            // , related_id: Option<&Guid>
+            // , related_id: Option<&[u8; 16]>
             .add_punct(",")
             .add_ident(TLG_RELATED_ID_VAR)
             .add_punct(":")
