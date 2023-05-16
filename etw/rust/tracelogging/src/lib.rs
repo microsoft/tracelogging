@@ -5,9 +5,9 @@
 #![warn(missing_docs)]
 #![allow(clippy::needless_return)]
 
-//! # TraceLogging for Rust
+//! # TraceLogging-encoded ETW events
 //!
-//! `tracelogging` provides a simple and efficient way to log
+//! The `tracelogging` crate provides a simple and efficient way to log
 //! [TraceLogging](https://docs.microsoft.com/windows/win32/tracelogging/trace-logging-portal)
 //! (manifest-free) events to
 //! [ETW](https://docs.microsoft.com/windows/win32/etw/event-tracing-portal)
@@ -22,7 +22,7 @@
 //! In rare cases, you might not know what events you want to log until runtime. For
 //! example, you might be implementing a middle-layer library providing ETW support to a
 //! dynamic top-layer or a scripting language like JavaScript or Python. In these cases,
-//! you might use the `traceloggingdynamic` crate instead of this crate.
+//! you might use the `tracelogging_dynamic` crate instead of this crate.
 //!
 //! # Overview
 //!
@@ -199,6 +199,9 @@
 /// - `debug()`
 ///
 ///   For non-production diagnostics: prints the expanded macro during compilation.
+///
+/// - For compability with the `eventheader` crate, certain other options may be
+///   accepted and ignored.
 #[cfg(feature = "macros")]
 pub use tracelogging_macros::define_provider;
 
@@ -377,18 +380,20 @@ pub use tracelogging_macros::define_provider;
 ///   Specifies the activity id to use for the event.
 ///
 ///   If not specified, the event will use the current thread's thread-local activity id.
-///   If specified, the value must be a reference to a [Guid].
+///   If specified, the value must be a reference to a [Guid] or a reference to a
+///   `[u8; 16]`.
 ///
 /// - `related_id(&guid)`
 ///
 ///   Specifies the related activity id to use for the event.
 ///
-///   This value is normally set for the activity-[start](Opcode::Start) event to record the
+///   This value is normally set for the activity-[start](Opcode::ActivityStart) event to record the
 ///   parent activity of the newly-started activity. This is normally left unset for other
 ///   events.
 ///
-///   If not specified, the event will not have any related activity id. If specified,
-///   the value must be a reference to a [Guid].
+///   If not specified, the event will not have any related activity id.
+///   If specified, the value must be a reference to a [Guid] or a reference to a
+///   `[u8; 16]`.
 ///
 /// - `task(event_task)`
 ///
@@ -833,7 +838,7 @@ pub use tracelogging_macros::define_provider;
 ///     raw_field_slice("RawChar8s", U8, &[
 ///         3, 0,       // RawChar8s.Length = 3
 ///         65, 66, 67, // RawChar8s content = [65, 66, 67]
-///     ]),
+///     ], format(String)),
 ///
 ///     // Declare a U32 + Hex field, but don't provide the data yet.
 ///     raw_meta("RawHex32", U32, format(Hex)),

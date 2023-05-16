@@ -9,7 +9,7 @@ use core::str::from_utf8;
 
 /// [GUID](https://docs.microsoft.com/windows/win32/api/guiddef/ns-guiddef-guid)
 /// ([UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier)).
-/// Uses the in-memory representation expected by the ETW APIs (host-endian).
+/// with host-endian in-memory representation (as expected by the ETW APIs).
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Guid {

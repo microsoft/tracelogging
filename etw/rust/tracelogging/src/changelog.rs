@@ -3,6 +3,17 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v1.2.0 (2023-05-15)
+/// - In event macros, `activity_id` and `related_id` values can now be either
+///   `&Guid` or `&[u8; 16]`.
+/// - New event macro field types `errno`, `errno_slice`, `time32`, and `time64`
+///   (for compatibility with eventheader).
+/// - New provider macro option `group_name` (for compatibility with eventheader).
+/// - Guid: Added `as_bytes_raw()` method and `borrow<[u8; 16]>` trait.
+/// - Better macro parse error reporting.
+/// - Opcode enum names clarified.
+pub mod v1_2_0 {}
+
 /// # v1.1.0 (2023-03-24)
 /// - Relax multithreading precondition on [`Provider::unregister`]. Now,
 ///   only [`Provider::register`] has special preconditions.

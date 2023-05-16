@@ -64,7 +64,7 @@ use crate::provider::Provider;
 ///     thread-local activity id will be used as the event's activity id.
 ///   - `related_id` is an optional 128-bit value that indicates the parent of a
 ///     newly-started activity. This should be specified for
-///     activity-[start](Opcode::Start) events and should be `None` for other events.
+///     activity-[start](Opcode::ActivityStart) events and should be `None` for other events.
 ///
 /// # Event Size Limits
 ///
