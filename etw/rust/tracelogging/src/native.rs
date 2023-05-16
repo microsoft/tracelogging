@@ -196,8 +196,8 @@ impl ProviderContext {
     pub fn write_transfer(
         &self,
         _descriptor: &EventDescriptor,
-        _activity_id: Option<&Guid>,
-        _related_id: Option<&Guid>,
+        _activity_id: Option<&[u8; 16]>,
+        _related_id: Option<&[u8; 16]>,
         _data: &[EventDataDescriptor],
     ) -> u32 {
         let result;
@@ -398,8 +398,8 @@ extern "system" {
     fn EventWriteTransfer(
         reg_handle: u64,
         descriptor: &EventDescriptor,
-        activity_id: Option<&Guid>,
-        related_id: Option<&Guid>,
+        activity_id: Option<&[u8; 16]>,
+        related_id: Option<&[u8; 16]>,
         data_count: u32,
         data: *const EventDataDescriptor,
     ) -> u32;

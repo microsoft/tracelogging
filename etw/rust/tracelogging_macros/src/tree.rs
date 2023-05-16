@@ -100,16 +100,23 @@ impl Tree {
         return self;
     }
 
-    pub fn add_option_from_tokens(
+    /// Either `None` or `Some(borrow(tokens))`
+    pub fn add_borrowed_option_from_tokens(
         &mut self,
+        scratch_tree: &mut Tree,
         tokens: impl IntoIterator<Item = TokenTree>,
     ) -> &mut Self {
         let stream = TokenStream::from_iter(tokens);
         if stream.is_empty() {
             self.add_path(OPTION_NONE_PATH);
         } else {
-            self.add_path(OPTION_SOME_PATH)
-                .add_with_tree_span(Group::new(Delimiter::Parenthesis, stream));
+            self.add_path_call(
+                OPTION_SOME_PATH,
+                scratch_tree
+                    .add_path(BORROW_BORROW_PATH)
+                    .add_with_tree_span(Group::new(Delimiter::Parenthesis, stream))
+                    .drain(),
+            );
         }
         return self;
     }

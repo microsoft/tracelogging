@@ -194,7 +194,12 @@ impl EventBuilder {
                 EventDataDescriptor::from_raw_bytes(&self.data, 0), // EVENT_DATA_DESCRIPTOR_TYPE_NONE
             ];
             let ctx = &provider.context;
-            result = ctx.write_transfer(&self.descriptor, activity_id, related_id, &dd);
+            result = ctx.write_transfer(
+                &self.descriptor,
+                activity_id.map(|g| g.as_bytes_raw()),
+                related_id.map(|g| g.as_bytes_raw()),
+                &dd,
+            );
         }
         return result;
     }

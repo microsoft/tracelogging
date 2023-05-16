@@ -279,8 +279,8 @@ pub const unsafe fn provider_new(meta: &'static [u8], id: &Guid) -> Provider {
 pub fn provider_write_transfer(
     provider: &Provider,
     descriptor: &EventDescriptor,
-    activity_id: Option<&Guid>,
-    related_id: Option<&Guid>,
+    activity_id: Option<&[u8; 16]>,
+    related_id: Option<&[u8; 16]>,
     dd: &[EventDataDescriptor],
 ) -> u32 {
     return provider

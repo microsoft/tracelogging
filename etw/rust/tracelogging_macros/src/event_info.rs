@@ -238,6 +238,8 @@ impl EventInfo {
                 match field.option.strategy {
                     FieldStrategy::Scalar
                     | FieldStrategy::SystemTime
+                    | FieldStrategy::Time32
+                    | FieldStrategy::Time64
                     | FieldStrategy::Sid
                     | FieldStrategy::CStr
                     | FieldStrategy::Counted

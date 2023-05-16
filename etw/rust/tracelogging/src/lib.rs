@@ -547,6 +547,8 @@ pub use tracelogging_macros::define_provider;
 /// | `cstr16` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16)
 /// | `cstr16_json` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16) + [`Json`](OutType::Json)
 /// | `cstr16_xml` [^cstr] | `&[u16]` | [`CStr16`](InType::CStr16) + [`Xml`](OutType::Xml)
+/// | `errno` [^errno] | `&i32` | [`I32`](InType::I32)
+/// | `errno_slice` [^errno] | `&[i32]` | [`I32`](InType::I32)
 /// | `f32` | `&f32` | [`F32`](InType::F32)
 /// | `f32_slice` | `&[f32]` | [`F32`](InType::F32)
 /// | `f64` | `&f64` | [`F64`](InType::F64)
@@ -597,6 +599,8 @@ pub use tracelogging_macros::define_provider;
 /// | `systemtime` [^systemtime] | `&std::time::SystemTime` | [`FileTime`](InType::FileTime)
 /// | `tid` | `&u32` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
 /// | `tid_slice` | `&[u32]` | [`U32`](InType::U32) + [`Tid`](OutType::Tid)
+/// | `time32` [^time] | `&i32` | [`FileTime`](InType::FileTime)
+/// | `time64` [^time] | `&i64` | [`FileTime`](InType::FileTime)
 /// | `u8` | `&u8` | [`U8`](InType::U8)
 /// | `u8_slice` | `&[u8]` | [`U8`](InType::U8)
 /// | `u8_hex` | `&u8` | [`U8`](InType::U8) + [`Hex`](OutType::Hex)
@@ -643,6 +647,9 @@ pub use tracelogging_macros::define_provider;
 /// `'\0'` characters), prefer the `str` types (counted strings) over the `cstr` types
 /// (`0`-terminated strings) unless you specifically need a `0`-terminated ETW encoding.
 ///
+/// [^errno]: The `errno` type is intended for use with C-style `errno` error codes. On
+/// Windows, the `errno` type behaves exactly like the `i32` type.
+///
 /// [^systemtime]: When logging `systemtime` types, `write_event!` will convert the
 /// provided `std::time::SystemTime` value into a Win32
 /// [`FILETIME`](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime),
@@ -656,6 +663,16 @@ pub use tracelogging_macros::define_provider;
 /// [`GetSidLength(value_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
 /// =  `value_bytes[1] * 4 + 8` bytes long. `write_event!` will panic if the value is
 /// smaller than that size.
+///
+/// [^time]: When logging `time32` and `time64` types, `write_event!` assumes that the
+/// provided `i32` or `i64` value is the number of seconds since 1970 (i.e. a `time_t`)
+/// and will convert the value into a Win32
+/// [`FILETIME`](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime),
+/// saturating if the value is out of the range that
+/// [`FileTimeToSystemTime`](https://docs.microsoft.com/windows/win32/api/timezoneapi/nf-timezoneapi-filetimetosystemtime)
+/// can handle: if an `i64` value is a date before 1601, the logged `FILETIME`
+/// value will be the start of 1601, and if the `i64` value is a date after 30827,
+/// the logged `FILETIME` value will be the end of 30827.
 ///
 /// ### Struct fields
 ///

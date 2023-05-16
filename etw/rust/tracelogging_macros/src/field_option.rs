@@ -9,6 +9,10 @@ pub enum FieldStrategy {
     Scalar,
     /// meta = scalar; data = from_value(filetime_from_duration_***_1970)
     SystemTime,
+    /// meta = scalar; data = from_value(filetime_from_time32)
+    Time32,
+    /// meta = scalar; data = from_value(filetime_from_time64)
+    Time64,
     /// meta = scalar; data = from_sid
     Sid,
     /// meta = scalar; data = from_cstr + nul
@@ -40,6 +44,8 @@ impl FieldStrategy {
         match self {
             FieldStrategy::Scalar
             | FieldStrategy::SystemTime
+            | FieldStrategy::Time32
+            | FieldStrategy::Time64
             | FieldStrategy::Sid
             | FieldStrategy::CStr
             | FieldStrategy::Counted
@@ -70,6 +76,8 @@ impl FieldStrategy {
 
             FieldStrategy::Scalar
             | FieldStrategy::SystemTime
+            | FieldStrategy::Time32
+            | FieldStrategy::Time64
             | FieldStrategy::Sid
             | FieldStrategy::RawData
             | FieldStrategy::RawField

@@ -152,7 +152,13 @@ impl EventGenerator {
             .add_path(OPTION_PATH)
             .add_punct("<")
             .add_punct("&")
-            .add_path(GUID_PATH)
+            .add_group_square(
+                self.tree1
+                    .add_path(U8_PATH)
+                    .add_punct(";")
+                    .add_literal(Literal::usize_unsuffixed(16))
+                    .drain(),
+            )
             .add_punct(">")
             // , related_id: Option<&Guid>
             .add_punct(",")
@@ -161,7 +167,13 @@ impl EventGenerator {
             .add_path(OPTION_PATH)
             .add_punct("<")
             .add_punct("&")
-            .add_path(GUID_PATH)
+            .add_group_square(
+                self.tree1
+                    .add_path(U8_PATH)
+                    .add_punct(";")
+                    .add_literal(Literal::usize_unsuffixed(16))
+                    .drain(),
+            )
             .add_punct(">");
 
         // always-present args for the helper function's call site
@@ -179,15 +191,15 @@ impl EventGenerator {
             .add_punct(",")
             .add_punct("&")
             .add_ident(TLG_DESC_CONST)
-            // , activity_id_tokens...
+            // , None-or-Some(borrow(activity_id_tokens...))
             .add_punct(",")
             .push_span(event.activity_id.context)
-            .add_option_from_tokens(event.activity_id.tokens)
+            .add_borrowed_option_from_tokens(&mut self.tree1, event.activity_id.tokens)
             .pop_span()
-            // , related_id_tokens...
+            // , None-or-Some(borrow(related_id_tokens...))
             .add_punct(",")
             .push_span(event.related_id.context)
-            .add_option_from_tokens(event.related_id.tokens)
+            .add_borrowed_option_from_tokens(&mut self.tree1, event.related_id.tokens)
             .pop_span();
 
         // Add the per-field stuff:
@@ -474,6 +486,28 @@ impl EventGenerator {
                 self.add_data_desc_for_arg_n(DATADESC_FROM_VALUE_PATH);
             }
 
+            FieldStrategy::Time32 | FieldStrategy::Time64 => {
+                let filetime_from_time_path = if let FieldStrategy::Time64 = field.option.strategy {
+                    FILETIME_FROM_TIME64_PATH
+                } else {
+                    FILETIME_FROM_TIME32_PATH
+                };
+
+                self.tree1
+                    // , &filetime_from_timeNN(value_tokens...)
+                    .push_span(field.type_name_span) // Use filetime_from_timeNN(...) as a target for error messages.
+                    .add_punct("&")
+                    .add_path_call(filetime_from_time_path, field.value_tokens)
+                    .pop_span();
+
+                // Prototype: , _tlg_argN: &value_type
+                // Call site: , &filetime_from_timeNN(value_tokens...)
+                self.add_func_scalar_arg(field.option); // consumes tree1
+
+                // EventDataDescriptor::from_value(_tlg_argN),
+                self.add_data_desc_for_arg_n(DATADESC_FROM_VALUE_PATH);
+            }
+
             FieldStrategy::SystemTime => {
                 self.tree1
                     // match SystemTime::duration_since(value_tokens, SystemTime::UNIX_EPOCH) { ... }
@@ -518,7 +552,7 @@ impl EventGenerator {
                     .pop_span();
 
                 // Prototype: , _tlg_argN: &i64
-                // Call site: , match SystemTime::duration_since(value_tokens, SystemTime::UNIX_EPOCH) { ... }
+                // Call site: , &match SystemTime::duration_since(value_tokens, SystemTime::UNIX_EPOCH) { ... }
                 self.add_func_scalar_arg(field.option); // consumes tree1
 
                 // EventDataDescriptor::from_value(_tlg_argN),

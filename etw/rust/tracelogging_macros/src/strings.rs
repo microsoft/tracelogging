@@ -110,6 +110,7 @@ pub const TLG_ACTIVITY_ID_VAR: &str = "_tlg_aid";
 pub const TLG_RELATED_ID_VAR: &str = "_tlg_rid";
 pub const TLG_DUR_VAR: &str = "_tlg_dur";
 
+pub const BORROW_BORROW_PATH: &[&str] = &["core", "borrow", "Borrow", "borrow"];
 pub const ASREF_PATH: &[&str] = &["core", "convert", "AsRef"];
 pub const IDENTITY_PATH: &[&str] = &["core", "convert", "identity"];
 pub const BOOL_PATH: &[&str] = &["core", "primitive", "bool"];
@@ -164,6 +165,10 @@ pub const FILETIME_FROM_DURATION_BEFORE_PATH: &[&str] = &[
     "_internal",
     "filetime_from_duration_before_1970",
 ];
+pub const FILETIME_FROM_TIME32_PATH: &[&str] =
+    &["tracelogging", "_internal", "filetime_from_time32"];
+pub const FILETIME_FROM_TIME64_PATH: &[&str] =
+    &["tracelogging", "_internal", "filetime_from_time64"];
 
 pub const EVENTDESC_PATH: &[&str] = &["tracelogging", "_internal", "EventDescriptor"];
 pub const EVENTDESC_FROM_PARTS_PATH: &[&str] =

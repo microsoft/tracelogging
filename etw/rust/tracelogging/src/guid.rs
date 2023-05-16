@@ -1,6 +1,7 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use core::borrow;
 use core::convert::TryInto;
 use core::fmt;
 use core::mem;
@@ -377,6 +378,13 @@ impl fmt::Debug for Guid {
     /// Format the GUID, e.g. "a3a2a1a0-b1b0-c1c0-d7d6-d5d4d3d2d1d0".
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return f.write_str(from_utf8(&self.to_utf8_bytes()).unwrap());
+    }
+}
+
+impl borrow::Borrow<[u8; 16]> for Guid {
+    /// Returns this implementation's in-memory byte representation.
+    fn borrow(&self) -> &[u8; 16] {
+        return unsafe { mem::transmute(&self) };
     }
 }
 

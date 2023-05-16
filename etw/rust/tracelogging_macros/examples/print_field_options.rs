@@ -126,10 +126,26 @@ impl ToMarkdown for FieldOption {
 
         match self.strategy {
             FieldStrategy::Scalar => {
-                self.normal_field(&mut s, self.value_type, false, "");
+                let note = if self.option_name == "errno" {
+                    "errno"
+                } else {
+                    ""
+                };
+                self.normal_field(&mut s, self.value_type, false, note);
+            }
+            FieldStrategy::Slice => {
+                let note = if self.option_name == "errno_slice" {
+                    "errno"
+                } else {
+                    ""
+                };
+                self.normal_field(&mut s, self.value_type, true, note);
             }
             FieldStrategy::SystemTime => {
                 self.normal_field(&mut s, &["std", "time", "SystemTime"], false, "systemtime");
+            }
+            FieldStrategy::Time32 | FieldStrategy::Time64 => {
+                self.normal_field(&mut s, self.value_type, false, "time");
             }
             FieldStrategy::Sid => {
                 self.normal_field(&mut s, self.value_type, true, "sid");
@@ -144,9 +160,6 @@ impl ToMarkdown for FieldOption {
                     ""
                 };
                 self.normal_field(&mut s, self.value_type, self.value_array_count == 0, note);
-            }
-            FieldStrategy::Slice => {
-                self.normal_field(&mut s, self.value_type, true, "");
             }
             FieldStrategy::Struct
             | FieldStrategy::RawStruct
