@@ -906,6 +906,8 @@ pub mod changelog;
 /// `i64` value.
 /// (Usually not needed - the `systemtime` field type does this automatically.)
 ///
+/// Usage: `let filetime = win_filetime_from_systemtime!(system_time_value);`
+///
 /// This macro will convert the provided `SystemTime` value into a Win32
 /// [`FILETIME`](https://docs.microsoft.com/windows/win32/api/minwinbase/ns-minwinbase-filetime),
 /// saturating if the value is out of the range that
@@ -934,6 +936,33 @@ macro_rules! win_filetime_from_systemtime {
             }
         }
     };
+}
+
+/// Returns true if a `write_event!` macro using the specified PROVIDER_SYMBOL,
+/// level, and keyword would be enabled, false if it would be disabled.
+///
+/// Usage: `let enabled = provider_enabled!(PROVIDER_SYMBOL, level, keyword);`
+///
+/// The `PROVIDER_SYMBOL` parameter should be the original symbol name created by
+/// [`define_provider!`], not a reference or alias.
+///
+/// The level and keyword parameters must be compile-time constant expressions.
+///
+/// Note that [`write_event!`] already checks whether the tracepoint is enabled -- it
+/// skips evaluating the field value expressions and skips sending the event if the
+/// tracepoint is not enabled. You only need to make your own call to
+/// `provider_enabled!` if you want to control something other than [`write_event!`].
+///
+/// Implementation details: For ETW, this macro is implemented as a call to
+/// `PROVIDER_SYMBOL.enabled(level, keyword)`.
+#[macro_export]
+macro_rules! provider_enabled {
+    ($provider_symbol:ident, $level:expr, $keyword:expr) => {{
+        static _TLG_PROV: &::tracelogging::Provider = &$provider_symbol;
+        const _TLG_LEVEL: ::tracelogging::Level = $level;
+        const _TLG_KEYWORD: ::core::primitive::u64 = $keyword;
+        _TLG_PROV.enabled(_TLG_LEVEL, _TLG_KEYWORD)
+    }};
 }
 
 mod descriptors;

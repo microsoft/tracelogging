@@ -135,6 +135,10 @@ impl Provider {
     /// Returns true if any ETW logging session is listening to this provider for events
     /// with the specified level and keyword.
     ///
+    /// This method is only supported on the ETW implementation of Provider.
+    /// For similar functionality that works with all implementations, use the
+    /// [`provider_enabled!`] macro.
+    ///
     /// Note: [`write_event!`] already checks `enabled()`. You only need to make your own
     /// call to `enabled()` if you want to skip something other than [`write_event!`].
     #[inline(always)]

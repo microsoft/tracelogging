@@ -126,6 +126,11 @@ fn main() {
         ]),
     );
 
-    println!("PROV1= {:?}", PROV1);
+    println!(
+        "PROV1={:?}, L5K1={}, L4K10={}",
+        PROV1,
+        tlg::provider_enabled!(PROV1, tlg::Level::from_int(5), 1),
+        tlg::provider_enabled!(PROV1, tlg::Level::Informational, 0x10),
+    );
     PROV1.unregister();
 }
