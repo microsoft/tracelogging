@@ -17,6 +17,12 @@ pub use crate::native::ProviderContext;
 pub use crate::provider::provider_new;
 pub use crate::provider::provider_write_transfer;
 
+const UNIX_EPOCH_FILETIME: u64 = 0x19DB1DED53E8000;
+const FILETIME_PER_SECOND: u64 = 10000000;
+const NANOS_PER_FILETIME: u32 = 100;
+const FILETIME_MIN: u64 = 0; // Lowest filetime supported by FileTimetoSystemTime
+const FILETIME_MAX: u64 = 0x7FFF35F4F06C7FFF; // Highest filetime supported by FileTimetoSystemTime
+
 /// Returns the metadata bytes for the given metadata structure.
 pub fn meta_as_bytes<T>(meta: &T) -> &[u8] {
     // Safety: read-only; pointer and size are valid.
@@ -59,6 +65,26 @@ pub const fn tag_encode<const SIZE: usize>(tag: u32) -> [u8; SIZE] {
     return result;
 }
 
+/// Returns the filetime corresponding to an i32 count of seconds since 1970 (time32_t).
+pub const fn filetime_from_time32(time32: &i32) -> i64 {
+    let time = *time32;
+    return (time as i64) * (FILETIME_PER_SECOND as i64) + (UNIX_EPOCH_FILETIME as i64);
+}
+
+/// Returns the filetime corresponding to an i64 count of seconds since 1970 (time64_t).
+pub const fn filetime_from_time64(time64: &i64) -> i64 {
+    const VALID_MIN: i64 = (0 - (UNIX_EPOCH_FILETIME as i64)) / (FILETIME_PER_SECOND as i64);
+    const VALID_MAX: i64 = ((FILETIME_MAX - UNIX_EPOCH_FILETIME) / FILETIME_PER_SECOND) as i64;
+    let time = *time64;
+    return if VALID_MIN <= time && time <= VALID_MAX {
+        time * (FILETIME_PER_SECOND as i64) + (UNIX_EPOCH_FILETIME as i64)
+    } else if time < VALID_MIN {
+        0
+    } else {
+        FILETIME_MAX as i64
+    };
+}
+
 /// Returns the filetime corresponding to a duration returned by a successful call to
 /// `systemtime.duration_since(SystemTime::UNIX_EPOCH)`.
 /// ```
@@ -71,10 +97,6 @@ pub const fn tag_encode<const SIZE: usize>(tag: u32) -> [u8; SIZE] {
 /// };
 /// ```
 pub const fn filetime_from_duration_after_1970(duration: Duration) -> i64 {
-    const FILETIME_MAX: u64 = 0x7FFF35F4F06C7FFF; // Highest value supported by FileTimetoSystemTime
-    const UNIX_EPOCH_FILETIME: u64 = 0x19DB1DED53E8000;
-    const FILETIME_PER_SECOND: u64 = 10000000;
-    const NANOS_PER_FILETIME: u32 = 100;
     const SECS_MAX_POS: u64 = (FILETIME_MAX - UNIX_EPOCH_FILETIME) / FILETIME_PER_SECOND;
 
     let secs_1970 = duration.as_secs();
@@ -103,11 +125,7 @@ pub const fn filetime_from_duration_after_1970(duration: Duration) -> i64 {
 /// };
 /// ```
 pub const fn filetime_from_duration_before_1970(duration: Duration) -> i64 {
-    const FILETIME_MIN: u64 = 0; // FileTimeToSystemTime does not support negative FILETIMEs.
-    const UNIX_EPOCH_FILETIME: u64 = 0x19DB1DED53E8000;
-    const FILETIME_PER_SECOND: u64 = 10000000;
     const NANOS_MAX: u32 = 1000000000; // subsec_nanos() won't exceed this value.
-    const NANOS_PER_FILETIME: u32 = 100;
     const SECS_MAX_NEG: u64 = (UNIX_EPOCH_FILETIME - FILETIME_MIN) / FILETIME_PER_SECOND - 1;
 
     let secs_1970 = duration.as_secs();

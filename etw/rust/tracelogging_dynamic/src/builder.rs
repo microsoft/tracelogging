@@ -64,7 +64,7 @@ use crate::provider::Provider;
 ///     thread-local activity id will be used as the event's activity id.
 ///   - `related_id` is an optional 128-bit value that indicates the parent of a
 ///     newly-started activity. This should be specified for
-///     activity-[start](Opcode::Start) events and should be `None` for other events.
+///     activity-[start](Opcode::ActivityStart) events and should be `None` for other events.
 ///
 /// # Event Size Limits
 ///
@@ -194,7 +194,12 @@ impl EventBuilder {
                 EventDataDescriptor::from_raw_bytes(&self.data, 0), // EVENT_DATA_DESCRIPTOR_TYPE_NONE
             ];
             let ctx = &provider.context;
-            result = ctx.write_transfer(&self.descriptor, activity_id, related_id, &dd);
+            result = ctx.write_transfer(
+                &self.descriptor,
+                activity_id.map(|g| g.as_bytes_raw()),
+                related_id.map(|g| g.as_bytes_raw()),
+                &dd,
+            );
         }
         return result;
     }

@@ -1,13 +1,15 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT license.
 
+use core::borrow;
 use core::convert::TryInto;
 use core::fmt;
+use core::mem;
 use core::str::from_utf8;
 
 /// [GUID](https://docs.microsoft.com/windows/win32/api/guiddef/ns-guiddef-guid)
 /// ([UUID](https://en.wikipedia.org/wiki/Universally_unique_identifier)).
-/// Uses the in-memory representation expected by the ETW APIs (host-endian).
+/// with host-endian in-memory representation (as expected by the ETW APIs).
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash, Ord, PartialOrd)]
 pub struct Guid {
@@ -95,7 +97,7 @@ impl Guid {
         };
     }
 
-    /// Creates a GUID from bytes in RFC (big-endian) byte order.
+    /// Creates a GUID from bytes in big-endian (RFC) byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -112,7 +114,7 @@ impl Guid {
         };
     }
 
-    /// Creates a GUID from bytes in Windows (little-endian) byte order.
+    /// Creates a GUID from bytes in little-endian byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -242,7 +244,12 @@ impl Guid {
         return (self.data1, self.data2, self.data3, self.data4);
     }
 
-    /// Returns the bytes of the GUID in RFC byte order (big-endian).
+    /// Returns this implementation's in-memory byte representation.
+    pub const fn as_bytes_raw(&self) -> &[u8; 16] {
+        return unsafe { mem::transmute(&self) };
+    }
+
+    /// Returns the bytes of the GUID in big-endian (RFC) byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -271,7 +278,7 @@ impl Guid {
         ];
     }
 
-    /// Returns the bytes of the GUID in Windows byte order (little-endian).
+    /// Returns the bytes of the GUID in little-endian byte order.
     /// ```
     /// # use tracelogging::Guid;
     /// assert_eq!(
@@ -371,6 +378,13 @@ impl fmt::Debug for Guid {
     /// Format the GUID, e.g. "a3a2a1a0-b1b0-c1c0-d7d6-d5d4d3d2d1d0".
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         return f.write_str(from_utf8(&self.to_utf8_bytes()).unwrap());
+    }
+}
+
+impl borrow::Borrow<[u8; 16]> for Guid {
+    /// Returns this implementation's in-memory byte representation.
+    fn borrow(&self) -> &[u8; 16] {
+        return unsafe { mem::transmute(&self) };
     }
 }
 

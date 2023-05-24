@@ -118,10 +118,10 @@ fn provider() {
     ));
     unsafe { provider.as_ref().register() };
     b.reset("GroupEvent-Start", Level::Verbose, 0x1, 0)
-        .opcode(Opcode::Start)
+        .opcode(Opcode::ActivityStart)
         .write(&provider, Some(&aid), Some(&rid));
     b.reset("GroupEvent-Stop", Level::Verbose, 0x1, 0)
-        .opcode(Opcode::Stop)
+        .opcode(Opcode::ActivityStop)
         .write(&provider, Some(&aid), None);
 }
 

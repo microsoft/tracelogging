@@ -44,8 +44,8 @@ fn main() {
 
         // Optional event attributes:
 
-        activity_id(&guid1),
-        related_id(&guid2),
+        activity_id(&guid1), // activity_id and related_id can be either &Guid or &[u8; 16].
+        related_id(guid2.as_bytes_raw()),
         channel(tlg::Channel::TraceLogging),
         level(Informational),
         opcode(0),
@@ -90,8 +90,12 @@ fn main() {
         codepointer("codepointer", &(main as *const u8 as usize)),
 
         systemtime("now", &SystemTime::now()),
-
         hresult("E_FILENOTFOUND", &-2147024894),
+        time32("t32_100", &100),
+        time64("t64_200", &200),
+        errno("errno", &2),
+        errno_slice("errno_slice", &[1, 2]),
+
         win_ntstatus("STATUS_ACCESS_VIOLATION", &-1073741819),
         win_error("ERROR_ACCESS_DENIED", &5),
         win_sid("sid", &[1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]),
@@ -122,6 +126,11 @@ fn main() {
         ]),
     );
 
-    println!("PROV1= {:?}", PROV1);
+    println!(
+        "PROV1={:?}, L5K1={}, L4K10={}",
+        PROV1,
+        tlg::provider_enabled!(PROV1, tlg::Level::from_int(5), 1),
+        tlg::provider_enabled!(PROV1, tlg::Level::Informational, 0x10),
+    );
     PROV1.unregister();
 }

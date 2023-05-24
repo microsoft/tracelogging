@@ -115,8 +115,8 @@ impl From<Level> for u8 {
 /// Indicates special semantics to be used by the event decoder for grouping and
 /// organizing events, e.g. for activities.
 ///
-/// For example, the [Opcode::Start] opcode indicates the beginning of an activity and
-/// the [Opcode::Stop] indicates the end of an activity. Most events use [Opcode::Info]
+/// For example, the [Opcode::ActivityStart] opcode indicates the beginning of an activity and
+/// the [Opcode::ActivityStop] indicates the end of an activity. Most events use [Opcode::Info]
 /// (0).
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -137,62 +137,104 @@ impl Opcode {
 
     /// Normal event. The event may set activity_id if it is part of an activity.
     pub const Info: Opcode = Opcode(0);
+
     /// Event indicates the beginning of an activity. The event should set related_id to
     /// the id of the parent activity and should set activity_id to the id of the
     /// newly-started activity. All subsequent events that use the new activity_id will
     /// be considered as part of this activity, up to the corresponding
-    /// [Stop](Opcode::Stop) event.
-    pub const Start: Opcode = Opcode(1);
+    /// [ActivityStop](Opcode::ActivityStop) event.
+    pub const ActivityStart: Opcode = Opcode(1);
+
     /// Event indicates the end of an activity. The event should set activity_id
     /// to the id of the activity that is ending and should use the same level
-    /// and keyword as were used for the corresponding [Start](Opcode::Start) event.
-    pub const Stop: Opcode = Opcode(2);
+    /// and keyword as were used for the corresponding
+    /// [ActivityStart](Opcode::ActivityStart) event.
+    pub const ActivityStop: Opcode = Opcode(2);
+
     /// Data Collection Start event
-    pub const DC_Start: Opcode = Opcode(3);
+    pub const CollectionStart: Opcode = Opcode(3);
+
     /// Data Collection Stop event
-    pub const DC_Stop: Opcode = Opcode(4);
+    pub const CollectionStop: Opcode = Opcode(4);
+
     /// Extension event
     pub const Extension: Opcode = Opcode(5);
+
     /// Reply event
     pub const Reply: Opcode = Opcode(6);
+
     /// Resume event
     pub const Resume: Opcode = Opcode(7);
+
     /// Suspend event
     pub const Suspend: Opcode = Opcode(8);
+
     /// Message Send event
     pub const Send: Opcode = Opcode(9);
+
     /// Message Receive event
     pub const Receive: Opcode = Opcode(240);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode241: Opcode = Opcode(241);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode242: Opcode = Opcode(242);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode243: Opcode = Opcode(243);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode244: Opcode = Opcode(244);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode245: Opcode = Opcode(245);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode246: Opcode = Opcode(246);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode247: Opcode = Opcode(247);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode248: Opcode = Opcode(248);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode249: Opcode = Opcode(249);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode250: Opcode = Opcode(250);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode251: Opcode = Opcode(251);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode252: Opcode = Opcode(252);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode253: Opcode = Opcode(253);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode254: Opcode = Opcode(254);
+
     /// Reserved for future definition by Microsoft
     pub const ReservedOpcode255: Opcode = Opcode(255);
+
+    /// Alias for `ActivityStart`.
+    /// Deprecated - prefer [`ActivityStart`](Opcode::ActivityStart).
+    pub const Start: Opcode = Self::ActivityStart;
+
+    /// Alias for `ActivityStop`.
+    /// Deprecated - prefer [`ActivityStop`](Opcode::ActivityStop).
+    pub const Stop: Opcode = Self::ActivityStop;
+
+    /// Alias for `CollectionStart`.
+    /// Deprecated - prefer [`CollectionStart`](Opcode::CollectionStart).
+    pub const DC_Start: Opcode = Self::CollectionStart;
+
+    /// Alias for `CollectionStop`.
+    /// Deprecated - prefer [`CollectionStop`](Opcode::CollectionStop).
+    pub const DC_Stop: Opcode = Self::CollectionStop;
 }
 
 impl fmt::Display for Opcode {
