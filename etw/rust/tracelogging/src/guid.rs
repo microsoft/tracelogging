@@ -246,7 +246,7 @@ impl Guid {
 
     /// Returns this implementation's in-memory byte representation.
     pub const fn as_bytes_raw(&self) -> &[u8; 16] {
-        return unsafe { mem::transmute(&self) };
+        return unsafe { mem::transmute(self) };
     }
 
     /// Returns the bytes of the GUID in big-endian (RFC) byte order.
@@ -384,7 +384,7 @@ impl fmt::Debug for Guid {
 impl borrow::Borrow<[u8; 16]> for Guid {
     /// Returns this implementation's in-memory byte representation.
     fn borrow(&self) -> &[u8; 16] {
-        return unsafe { mem::transmute(&self) };
+        return unsafe { mem::transmute(self) };
     }
 }
 

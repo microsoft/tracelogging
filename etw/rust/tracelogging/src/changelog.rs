@@ -3,6 +3,10 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v1.2.1 (2023-06-29)
+/// - Guid: Fix `as_bytes_raw()` method and `borrow<[u8; 16]>` trait.
+pub mod v1_2_1 {}
+
 /// # v1.2.0 (2023-05-15)
 /// - In event macros, `activity_id` and `related_id` values can now be either
 ///   `&Guid` or `&[u8; 16]`.
