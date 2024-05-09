@@ -50,6 +50,7 @@ impl ProviderGenerator {
         let prov_tokens = self
             .prov_tree
             // static PROVIDER: ::tracelogging::Provider = unsafe { ... };
+            .add_ident("pub")
             .add_ident("static")
             .add_token(provider.symbol.clone())
             .add_punct(":")
