@@ -13,6 +13,9 @@ implementation in the Windows SDK.
 use tracelogging as tlg;
 
 // Define a static variable for the "MyCompany.MyComponent" provider.
+// Note that provider variable is not pub so it is not visible outside the
+// module. To share the variable with multiple modules, put the define_provider
+// in the parent module, e.g. in lib.rs.
 tlg::define_provider!(
     MY_PROVIDER,              // The static symbol to use for this provider.
     "MyCompany.MyComponent"); // The provider's name (string literal).

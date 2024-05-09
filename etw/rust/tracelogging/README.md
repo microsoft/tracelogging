@@ -11,6 +11,9 @@ implementation in the Windows SDK.
 use tracelogging as tlg;
 
 // Define a static variable for the "MyCompany.MyComponent" provider.
+// Note that provider variable is not pub so it is not visible outside the
+// module. To share the variable with multiple modules, put the define_provider
+// in the parent module, e.g. in lib.rs.
 tlg::define_provider!(
     MY_PROVIDER,              // The static symbol to use for this provider.
     "MyCompany.MyComponent"); // The provider's name (string literal).
@@ -45,6 +48,8 @@ This crate supports the following configurable features:
   [Windows ETW](https://docs.microsoft.com/windows/win32/etw/about-event-tracing) APIs to
   log events. If not enabled, all logging operations will be no-ops.
   **Enabled by default.**
+- `kernel_mode`: Use kernel-mode ETW APIs (e.g. `EtwWriteTransfer`) instead of
+  user-mode ETW APIs (e.g. `EventWriteTransfer`).
 - `macros`: Re-export the `define_provider!` and `write_event!` macros from the
   `tracelogging_macros` crate. **Enabled by default.**
 
