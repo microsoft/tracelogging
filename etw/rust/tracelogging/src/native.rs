@@ -20,7 +20,7 @@ pub enum NativeImplementation {
     /// Crate compiled for Windows (ETW) configuration (logging is performed via ETW
     /// APIs).
     Windows,
-    /// Create compiled for Windows (ETW) kernel-mode clients (logging is performed via
+    /// Crate compiled for Windows (ETW) kernel-mode clients (logging is performed via
     /// kernel-mode ETW APIs).
     /// 
     WindowsKernelMode,
