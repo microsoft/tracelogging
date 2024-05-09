@@ -48,6 +48,8 @@ This crate supports the following configurable features:
   [Windows ETW](https://docs.microsoft.com/windows/win32/etw/about-event-tracing) APIs to
   log events. If not enabled, all logging operations will be no-ops.
   **Enabled by default.**
+- `kernel_mode`: Use kernel-mode ETW APIs (e.g. `EtwWriteTransfer`) instead of
+  user-mode ETW APIs (e.g. `EventWriteTransfer`).
 - `macros`: Re-export the `define_provider!` and `write_event!` macros from the
   `tracelogging_macros` crate. **Enabled by default.**
 
