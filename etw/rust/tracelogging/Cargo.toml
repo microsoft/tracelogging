@@ -24,9 +24,8 @@ readme = "README.md"
 rust-version = "1.63"
 
 [features]
-default = ["macros", "etw", "user_mode"]
+default = ["macros", "etw"]
 etw = [] # Logging is enabled if windows && etw.
-user_mode = []
 kernel_mode = []
 macros = ["dep:tracelogging_macros"]
 

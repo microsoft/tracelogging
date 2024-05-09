@@ -20,12 +20,19 @@ pub enum NativeImplementation {
     /// Crate compiled for Windows (ETW) configuration (logging is performed via ETW
     /// APIs).
     Windows,
+    /// Create compiled for Windows (ETW) kernel-mode clients (logging is performed via
+    /// kernel-mode ETW APIs).
+    /// 
+    WindowsKernelMode,
 }
 
-/// The configuration under which this crate was compiled: `Windows` or `Other`.
-pub const NATIVE_IMPLEMENTATION: NativeImplementation = if cfg!(all(windows, feature = "etw")) {
+/// The configuration under which this crate was compiled: `Windows`, `WindowsKernelMode` or `Other`.
+pub const NATIVE_IMPLEMENTATION: NativeImplementation = if cfg!(all(windows, feature = "etw", not(feature = "kernel_mode"))) {
     NativeImplementation::Windows
-} else {
+} else if cfg!(all(windows, feature = "etw", feature = "kernel_mode")) {
+    NativeImplementation::WindowsKernelMode
+}
+else {
     NativeImplementation::Other
 };
 
@@ -62,6 +69,7 @@ pub struct ProviderContext {
 
 impl ProviderContext {
     /// Windows: return EventActivityIdControl(...);
+    /// WindowsKernelMode: return EtwActivityIdControl(...);
     /// Other: return ERROR_NOT_SUPPORTED;
     pub fn activity_id_control(_control_code: u32, _activity_id: &mut Guid) -> u32 {
         let result;
@@ -69,7 +77,7 @@ impl ProviderContext {
         {
             result = 50; // ERROR_NOT_SUPPORTED
         }
-        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+        #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         {
             result = unsafe { EventActivityIdControl(_control_code, _activity_id) };
         }
@@ -123,7 +131,7 @@ impl ProviderContext {
         return result;
     }
 
-    /// Calls EventUnregister and sets reg_handle = 0.
+    /// Calls EventUnregister (EtwUnregister for kernel_mode) and sets reg_handle = 0.
     ///
     /// # Preconditions
     /// - This will panic if it overlaps with another thread simultaneously calling
@@ -143,7 +151,7 @@ impl ProviderContext {
         return result;
     }
 
-    /// Calls EventRegister.
+    /// Calls EventRegister (EtwRegister for kernel_mode).
     ///
     /// # Preconditions
     /// - This will panic if provider is currently registered.
@@ -175,14 +183,14 @@ impl ProviderContext {
         return result;
     }
 
-    /// Calls EventSetInformation.
+    /// Calls EventSetInformation (EtwSetInformation for kernel_mode).
     pub fn set_information(&self, _information_class: u32, _information: &[u8]) -> u32 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
         {
             result = 0;
         }
-        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+        #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         {
             result = unsafe {
                 EventSetInformation(
@@ -207,7 +215,7 @@ impl ProviderContext {
         return result;
     }
 
-    /// Calls EventWriteTransfer.
+    /// Calls EventWriteTransfer (EtwWriteTransfer for kernel_mode).
     pub fn write_transfer(
         &self,
         _descriptor: &EventDescriptor,
@@ -220,7 +228,7 @@ impl ProviderContext {
         {
             result = 0;
         }
-        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+        #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         {
             result = unsafe {
                 EventWriteTransfer(
@@ -300,39 +308,26 @@ impl ProviderContextInner {
     fn unregister(&mut self) -> u32 {
         let result;
 
-        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
-        {
-            let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
-            if was_busy {
+        let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
+        if was_busy {
+            result = 0;
+        } else {
+            if self.reg_handle == 0 {
                 result = 0;
             } else {
-                if self.reg_handle == 0 {
-                    result = 0;
-                } else {
+                #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
+                {
                     result = unsafe { EventUnregister(self.reg_handle) };
-                    self.level = -1;
-                    self.reg_handle = 0;
                 }
-
-                self.busy.swap(false, atomic::Ordering::Release);
-            }
-        }
-        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
-        {
-            let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
-            if was_busy {
-                result = 0;
-            } else {
-                if self.reg_handle == 0 {
-                    result = 0;
-                } else {
+                #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+                {
                     result = unsafe { EtwUnregister(self.reg_handle) };
-                    self.level = -1;
-                    self.reg_handle = 0;
                 }
-
-                self.busy.swap(false, atomic::Ordering::Release);
+                self.level = -1;
+                self.reg_handle = 0;
             }
+
+            self.busy.swap(false, atomic::Ordering::Release);
         }
 
         return result;
@@ -358,7 +353,7 @@ impl ProviderContextInner {
         self.callback_context = callback_context;
 
         let self_ptr: *mut Self = self;
-        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+        #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         let result = unsafe {
             EventRegister(
                 provider_id,
@@ -438,7 +433,7 @@ impl ProviderContextInner {
     }
 }
 
-#[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+#[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
 extern "system" {
     fn EventUnregister(reg_handle: u64) -> u32;
     fn EventRegister(
