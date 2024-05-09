@@ -3,6 +3,11 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v1.2.2 (TBD)
+/// - tracelogging crate supports use in kernel mode via feature
+///   `kernel_mode`.
+pub mod v1_2_2 {}
+
 /// # v1.2.1 (2023-06-29)
 /// - Guid: Fix `as_bytes_raw()` method and `borrow<[u8; 16]>` trait.
 pub mod v1_2_1 {}
