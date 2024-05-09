@@ -69,9 +69,13 @@ impl ProviderContext {
         {
             result = 50; // ERROR_NOT_SUPPORTED
         }
-        #[cfg(all(windows, feature = "etw"))]
+        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
         {
             result = unsafe { EventActivityIdControl(_control_code, _activity_id) };
+        }
+        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+        {
+            result = unsafe { EtwActivityIdControl(_control_code, _activity_id) };
         }
         return result;
     }
@@ -178,10 +182,21 @@ impl ProviderContext {
         {
             result = 0;
         }
-        #[cfg(all(windows, feature = "etw"))]
+        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
         {
             result = unsafe {
                 EventSetInformation(
+                    self.reg_handle(),
+                    _information_class,
+                    _information.as_ptr(),
+                    _information.len() as u32,
+                )
+            };
+        }
+        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+        {
+            result = unsafe {
+                EtwSetInformation(
                     self.reg_handle(),
                     _information_class,
                     _information.as_ptr(),
@@ -205,10 +220,23 @@ impl ProviderContext {
         {
             result = 0;
         }
-        #[cfg(all(windows, feature = "etw"))]
+        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
         {
             result = unsafe {
                 EventWriteTransfer(
+                    self.reg_handle(),
+                    _descriptor,
+                    _activity_id,
+                    _related_id,
+                    _data.len() as u32,
+                    _data.as_ptr(),
+                )
+            };
+        }
+        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+        {
+            result = unsafe {
+                EtwWriteTransfer(
                     self.reg_handle(),
                     _descriptor,
                     _activity_id,
@@ -272,19 +300,39 @@ impl ProviderContextInner {
     fn unregister(&mut self) -> u32 {
         let result;
 
-        let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
-        if was_busy {
-            result = 0;
-        } else {
-            if self.reg_handle == 0 {
+        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
+        {
+            let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
+            if was_busy {
                 result = 0;
             } else {
-                result = unsafe { EventUnregister(self.reg_handle) };
-                self.level = -1;
-                self.reg_handle = 0;
-            }
+                if self.reg_handle == 0 {
+                    result = 0;
+                } else {
+                    result = unsafe { EventUnregister(self.reg_handle) };
+                    self.level = -1;
+                    self.reg_handle = 0;
+                }
 
-            self.busy.swap(false, atomic::Ordering::Release);
+                self.busy.swap(false, atomic::Ordering::Release);
+            }
+        }
+        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+        {
+            let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
+            if was_busy {
+                result = 0;
+            } else {
+                if self.reg_handle == 0 {
+                    result = 0;
+                } else {
+                    result = unsafe { EtwUnregister(self.reg_handle) };
+                    self.level = -1;
+                    self.reg_handle = 0;
+                }
+
+                self.busy.swap(false, atomic::Ordering::Release);
+            }
         }
 
         return result;
@@ -310,8 +358,18 @@ impl ProviderContextInner {
         self.callback_context = callback_context;
 
         let self_ptr: *mut Self = self;
+        #[cfg(all(windows, feature = "etw", feature = "user_mode"))]
         let result = unsafe {
             EventRegister(
+                provider_id,
+                Self::outer_callback,
+                self_ptr as usize,
+                &mut self.reg_handle,
+            )
+        };
+        #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+        let result = unsafe {
+            EtwRegister(
                 provider_id,
                 Self::outer_callback,
                 self_ptr as usize,
@@ -380,7 +438,7 @@ impl ProviderContextInner {
     }
 }
 
-#[cfg(all(windows, feature = "etw"))]
+#[cfg(all(windows, feature = "etw", feature = "user_mode"))]
 extern "system" {
     fn EventUnregister(reg_handle: u64) -> u32;
     fn EventRegister(
@@ -404,4 +462,30 @@ extern "system" {
         data: *const EventDataDescriptor,
     ) -> u32;
     fn EventActivityIdControl(control_code: u32, activity_id: &mut Guid) -> u32;
+}
+
+#[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+extern "system" {
+    fn EtwUnregister (reg_handle: u64) -> u32;
+    fn EtwRegister(
+        provider_id: &Guid,
+        outer_callback: OuterEnableCallback,
+        outer_context: usize,
+        reg_handle: &mut u64,
+    ) -> u32;
+    fn EtwSetInformation(
+        reg_handle: u64,
+        information_class: u32,
+        information: *const u8,
+        information_length: u32,
+    ) -> u32;
+    fn EtwWriteTransfer(
+        reg_handle: u64,
+        descriptor: &EventDescriptor,
+        activity_id: Option<&[u8; 16]>,
+        related_id: Option<&[u8; 16]>,
+        data_count: u32,
+        data: *const EventDataDescriptor,
+    ) -> u32;
+    fn EtwActivityIdControl(control_code: u32, activity_id: &mut Guid) -> u32;
 }
