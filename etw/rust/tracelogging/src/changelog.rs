@@ -3,7 +3,7 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
-/// # v1.2.2 (TBD)
+/// # v1.2.2 (2024-05-20)
 /// - tracelogging crate supports use in kernel mode via feature
 ///   `kernel_mode`.
 pub mod v1_2_2 {}
