@@ -1,18 +1,20 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.20)
 
 add_executable(
-    traceloggingTest
-    CatchMain.cpp
+    LTTngTest
+    main.cpp
     TestTraceLogging.cpp
     TestTraceLogging.c)
 
 target_link_libraries(
-    traceloggingTest
+    LTTngTest
     PRIVATE
     tracelogging
     # lttng-ust-common # Needed for LTTNG 2.13+
-    Catch2::Catch2)
+    )
 
-include(CTest)
-include(Catch)
-catch_discover_tests(traceloggingTest)
+add_test(NAME LTTngTest COMMAND LTTngTest)
+
+set (failRegex "Error" "Fail")
+set_property (TEST LTTngTest
+              PROPERTY FAIL_REGULAR_EXPRESSION "${failRegex}")

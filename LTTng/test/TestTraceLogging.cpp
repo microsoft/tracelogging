@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#include "TestFunctions.h"
+#include <stdio.h>
 #include <tracelogging/TraceLoggingProvider.h>
 
 TRACELOGGING_DECLARE_PROVIDER(TestProviderCpp);
@@ -13,7 +15,7 @@ TRACELOGGING_DEFINE_PROVIDER(
     // {3f3dc547-92d7-59d6-ed26-053336a36f9b}
     (0x3f3dc547, 0x92d7, 0x59d6, 0xed, 0x26, 0x05, 0x33, 0x36, 0xa3, 0x6f, 0x9b));
 
-static bool TestTraceLoggingValue()
+static int TestTraceLoggingValue()
 {
     void const* const pSamplePtr = (void*)(intptr_t)(-12345);
 
@@ -98,30 +100,56 @@ static bool TestTraceLoggingValue()
     TraceLoggingWrite(TestProvider, "Value:cwchar_t*",
         TraceLoggingValue((wchar_t const*)0, "0"),
         TraceLoggingValue((wchar_t const*)L"hello", "hello"));
-    return true;
+
+    return 0;
 }
 
-#include <stdio.h>
-
-bool TestCpp()
+// Returns 0 on success
+int TestCpp()
 {
-    int err;
-    err = TraceLoggingRegister(TestProvider);
-    printf("TestCpp register: %d\n", err);
+    int err = TraceLoggingRegister(TestProvider);
+    if (err != 0)
+    {
+        printf("Error: TestCpp register: %d\n", err);
+        return err;
+    }
+
     printf("Name: %s\n", TraceLoggingProviderName(TestProvider));
+
+    err = TraceLoggingEventEnabled(TestProvider, "Event1");
+    if (err == 0)
+    {
+        printf("Warning: Event1 is not enabled: %d\n", err);
+    }
     TraceLoggingWrite(TestProvider, "Event1");
-    printf("Enabled1: %d\n", TraceLoggingEventEnabled(TestProvider, "Event1"));
+
+    err = TraceLoggingEventEnabled(TestProvider, "Event2");
+    if (err == 0)
+    {
+        printf("Warning: Event2 is not enabled: %d\n", err);
+    }
     TraceLoggingWrite(TestProvider, "Event2", TraceLoggingKeyword(3));
-    printf("Enabled2: %d\n", TraceLoggingEventEnabled(TestProvider, "Event2"));
-    bool ok = TestCommon() && TestTraceLoggingValue() && err == 0;
-    err = TraceLoggingUnregister(TestProvider);
-    printf("TestCpp unregister: %d\n", err);
-    return ok && err == 0;
-}
 
-#include <catch2/catch.hpp>
+    err = TestCommon();
+    int err_value = TestTraceLoggingValue();
 
-TEST_CASE("TraceLogging workflow builds", "[tracelogging]") {
-  REQUIRE(TestC());
-  REQUIRE(TestCpp());
+    int err2 = TraceLoggingUnregister(TestProvider);
+    if (err != 0)
+    {
+        puts("Error: TestCommon failed in the C++ tests");
+        return err;
+    }
+
+    if (err_value != 0)
+    {
+        puts("Error: TestTraceLoggingValue failed");
+        return err_value;
+    }
+
+    if (err2 != 0)
+    {
+        printf("Error: TestCpp unregister: %d\n", err2);
+    }
+
+    return err2;
 }
