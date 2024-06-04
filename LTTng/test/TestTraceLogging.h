@@ -1,15 +1,6 @@
 #include <arpa/inet.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    bool TestC(void);
-    bool TestCpp(void);
-
-#ifdef __cplusplus
-} // extern "C"
-#endif
+#include <stdint.h>
+#include <string.h>
 
 typedef struct Buffer
 {
@@ -17,7 +8,8 @@ typedef struct Buffer
     uint16_t Length;
 } Buffer;
 
-static bool TestCommon(void)
+// Returns 0 on success
+static int TestCommon()
 {
     const bool b0 = 0;
     const bool b1 = 1;
@@ -316,5 +308,5 @@ static bool TestCommon(void)
         TraceLoggingFileTimeUtcFixedArray(ft, 1, "a1"),
         TraceLoggingFileTimeUtcArray(ft, n1, "s"));
 
-    return true;
+    return 0;
 }

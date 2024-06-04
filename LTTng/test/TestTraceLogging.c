@@ -15,18 +15,44 @@ TRACELOGGING_DEFINE_PROVIDER(
 
 #include <stdio.h>
 
-bool TestC()
+// Returns 0 on success
+int TestC()
 {
-    int err;
-    err = TraceLoggingRegister(TestProvider);
-    printf("TestC register: %d\n", err);
+    int err = TraceLoggingRegister(TestProvider);
+    if (err != 0)
+    {
+        printf("Error: TestC register: %d\n", err);
+        return err;
+    }
+
     printf("Name: %s\n", TraceLoggingProviderName(TestProvider));
+
+    err = TraceLoggingEventEnabled(TestProvider, "Event1");
+    if (err == 0)
+    {
+        printf("Warning: Event1 is not enabled: %d\n", err);
+    }
     TraceLoggingWrite(TestProvider, "Event1");
-    printf("Enabled1: %d\n", TraceLoggingEventEnabled(TestProvider, "Event1"));
+
+    err = TraceLoggingEventEnabled(TestProvider, "Event2");
+    if (err == 0)
+    {
+        printf("Warning: Event2 is not enabled: %d\n", err);
+    }
     TraceLoggingWrite(TestProvider, "Event2", TraceLoggingKeyword(3));
-    printf("Enabled2: %d\n", TraceLoggingEventEnabled(TestProvider, "Event2"));
-    bool ok = TestCommon() && err == 0;
-    err = TraceLoggingUnregister(TestProvider);
-    printf("TestC unregister: %d\n", err);
-    return ok && err == 0;
+
+    err = TestCommon();
+    int err2 = TraceLoggingUnregister(TestProvider);
+    if (err != 0)
+    {
+        puts("Error: TestCommon failed in the C tests");
+        return err;
+    }
+
+    if (err2 != 0)
+    {
+        printf("Error: TestC unregister: %d\n", err2);
+    }
+
+    return err2;
 }
