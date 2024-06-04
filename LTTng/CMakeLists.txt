@@ -15,4 +15,6 @@ find_package(lttng-ust-tracepoint REQUIRED)
 add_subdirectory(src)
 
 # Use the standard BUILD_TESTING option to disable
-add_subdirectory(test)
+if(BUILD_TESTING)
+    add_subdirectory(test)
+endif()
