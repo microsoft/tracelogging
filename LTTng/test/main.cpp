@@ -1,6 +1,7 @@
-extern "C" int TestC();
-int TestCpp();
+// Copyright (c) Microsoft Corporation. All rights reserved.
+// Licensed under the MIT License.
 
+#include "TestFunctions.h"
 #include <stdio.h>
 
 int main(int, char*[])

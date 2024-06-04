@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#include "TestFunctions.h"
+#include <stdio.h>
 #include <tracelogging/TraceLoggingProvider.h>
 
 TRACELOGGING_DECLARE_PROVIDER(TestProviderC);
@@ -13,10 +15,8 @@ TRACELOGGING_DEFINE_PROVIDER(
     // {0da7a945-e9b1-510f-0ccf-ab1af0bc095b}
     (0x0da7a945, 0xe9b1, 0x510f, 0x0c, 0xcf, 0xab, 0x1a, 0xf0, 0xbc, 0x09, 0x5b));
 
-#include <stdio.h>
-
 // Returns 0 on success
-int TestC()
+int TestC(void)
 {
     int err = TraceLoggingRegister(TestProvider);
     if (err != 0)

@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+#include "TestFunctions.h"
+#include <stdio.h>
 #include <tracelogging/TraceLoggingProvider.h>
 
 TRACELOGGING_DECLARE_PROVIDER(TestProviderCpp);
@@ -101,8 +103,6 @@ static int TestTraceLoggingValue()
 
     return 0;
 }
-
-#include <stdio.h>
 
 // Returns 0 on success
 int TestCpp()

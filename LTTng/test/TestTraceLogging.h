@@ -9,7 +9,7 @@ typedef struct Buffer
 } Buffer;
 
 // Returns 0 on success
-static int TestCommon()
+static int TestCommon(void)
 {
     const bool b0 = 0;
     const bool b1 = 1;
