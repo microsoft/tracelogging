@@ -10,7 +10,7 @@ on:
     paths-ignore:
       - 'etw/**'
   schedule:
-    - cron: '17 17 * * 2'
+    - cron: '17 17 2,16 * *'
 
 permissions:
   security-events: write
