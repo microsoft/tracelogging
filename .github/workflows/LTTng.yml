@@ -1,0 +1,48 @@
+name: LTTng
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'etw/**'
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - 'etw/**'
+  schedule:
+    - cron: '17 17 2,16 * *'
+
+permissions:
+  security-events: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        preset: ["Release", "Debug"]
+    defaults:
+      run:
+        working-directory: ./LTTng
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: cpp
+    - name: Install deps
+      run: sudo apt-get update && sudo apt-get install -y cmake liblttng-ust-dev
+
+    - name: Configure CMake
+      run: cmake --preset ${{matrix.preset}}
+
+    - name: build
+      run: cmake --build --preset ${{matrix.preset}}
+
+    - name: test
+      run: ctest --preset ${{matrix.preset}}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3

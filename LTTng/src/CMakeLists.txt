@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.5)
 
+include(GNUInstallDirs)
+
 set(TLG_INCLUDEDIR ${PROJECT_SOURCE_DIR}/include/)
 
 # Add source to this project's executable.
