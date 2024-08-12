@@ -90,7 +90,7 @@ def providerid_from_name(providername : str) -> uuid.UUID:
     """
     # Note: This is almost (but not quite) compliant with RFC 4122 UUIDv5.
     # Not fixed here because it needs to match well-established behavior.
-    sha1 = hashlib.new('sha1', usedforsecurity = False)
+    sha1 = hashlib.new('sha1', usedforsecurity = False) # CodeQL [SM02167] SHA1 is not being used for security or cryptography. Collisions will not cause bugs.
     sha1.update(b'\x48\x2C\x2D\xB2\xC3\x90\x47\xC8\x87\xF8\x1A\x15\xBF\xC1\x30\xFB')
     sha1.update(providername.upper().encode('utf_16_be'))
     arr = bytearray(sha1.digest()[0:16])
