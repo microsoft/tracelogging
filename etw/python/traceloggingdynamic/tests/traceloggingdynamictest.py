@@ -2,8 +2,28 @@ import traceloggingdynamic as tld
 import unittest as ut
 import uuid
 import timeit
+import hashlib
+import random
 
 class TraceLoggingDynamicTest(ut.TestCase):
+
+    def check_Sha1NonSecret(self, data : bytes):
+        """Assert that _Sha1NonSecret returns the same result as hashlib.sha1 for one input."""
+
+        sha1 = tld._Sha1NonSecret()
+        sha1.write(data)
+        actual = sha1.finish()
+        self.assertEqual(actual, hashlib.sha1(data, usedforsecurity=False).digest())
+
+    def test_Sha1NonSecret(self):
+        """Verify that _Sha1NonSecret returns the same result as hashlib.sha1 for various inputs."""
+
+        r = random.Random()
+        self.check_Sha1NonSecret(b'')
+        for _ in range(32):
+            data = r.randbytes(256)
+            for l in range(1, 256):
+                self.check_Sha1NonSecret(data[:l])
 
     def test_speed(self):
 

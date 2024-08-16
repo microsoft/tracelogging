@@ -73,7 +73,138 @@ import typing
 import ctypes
 import struct
 import uuid
-import hashlib
+import array
+import itertools
+
+def _rol32(shift: int, val: int) -> int:
+    return ((val << shift) | (val >> (32 - shift))) & 0xFFFFFFFF
+
+class _Sha1NonSecret:
+    """
+    Single-use SHA1 hasher (finish() is destructive). Note that this implementation
+    is for hashing public information. Do not use this code to hash private data
+    as this implementation does not take any steps to avoid information disclosure
+    (i.e. does not scrub its buffers).
+    """
+
+    _RESULTS_INIT = (0x67452301, 0xEFCDAB89, 0x98BADCFE, 0x10325476, 0xC3D2E1F0)
+    chunk: bytes  # Each chunk is 64 bytes.
+    chunk_count: int # Implementation limited to 2^32-1 chunks = 255GB.
+    chunk_pos: int
+    results: array # 5 X UINT32 = 160 bits.
+    w: array # 80 X UINT32
+
+    def __init__(self):
+        self.chunk = bytearray(64)
+        self.chunk_count = 0
+        self.chunk_pos = 0
+        self.results = array.array('I', _Sha1NonSecret._RESULTS_INIT)
+        self.w = array.array('I', itertools.repeat(0, 80))
+
+    def write_u8(self, val: int) -> None:
+        self.chunk[self.chunk_pos] = val
+        self.chunk_pos = self.chunk_pos + 1
+        if self.chunk_pos == 64:
+            self.chunk_pos = 0
+            self._drain()
+
+    def write(self, data: bytes) -> None:
+        for i in data:
+            self.write_u8(i)
+
+    def finish(self) -> bytes:
+        # Need to capture chunk_count before we add end-bit and zerofill.
+        total_bit_count = (self.chunk_count * 512) + (self.chunk_pos * 8)
+
+        # Add end-bit
+        self.write_u8(0x80)
+
+        # Zero-fill until almost to end of chunk.
+        while self.chunk_pos != 56:
+            self.write_u8(0)
+
+        # End chunk with total bit count.
+        self.write(total_bit_count.to_bytes(8, 'big'))
+        assert self.chunk_pos == 0, "Bug: write should have drained"
+
+        sha1 = bytearray(20)
+        for i in range(5):
+            sha1[(i * 4):(i * 4 + 4)] = self.results[i].to_bytes(4, 'big')
+
+        return sha1
+
+    def _drain(self) -> None:
+        wpos = 0
+        while wpos != 16:
+            self.w[wpos] = int.from_bytes((
+                self.chunk[wpos * 4],
+                self.chunk[wpos * 4 + 1],
+                self.chunk[wpos * 4 + 2],
+                self.chunk[wpos * 4 + 3],
+                ), 'big')
+            wpos += 1
+
+        while wpos != 80:
+            self.w[wpos] = _rol32(1, self.w[wpos - 3] ^ self.w[wpos - 8] ^ self.w[wpos - 14] ^ self.w[wpos - 16])
+            wpos += 1
+
+        a = self.results[0]
+        b = self.results[1]
+        c = self.results[2]
+        d = self.results[3]
+        e = self.results[4]
+
+        wpos = 0
+        while wpos != 20:
+            k = 0x5A827999
+            f = (b & c) | (~b & d)
+            temp = (_rol32(5, a) + f + e + k + self.w[wpos]) & 0xFFFFFFFF
+            e = d
+            d = c
+            c = _rol32(30, b)
+            b = a
+            a = temp
+            wpos += 1
+
+        while wpos != 40:
+            k = 0x6ED9EBA1
+            f = b ^ c ^ d
+            temp = (_rol32(5, a) + f + e + k + self.w[wpos]) & 0xFFFFFFFF
+            e = d
+            d = c
+            c = _rol32(30, b)
+            b = a
+            a = temp
+            wpos += 1
+
+        while wpos != 60:
+            k = 0x8F1BBCDC
+            f = (b & c) | (b & d) | (c & d)
+            temp = (_rol32(5, a) + f + e + k + self.w[wpos]) & 0xFFFFFFFF
+            e = d
+            d = c
+            c = _rol32(30, b)
+            b = a
+            a = temp
+            wpos += 1
+
+        while wpos != 80:
+            k = 0xCA62C1D6
+            f = b ^ c ^ d
+            temp = (_rol32(5, a) + f + e + k + self.w[wpos]) & 0xFFFFFFFF
+            e = d
+            d = c
+            c = _rol32(30, b)
+            b = a
+            a = temp
+            wpos += 1
+
+        self.results[0] = (self.results[0] + a) & 0xFFFFFFFF
+        self.results[1] = (self.results[1] + b) & 0xFFFFFFFF
+        self.results[2] = (self.results[2] + c) & 0xFFFFFFFF
+        self.results[3] = (self.results[3] + d) & 0xFFFFFFFF
+        self.results[4] = (self.results[4] + e) & 0xFFFFFFFF
+        self.chunk_count += 1
 
 def providerid_from_name(providername : str) -> uuid.UUID:
     """Generate a provider id UUID from a provider name string.
@@ -90,10 +221,10 @@ def providerid_from_name(providername : str) -> uuid.UUID:
     """
     # Note: This is almost (but not quite) compliant with RFC 4122 UUIDv5.
     # Not fixed here because it needs to match well-established behavior.
-    sha1 = hashlib.new('sha1', usedforsecurity = False) # CodeQL [SM02167] SHA1 is not being used for security or cryptography. Collisions will not cause bugs.
-    sha1.update(b'\x48\x2C\x2D\xB2\xC3\x90\x47\xC8\x87\xF8\x1A\x15\xBF\xC1\x30\xFB')
-    sha1.update(providername.upper().encode('utf_16_be'))
-    arr = bytearray(sha1.digest()[0:16])
+    sha1 = _Sha1NonSecret() # CodeQL [SM02167] SHA1 is not being used for security or cryptography. Collisions will not cause bugs.
+    sha1.write(b'\x48\x2C\x2D\xB2\xC3\x90\x47\xC8\x87\xF8\x1A\x15\xBF\xC1\x30\xFB')
+    sha1.write(providername.upper().encode('utf_16_be'))
+    arr = bytearray(sha1.finish()[0:16])
     arr[7] = (arr[7] & 0x0F) | 0x50
     return uuid.UUID(bytes_le = bytes(arr))
 
@@ -310,10 +441,10 @@ class EventBuilder:
     # Instance field types
     name_utf8 : bytes
     __field_count : int
-    __event_desc : ctypes.c_byte * 16 # EVENT_DESCRIPTOR
-    _meta : ctypes.c_byte * 128 # TraceLogging-encoded event name, field names, field types.
+    __event_desc : ctypes.Array # ctypes.c_byte * 16, EVENT_DESCRIPTOR
+    _meta : ctypes.Array # ctypes.c_byte * 128, TraceLogging-encoded event name, field names, field types.
     _meta_pos : int
-    _data : ctypes.c_byte * 512 # TraceLogging-encoded field values.
+    _data : ctypes.Array # ctypes.c_byte * 512 TraceLogging-encoded field values.
     _data_pos : int
 
     # Static fields
@@ -905,7 +1036,7 @@ class EventBuilder:
         assert slice_len <= len(val)
         return val if len(val) == slice_len else val[:slice_len]
 
-    def _get_event_desc(self) -> ctypes.c_byte * 16:
+    def _get_event_desc(self) -> ctypes.Array: # ctypes.c_byte * 16
 
         if self.__field_count > 128: self.check_state()
         return self.__event_desc
@@ -1168,14 +1299,14 @@ class Provider:
 
     # Instance fields
     __handle: ctypes.c_uint64
-    __traits : (ctypes.c_byte * 128)
+    __traits : ctypes.Array # c_byte * 128
     name_utf8 : bytes # utf-8 encoded name
     id : uuid.UUID
     group_id : typing.Union[None, uuid.UUID]
 
     # Static fields
     __null_handle : ctypes.c_uint64 = ctypes.c_uint64()
-    __data_desc : ctypes.c_byte * 48 = (ctypes.c_byte * 48)()  # EVENT_DATA_DESCRIPTOR * 3
+    __data_desc : ctypes.Array = (ctypes.c_byte * 48)()  # EVENT_DATA_DESCRIPTOR * 3
     __struct_data_desc : struct.Struct = struct.Struct(b'=QII') # Ptr, Size, Reserved
     __struct_u16 : struct.Struct = struct.Struct(b'=H')
     __struct_group : struct.Struct = struct.Struct(b'=HB16s')
