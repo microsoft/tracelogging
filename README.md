@@ -1,5 +1,3 @@
-[![Build Status](https://dev.azure.com/ms/TraceLogging/_apis/build/status/microsoft.TraceLogging?branchName=master)](https://dev.azure.com/ms/TraceLogging/_build/latest?definitionId=147&branchName=master)
-
 # TraceLogging
 
 TraceLogging is a set of technologies for emitting structured events. It is
