@@ -3,6 +3,11 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v1.2.3 (2025-03-02)
+/// - Fix newer warnings about unsafe code
+/// - Update `tracelongging` dependency to 1.2.3
+pub mod v1_2_3 {}
+
 /// # v1.2.2 (2024-05-20)
 /// - tracelogging crate supports use in kernel mode via feature
 ///   `kernel_mode`.

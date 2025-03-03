@@ -4,6 +4,13 @@
 #![allow(clippy::needless_return)]
 
 //! Implements the macros that are exported by the tracelogging crate.
+//!
+//! # Changelog
+//!
+//! ## v1.2.1 (2025-03-02)
+//! - Fix `repr_packed_without_abi` warning.
+//!
+//! ## v1.2.0 (2023-05-23)
 
 extern crate proc_macro;
 use proc_macro::{Span, TokenStream};
