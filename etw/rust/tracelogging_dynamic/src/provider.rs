@@ -329,9 +329,9 @@ impl Provider {
     ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
     ///   for clarity.)
     pub unsafe fn register(self: Pin<&Self>) -> u32 {
-        let result = self
+        let result = unsafe { self
             .context
-            .register(&self.id, self.callback_fn, self.callback_context);
+            .register(&self.id, self.callback_fn, self.callback_context) };
         if result == 0 {
             self.context.set_information(
                 2, // EventProviderSetTraits

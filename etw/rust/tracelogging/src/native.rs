@@ -175,7 +175,7 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            result = /* unsafe */ { &mut *self.cell.get() }.register(
+            result = unsafe { &mut *self.cell.get() }.register(
                 _provider_id,
                 _callback_fn,
                 _callback_context);
@@ -422,14 +422,16 @@ impl ProviderContextInner {
         filter_data: usize,
         outer_context: usize,
     ) {
-        (*(outer_context as *mut Self)).outer_callback_impl(
-            source_id,
-            event_control_code,
-            level,
-            match_any_keyword,
-            match_all_keyword,
-            filter_data,
-        );
+        unsafe {
+            (*(outer_context as *mut Self)).outer_callback_impl(
+                source_id,
+                event_control_code,
+                level,
+                match_any_keyword,
+                match_all_keyword,
+                filter_data,
+            );
+        }
     }
 }
 
