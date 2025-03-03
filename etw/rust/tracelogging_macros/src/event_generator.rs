@@ -251,8 +251,15 @@ impl EventGenerator {
             )
             // const _TLG_TAG: u32 = EVENT_TAG; const _TLG_TAG3: u32 = FIELD3_TAG;
             .add_tokens(self.tags_tree.drain())
-            // #[repr(packed)]
-            .add_outer_attribute("repr", self.tree1.add_ident("packed").drain())
+            // #[repr(C, packed)]
+            .add_outer_attribute(
+                "repr",
+                self.tree1
+                    .add_ident("C")
+                    .add_punct(",")
+                    .add_ident("packed")
+                    .drain(),
+            )
             // struct _TlgMeta(meta_types...);
             .add_ident("struct")
             .add_ident(TLG_META_TYPE)
