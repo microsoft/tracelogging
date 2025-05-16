@@ -436,6 +436,7 @@ impl ProviderContextInner {
 }
 
 #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
+#[link(name="OneCore_apiset")]
 extern "system" {
     fn EventUnregister(reg_handle: u64) -> u32;
     fn EventRegister(
@@ -444,6 +445,7 @@ extern "system" {
         outer_context: usize,
         reg_handle: &mut u64,
     ) -> u32;
+
     fn EventSetInformation(
         reg_handle: u64,
         information_class: u32,
