@@ -3,6 +3,10 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v1.2.4 (2025-05-16)
+/// - Fix linker issues when building with rustc 1.87
+pub mod v1_2_4 {}
+
 /// # v1.2.3 (2025-03-02)
 /// - Fix newer warnings about unsafe code
 /// - Update `tracelongging-macros` dependency to 1.2.1
