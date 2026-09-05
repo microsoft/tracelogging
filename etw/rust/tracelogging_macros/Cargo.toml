@@ -7,7 +7,7 @@ license = "MIT"
 description = "TraceLogging for Rust Proc Macros"
 repository = "https://github.com/microsoft/tracelogging"
 readme = "README.md"
-rust-version = "1.70"
+rust-version = "1.80"
 
 [lib]
 proc-macro = true
