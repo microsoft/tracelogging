@@ -21,7 +21,7 @@ categories = [
 ]
 repository = "https://github.com/microsoft/tracelogging"
 readme = "README.md"
-rust-version = "1.63"
+rust-version = "1.70"
 
 [features]
 default = ["etw"]
