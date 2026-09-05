@@ -246,7 +246,7 @@ impl Guid {
 
     /// Returns this implementation's in-memory byte representation.
     pub const fn as_bytes_raw(&self) -> &[u8; 16] {
-        return unsafe { mem::transmute(self) };
+        return unsafe { mem::transmute::<&Guid, &[u8; 16]>(self) };
     }
 
     /// Returns the bytes of the GUID in big-endian (RFC) byte order.
@@ -384,7 +384,7 @@ impl fmt::Debug for Guid {
 impl borrow::Borrow<[u8; 16]> for Guid {
     /// Returns this implementation's in-memory byte representation.
     fn borrow(&self) -> &[u8; 16] {
-        return unsafe { mem::transmute(self) };
+        return unsafe { mem::transmute::<&Guid, &[u8; 16]>(self) };
     }
 }
 
@@ -411,14 +411,13 @@ impl GuidParseState<'_> {
     }
 
     fn hex_to_u4(ch: u8) -> u32 {
-        let hexval;
         let mut index = ch.wrapping_sub(48);
-        if index < 10 {
-            hexval = index as u32;
+        let hexval = if index < 10 {
+            index as u32
         } else {
             index = (ch | 32).wrapping_sub(97);
-            hexval = if index < 6 { (index + 10) as u32 } else { 256 };
-        }
+            if index < 6 { (index + 10) as u32 } else { 256 }
+        };
         return hexval;
     }
 }

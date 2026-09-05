@@ -181,7 +181,7 @@ impl<'a> Parser<'a> {
     /// Reads OptionIdent(ArgsGroup) or {...} then moves to the next comma or the end-of-stream.
     /// Emits "expected option" errors for non-option syntax.
     /// Emits "expected ..." error for other tokens encountered before comma or end-of-stream.
-    pub fn next_arg(&mut self, want_struct: bool) -> ArgResult {
+    pub fn next_arg(&mut self, want_struct: bool) -> ArgResult<'_> {
         const EXPECTED_OPTION: &str = "expected identifier for option name, e.g. Option(args...)";
         const EXPECTED_OPTION_OR_STRUCT: &str =
             "expected '{' for struct or identifier for option name, e.g. Option(args...)";
