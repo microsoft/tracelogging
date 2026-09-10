@@ -32,7 +32,7 @@ impl Tree {
         return self;
     }
 
-    pub fn drain(&mut self) -> vec::Drain<TokenTree> {
+    pub fn drain(&mut self) -> vec::Drain<'_, TokenTree> {
         debug_assert!(self.span_stack.is_empty());
         return self.trees.drain(..);
     }

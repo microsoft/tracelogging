@@ -181,10 +181,9 @@ impl EventBuilder {
         activity_id: Option<&Guid>,
         related_id: Option<&Guid>,
     ) -> u32 {
-        let result;
         let meta_len = self.meta.len();
-        if meta_len > 65535 {
-            result = 534; // ERROR_ARITHMETIC_OVERFLOW
+        let result = if meta_len > 65535 {
+            534 // ERROR_ARITHMETIC_OVERFLOW
         } else {
             self.meta[0] = meta_len as u8;
             self.meta[1] = (meta_len >> 8) as u8;
@@ -194,13 +193,13 @@ impl EventBuilder {
                 EventDataDescriptor::from_raw_bytes(&self.data, 0), // EVENT_DATA_DESCRIPTOR_TYPE_NONE
             ];
             let ctx = &provider.context;
-            result = ctx.write_transfer(
+            ctx.write_transfer(
                 &self.descriptor,
                 activity_id.map(|g| g.as_bytes_raw()),
                 related_id.map(|g| g.as_bytes_raw()),
                 &dd,
-            );
-        }
+            )
+        };
         return result;
     }
 
@@ -1344,7 +1343,7 @@ impl EventBuilder {
     /// the TraceLogging encoding system. If done incorrectly, the resulting events will not
     /// decode properly.
     pub fn raw_add_data_slice<T: Copy>(&mut self, value: &[T]) -> &mut Self {
-        let value_size = value.len() * size_of::<T>();
+        let value_size = size_of_val(value);
         let old_data_size = self.data.len();
         self.data.reserve(value_size);
         unsafe {

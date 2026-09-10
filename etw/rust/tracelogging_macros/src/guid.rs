@@ -397,14 +397,13 @@ impl GuidParseState<'_> {
     }
 
     fn hex_to_u4(ch: u8) -> u32 {
-        let hexval;
         let mut index = ch.wrapping_sub(48);
-        if index < 10 {
-            hexval = index as u32;
+        let hexval = if index < 10 {
+            index as u32
         } else {
             index = (ch | 32).wrapping_sub(97);
-            hexval = if index < 6 { (index + 10) as u32 } else { 256 };
-        }
+            if index < 6 { (index + 10) as u32 } else { 256 }
+        };
         return hexval;
     }
 }
