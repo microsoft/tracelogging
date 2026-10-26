@@ -129,3 +129,15 @@ so that you can cache event definitions.
 - Use EventDataDescCreate to fill in the data descriptor array (skipping
   the first two) to reference your event payload data.
 - Use tld::WriteEvent to write your event.
+
+Counted UTF-16 strings are truncated to 32,767 code units so their byte length
+fits in the encoding's 16-bit length prefix.
+
+## Tests
+
+From a Visual Studio Developer Command Prompt in this directory:
+
+```powershell
+cl /nologo /EHsc tests\TraceLoggingDynamicTest.cpp
+.\TraceLoggingDynamicTest.exe
+```

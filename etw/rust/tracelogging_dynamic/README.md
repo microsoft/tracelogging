@@ -3,6 +3,13 @@
 The `tracelogging_dynamic` crate provides a way to log TraceLogging events when
 the event schema is not known at compile-time.
 
+Generating and collecting events requires Windows 8 or later. Decoding events
+requires Windows 10 or later.
+
+Name-derived provider IDs use native Windows invariant casing. IDs for some
+non-ASCII names differ from earlier versions; specify an explicit provider ID
+to preserve an existing identity.
+
 This implementation is less user-friendly and has higher runtime costs than the
 implementation in the `tracelogging` crate. This implementation should only be used
 when the set of events to log cannot be deteremined ahead of time. For example, this

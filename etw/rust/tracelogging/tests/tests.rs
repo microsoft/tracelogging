@@ -6,6 +6,35 @@
 use tracelogging as tlg;
 use tracelogging::_internal as tli;
 
+#[test]
+fn unicode_provider_ids() {
+    tlg::define_provider!(SHARP_S, "Stra\u{df}e");
+    tlg::define_provider!(MICRO_SIGN, "Name.\u{b5}");
+    tlg::define_provider!(GREEK, "Name.\u{1f80}");
+    tlg::define_provider!(DESERET, "Name.\u{10428}");
+    for (name, expected) in [
+        ("", "4445ee6c-fd5a-5b15-047a-5866ffa76aa6"),
+        ("Stra\u{df}e", "591935bd-9bbd-5997-a315-51e34558623c"),
+        ("Name.\u{fb01}", "cf8ebd05-8498-5112-ea2d-f0bfff604146"),
+        ("Name.\u{1f80}", "dc88e966-2f97-595d-966c-c93c21d6212a"),
+        ("Name.\u{131}", "502b80fc-0c6e-516c-03ef-fb8bf57b0304"),
+        ("Name.\u{b5}", "d1ec660d-ed93-541c-023a-f9a188dd503b"),
+        ("Name.\u{17f}", "60da8ecb-b69b-52ed-bfe8-31f538666902"),
+        ("Name.\u{3c2}", "6aba4346-ec36-5c2c-b6d3-e571ea1595fe"),
+        ("Name.\u{10428}", "492900c7-09ed-5a8d-2d9e-f26d33a5e6b1"),
+        ("Name.\0tail", "41cd799d-b180-5213-8ff4-a99d68e19371"),
+    ] {
+        assert_eq!(
+            tlg::Guid::from_name(name).to_utf8_bytes().as_slice(),
+            expected.as_bytes(),
+            "{name}"
+        );
+    }
+    for provider in [&SHARP_S, &MICRO_SIGN, &GREEK, &DESERET] {
+        assert_eq!(*provider.id(), tlg::Guid::from_name(provider.name()));
+    }
+}
+
 #[allow(clippy::unusual_byte_groupings)]
 #[test]
 fn guid() {

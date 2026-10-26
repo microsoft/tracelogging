@@ -1,5 +1,12 @@
 # TraceLogging for Rust
 
+Generating and collecting events requires Windows 8 or later. Decoding events
+requires Windows 10 or later.
+
+Name-derived provider IDs use native Windows invariant casing, including on
+non-Windows build hosts. IDs for some non-ASCII names differ from earlier
+versions; specify an explicit provider ID to preserve an existing identity.
+
 ## tracelogging
 
 The [`tracelogging`](tracelogging) crate provides a simple and efficient system for

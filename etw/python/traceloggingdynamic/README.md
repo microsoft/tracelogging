@@ -27,8 +27,11 @@ This is a middle-layer API:
   is ready, send it to ETW with `provider.write(eb)`.
 - `OutType` enum: Formatting hints that can be added to a field.
 - `providerid_from_name` function: Hashes a provider name string to generate
-  a provider id UUID. Hash is generated using the same algorithm as other ETW
-  APIs and tools such as .NET EventSource and WinRT LoggingChannel.
+  a provider id UUID using native Windows invariant casing, matching native
+  TraceLogging.
+
+IDs for some non-ASCII names differ from earlier versions; specify an explicit
+provider ID to preserve an existing identity.
 
 ## Example
 

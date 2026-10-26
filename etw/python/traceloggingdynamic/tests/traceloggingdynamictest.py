@@ -4,6 +4,11 @@ import uuid
 import timeit
 import hashlib
 import random
+import ctypes
+import struct
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from unittest import mock
 
 class TraceLoggingDynamicTest(ut.TestCase):
 
@@ -89,6 +94,85 @@ class TraceLoggingDynamicTest(ut.TestCase):
         del p # Close a bunch of handles.
         p2 = tld.Provider(b'TestProvider', throw_on_error = True) # Now we should be ok again.
         self.assertTrue(p2.is_open())
+
+    def test_providerid_unicode(self):
+        for name, expected in (
+            ('', '4445ee6c-fd5a-5b15-047a-5866ffa76aa6'),
+            ('Stra\u00dfe', '591935bd-9bbd-5997-a315-51e34558623c'),
+            ('Name.\ufb01', 'cf8ebd05-8498-5112-ea2d-f0bfff604146'),
+            ('Name.\u1f80', 'dc88e966-2f97-595d-966c-c93c21d6212a'),
+            ('Name.\u0131', '502b80fc-0c6e-516c-03ef-fb8bf57b0304'),
+            ('Name.\u00b5', 'd1ec660d-ed93-541c-023a-f9a188dd503b'),
+            ('Name.\u017f', '60da8ecb-b69b-52ed-bfe8-31f538666902'),
+            ('Name.\u03c2', '6aba4346-ec36-5c2c-b6d3-e571ea1595fe'),
+            ('Name.\U00010428', '492900c7-09ed-5a8d-2d9e-f26d33a5e6b1'),
+            ('Name.\0tail', '41cd799d-b180-5213-8ff4-a99d68e19371'),
+        ):
+            with self.subTest(name=name):
+                self.assertEqual(tld.providerid_from_name(name), uuid.UUID(expected))
+                self.assertEqual(
+                    tld.providerid_from_name_bytes_utf8(name.encode('utf-8')),
+                    uuid.UUID(expected))
+
+    def test_uint8(self):
+        values = (0, 127, 128, 255)
+        e = tld.EventBuilder()
+        e.reset(b'uint8')
+        for value in values:
+            e.add_uint8(b'scalar', value)
+        e.add_uint8_seq(b'array', values)
+        self.assertEqual(
+            bytes(e._data)[:e._data_pos],
+            bytes(values) + struct.pack('=H', len(values)) + bytes(values))
+
+        for value in (-1, 256):
+            with self.subTest(value=value):
+                e.reset(b'uint8')
+                with self.assertRaises(struct.error):
+                    e.add_uint8(b'scalar', value)
+                e.reset(b'uint8')
+                with self.assertRaises(struct.error):
+                    e.add_uint8_seq(b'array', (value,))
+
+    def test_data_growth(self):
+        first = bytes(range(256)) * 4
+        second = b'B' * 2048
+        expected = struct.pack('=IH', 0x12345678, len(first)) + first \
+            + struct.pack('=H', len(second)) + second
+        for capacity in (64, 512):
+            with self.subTest(capacity=capacity):
+                e = tld.EventBuilder(initial_data_len=capacity)
+                e.reset(b'growth')
+                e.add_uint32(b'sentinel', 0x12345678)
+                e.add_binary_bytes(b'first', first)
+                e.add_binary_bytes(b'second', second)
+                self.assertEqual(bytes(e._data)[:e._data_pos], expected)
+
+    def test_overlapping_writes(self):
+        barrier = threading.Barrier(2)
+
+        def write(handle, event_desc, activity_id, related_id, count, descriptors):
+            barrier.wait(timeout=10)
+            address, length, reserved = struct.unpack_from('=QII', descriptors, 32)
+            return struct.unpack('=I', ctypes.string_at(address, length))[0]
+
+        providers = [tld.Provider(b'TestThreads1'), tld.Provider(b'TestThreads2')]
+        builders = [tld.EventBuilder(), tld.EventBuilder()]
+        values = (0x11111111, 0x22222222)
+        for builder, value in zip(builders, values):
+            builder.reset(b'threads')
+            builder.add_uint32(b'value', value)
+
+        try:
+            with mock.patch.object(tld.Provider, '_Provider__EventWriteTransfer', side_effect=write):
+                with ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = [
+                        executor.submit(provider.write, builder)
+                        for provider, builder in zip(providers, builders)]
+                    self.assertEqual(tuple(f.result(timeout=15) for f in futures), values)
+        finally:
+            for provider in providers:
+                provider.close()
 
     def test_EventBuilder(self):
 

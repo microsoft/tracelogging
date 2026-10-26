@@ -2457,10 +2457,14 @@ namespace tld
         /*
         Appends an InTypeCountedString field to the payload.
         Compatible with: TypeCountedUtf16String, TypeCountedUtf16Xml, TypeCountedUtf16Json.
+        Values longer than 32767 UTF-16 code units are truncated.
         */
         void AddCountedString(_In_reads_(cch) wchar_t const* pch, UINT16 cch)
         {
-            AddBinary(pch, cch * sizeof(*pch));
+            UINT16 const maxChars = 0xffffu / sizeof(*pch);
+            UINT16 const byteCount = static_cast<UINT16>(
+                (cch > maxChars ? maxChars : cch) * sizeof(*pch));
+            AddBinary(pch, byteCount);
         }
 
         /*

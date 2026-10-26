@@ -3,6 +3,13 @@
 The `tracelogging` crate provides a simple and efficient system for
 logging TraceLogging events when the event schema is known at compile time.
 
+Generating and collecting events requires Windows 8 or later. Decoding events
+requires Windows 10 or later.
+
+Name-derived provider IDs use native Windows invariant casing on every build
+host. IDs for some non-ASCII names differ from earlier versions; specify an
+explicit provider ID to preserve an existing identity.
+
 This is similar to the C/C++
 [TraceLoggingProvider.h](https://docs.microsoft.com/windows/win32/api/traceloggingprovider/)
 implementation in the Windows SDK.
