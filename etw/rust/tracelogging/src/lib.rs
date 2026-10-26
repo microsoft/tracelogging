@@ -12,7 +12,7 @@
 //! (manifest-free) events to
 //! [ETW](https://docs.microsoft.com/windows/win32/etw/event-tracing-portal)
 //! (Event Tracing for Windows). The events can be generated and collected on Windows
-//! Vista or later. The events can be decoded on Windows 10 or later.
+//! 8 or later. The events can be decoded on Windows 10 or later.
 //!
 //! This implementation of TraceLogging uses macros to generate event metadata at
 //! compile-time, improving runtime performance and minimizing dependencies. To enable

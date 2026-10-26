@@ -52,7 +52,7 @@ impl Guid {
         return g;
     }
 
-    /// Returns a GUID generated from a case-insensitive hash of the specified trace
+    /// Returns a GUID generated using Windows invariant casing and a hash of the specified trace
     /// provider name. The hash uses the same algorithm as many other ETW tools and APIs.
     /// Given the same name, it will always generate the same GUID.
     /// ```
@@ -70,7 +70,7 @@ impl Guid {
 
         // Hash name as uppercase UTF-16BE
         let mut u16buf = [0u16; 2];
-        for upper_ch in event_provider_name.chars().flat_map(char::to_uppercase) {
+        for upper_ch in event_provider_name.chars().map(uppercase_invariant) {
             for upper_u16 in upper_ch.encode_utf16(&mut u16buf) {
                 hasher.write(&upper_u16.to_be_bytes());
             }
@@ -385,6 +385,212 @@ impl borrow::Borrow<[u8; 16]> for Guid {
     /// Returns this implementation's in-memory byte representation.
     fn borrow(&self) -> &[u8; 16] {
         return unsafe { mem::transmute::<&Guid, &[u8; 16]>(self) };
+    }
+}
+
+fn uppercase_invariant(ch: char) -> char {
+    // Native Windows invariant casing, shared with tracelogging_macros. Unlike
+    // Unicode full uppercase, these mappings never expand a character.
+    const RANGES: &[(u32, u32, u32, i32)] = &[
+        (0x0061, 0x007a, 1, -32),
+        (0x00e0, 0x00f6, 1, -32),
+        (0x00f8, 0x00fe, 1, -32),
+        (0x00ff, 0x00ff, 1, 121),
+        (0x0101, 0x012f, 2, -1),
+        (0x0133, 0x0137, 2, -1),
+        (0x013a, 0x0148, 2, -1),
+        (0x014b, 0x0177, 2, -1),
+        (0x017a, 0x017e, 2, -1),
+        (0x0180, 0x0180, 1, 195),
+        (0x0183, 0x0185, 2, -1),
+        (0x0188, 0x0188, 1, -1),
+        (0x018c, 0x018c, 1, -1),
+        (0x0192, 0x0192, 1, -1),
+        (0x0195, 0x0195, 1, 97),
+        (0x0199, 0x0199, 1, -1),
+        (0x019a, 0x019a, 1, 163),
+        (0x019e, 0x019e, 1, 130),
+        (0x01a1, 0x01a5, 2, -1),
+        (0x01a8, 0x01a8, 1, -1),
+        (0x01ad, 0x01ad, 1, -1),
+        (0x01b0, 0x01b0, 1, -1),
+        (0x01b4, 0x01b6, 2, -1),
+        (0x01b9, 0x01b9, 1, -1),
+        (0x01bd, 0x01bd, 1, -1),
+        (0x01bf, 0x01bf, 1, 56),
+        (0x01c6, 0x01c6, 1, -2),
+        (0x01c9, 0x01c9, 1, -2),
+        (0x01cc, 0x01cc, 1, -2),
+        (0x01ce, 0x01dc, 2, -1),
+        (0x01dd, 0x01dd, 1, -79),
+        (0x01df, 0x01ef, 2, -1),
+        (0x01f3, 0x01f3, 1, -2),
+        (0x01f5, 0x01f5, 1, -1),
+        (0x01f9, 0x021f, 2, -1),
+        (0x0223, 0x0233, 2, -1),
+        (0x023c, 0x023c, 1, -1),
+        (0x0242, 0x0242, 1, -1),
+        (0x0247, 0x024f, 2, -1),
+        (0x0250, 0x0250, 1, 10783),
+        (0x0251, 0x0251, 1, 10780),
+        (0x0253, 0x0253, 1, -210),
+        (0x0254, 0x0254, 1, -206),
+        (0x0256, 0x0257, 1, -205),
+        (0x0259, 0x0259, 1, -202),
+        (0x025b, 0x025b, 1, -203),
+        (0x0260, 0x0260, 1, -205),
+        (0x0263, 0x0263, 1, -207),
+        (0x0268, 0x0268, 1, -209),
+        (0x0269, 0x0269, 1, -211),
+        (0x026b, 0x026b, 1, 10743),
+        (0x026f, 0x026f, 1, -211),
+        (0x0271, 0x0271, 1, 10749),
+        (0x0272, 0x0272, 1, -213),
+        (0x0275, 0x0275, 1, -214),
+        (0x027d, 0x027d, 1, 10727),
+        (0x0280, 0x0280, 1, -218),
+        (0x0283, 0x0283, 1, -218),
+        (0x0288, 0x0288, 1, -218),
+        (0x0289, 0x0289, 1, -69),
+        (0x028a, 0x028b, 1, -217),
+        (0x028c, 0x028c, 1, -71),
+        (0x0292, 0x0292, 1, -219),
+        (0x0371, 0x0373, 2, -1),
+        (0x0377, 0x0377, 1, -1),
+        (0x037b, 0x037d, 1, 130),
+        (0x03ac, 0x03ac, 1, -38),
+        (0x03ad, 0x03af, 1, -37),
+        (0x03b1, 0x03c1, 1, -32),
+        (0x03c3, 0x03cb, 1, -32),
+        (0x03cc, 0x03cc, 1, -64),
+        (0x03cd, 0x03ce, 1, -63),
+        (0x03d7, 0x03d7, 1, -8),
+        (0x03d9, 0x03ef, 2, -1),
+        (0x03f2, 0x03f2, 1, 7),
+        (0x03f8, 0x03f8, 1, -1),
+        (0x03fb, 0x03fb, 1, -1),
+        (0x0430, 0x044f, 1, -32),
+        (0x0450, 0x045f, 1, -80),
+        (0x0461, 0x0481, 2, -1),
+        (0x048b, 0x04bf, 2, -1),
+        (0x04c2, 0x04ce, 2, -1),
+        (0x04cf, 0x04cf, 1, -15),
+        (0x04d1, 0x0523, 2, -1),
+        (0x0561, 0x0586, 1, -48),
+        (0x1d79, 0x1d79, 1, 35332),
+        (0x1d7d, 0x1d7d, 1, 3814),
+        (0x1e01, 0x1e95, 2, -1),
+        (0x1ea1, 0x1eff, 2, -1),
+        (0x1f00, 0x1f07, 1, 8),
+        (0x1f10, 0x1f15, 1, 8),
+        (0x1f20, 0x1f27, 1, 8),
+        (0x1f30, 0x1f37, 1, 8),
+        (0x1f40, 0x1f45, 1, 8),
+        (0x1f51, 0x1f57, 2, 8),
+        (0x1f60, 0x1f67, 1, 8),
+        (0x1f70, 0x1f71, 1, 74),
+        (0x1f72, 0x1f75, 1, 86),
+        (0x1f76, 0x1f77, 1, 100),
+        (0x1f78, 0x1f79, 1, 128),
+        (0x1f7a, 0x1f7b, 1, 112),
+        (0x1f7c, 0x1f7d, 1, 126),
+        (0x1f80, 0x1f87, 1, 8),
+        (0x1f90, 0x1f97, 1, 8),
+        (0x1fa0, 0x1fa7, 1, 8),
+        (0x1fb0, 0x1fb1, 1, 8),
+        (0x1fb3, 0x1fb3, 1, 9),
+        (0x1fc3, 0x1fc3, 1, 9),
+        (0x1fd0, 0x1fd1, 1, 8),
+        (0x1fe0, 0x1fe1, 1, 8),
+        (0x1fe5, 0x1fe5, 1, 7),
+        (0x1ff3, 0x1ff3, 1, 9),
+        (0x214e, 0x214e, 1, -28),
+        (0x2170, 0x217f, 1, -16),
+        (0x2184, 0x2184, 1, -1),
+        (0x24d0, 0x24e9, 1, -26),
+        (0x2c30, 0x2c5e, 1, -48),
+        (0x2c61, 0x2c61, 1, -1),
+        (0x2c65, 0x2c65, 1, -10795),
+        (0x2c66, 0x2c66, 1, -10792),
+        (0x2c68, 0x2c6c, 2, -1),
+        (0x2c73, 0x2c73, 1, -1),
+        (0x2c76, 0x2c76, 1, -1),
+        (0x2c81, 0x2ce3, 2, -1),
+        (0x2d00, 0x2d25, 1, -7264),
+        (0xa641, 0xa65f, 2, -1),
+        (0xa663, 0xa66d, 2, -1),
+        (0xa681, 0xa697, 2, -1),
+        (0xa723, 0xa72f, 2, -1),
+        (0xa733, 0xa76f, 2, -1),
+        (0xa77a, 0xa77c, 2, -1),
+        (0xa77f, 0xa787, 2, -1),
+        (0xa78c, 0xa78c, 1, -1),
+        (0xff41, 0xff5a, 1, -32),
+        (0x10428, 0x1044f, 1, -40),
+    ];
+
+    let value = ch as u32;
+    let mut first = 0;
+    let mut last = RANGES.len();
+    while first != last {
+        let mid = first + (last - first) / 2;
+        let (start, end, step, delta) = RANGES[mid];
+        if value < start {
+            last = mid;
+        } else if value > end {
+            first = mid + 1;
+        } else {
+            return if (value - start) % step == 0 {
+                char::from_u32((value as i32 + delta) as u32).unwrap()
+            } else {
+                ch
+            };
+        }
+    }
+    return ch;
+}
+
+#[cfg(all(test, windows))]
+#[test]
+fn uppercase_invariant_matches_windows() {
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn LCMapStringEx(
+            locale: *const u16,
+            flags: u32,
+            source: *const u16,
+            source_len: i32,
+            destination: *mut u16,
+            destination_len: i32,
+            version: usize,
+            reserved: usize,
+            sort_handle: isize,
+        ) -> i32;
+    }
+
+    for value in 0..=0x10ffff {
+        if let Some(ch) = char::from_u32(value) {
+            let mut source = [0; 2];
+            let source = ch.encode_utf16(&mut source);
+            let mut destination = [0; 2];
+            let length = unsafe {
+                LCMapStringEx(
+                    [0].as_ptr(),
+                    0x200,
+                    source.as_ptr(),
+                    source.len() as i32,
+                    destination.as_mut_ptr(),
+                    destination.len() as i32,
+                    0,
+                    0,
+                    0,
+                )
+            };
+            assert_eq!(length as usize, source.len());
+            let mut expected = [0; 2];
+            let expected = uppercase_invariant(ch).encode_utf16(&mut expected);
+            assert_eq!(expected, &destination[..length as usize], "U+{:04X}", value);
+        }
     }
 }
 

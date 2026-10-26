@@ -187,6 +187,8 @@
                 Console.WriteLine("ERROR: Bad GetGuidForName.");
             }
 
+            ValidateUnicodeProviderIds();
+
             var eb = new EventBuilder(new UncheckedASCIIEncoding());
             var rawFields = eb.GetRawFields();
             Debug.Assert(rawFields.Item1.Length == 0);
@@ -338,6 +340,28 @@
 
                 Console.WriteLine("Benchmark event: N = {0}; events/s = {1}",
                     N, N / timer.Elapsed.TotalSeconds);
+            }
+        }
+
+        private static void ValidateUnicodeProviderIds()
+        {
+            foreach (var test in new[] {
+                Tuple.Create("", "4445ee6c-fd5a-5b15-047a-5866ffa76aa6"),
+                Tuple.Create("Stra\u00dfe", "591935bd-9bbd-5997-a315-51e34558623c"),
+                Tuple.Create("Name.\ufb01", "cf8ebd05-8498-5112-ea2d-f0bfff604146"),
+                Tuple.Create("Name.\u1f80", "dc88e966-2f97-595d-966c-c93c21d6212a"),
+                Tuple.Create("Name.\u0131", "502b80fc-0c6e-516c-03ef-fb8bf57b0304"),
+                Tuple.Create("Name.\u00b5", "d1ec660d-ed93-541c-023a-f9a188dd503b"),
+                Tuple.Create("Name.\u017f", "60da8ecb-b69b-52ed-bfe8-31f538666902"),
+                Tuple.Create("Name.\u03c2", "6aba4346-ec36-5c2c-b6d3-e571ea1595fe"),
+                Tuple.Create("Name.\U00010428", "492900c7-09ed-5a8d-2d9e-f26d33a5e6b1"),
+                Tuple.Create("Name.\0tail", "41cd799d-b180-5213-8ff4-a99d68e19371"),
+            })
+            {
+                if (EventProvider.GetGuidForName(test.Item1) != new Guid(test.Item2))
+                {
+                    throw new InvalidOperationException("Bad Unicode GetGuidForName: " + test.Item1);
+                }
             }
         }
 

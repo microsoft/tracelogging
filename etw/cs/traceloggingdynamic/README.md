@@ -9,6 +9,10 @@ TraceLoggingDynamic.cs might be used to implement a library providing
 manifest-free ETW to a higher-level API that does not enforce compile-time
 event layout.
 
+Name-derived provider GUIDs use native Windows invariant casing rather than
+.NET runtime casing. GUIDs for some non-ASCII names may differ from earlier
+versions; specify an explicit provider GUID to preserve an existing identity.
+
 ```cs
 // At start of program:
 static readonly EventProvider p = new EventProvider("MyProviderName");

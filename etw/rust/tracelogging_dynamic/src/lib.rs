@@ -12,7 +12,7 @@
 //! (manifest-free) events to
 //! [ETW](https://docs.microsoft.com/windows/win32/etw/event-tracing-portal)
 //! (Event Tracing for Windows). The events can be generated and collected on Windows
-//! Vista or later. The events can be decoded on Windows 10 or later.
+//! 8 or later. The events can be decoded on Windows 10 or later.
 //!
 //! This "dynamic" implementation of TraceLogging is more flexible than the
 //! implementation in the [`tracelogging`] crate. For example, it supports

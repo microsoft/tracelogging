@@ -76,6 +76,12 @@ import uuid
 import array
 import itertools
 
+_LCMapStringEx = ctypes.WinDLL('kernel32.dll', use_last_error=True).LCMapStringEx
+_LCMapStringEx.restype = ctypes.c_int
+_LCMapStringEx.argtypes = (
+    ctypes.c_wchar_p, ctypes.c_uint32, ctypes.c_void_p, ctypes.c_int,
+    ctypes.c_void_p, ctypes.c_int, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ssize_t)
+
 def _rol32(shift: int, val: int) -> int:
     return ((val << shift) | (val >> (32 - shift))) & 0xFFFFFFFF
 
@@ -213,9 +219,8 @@ def providerid_from_name(providername : str) -> uuid.UUID:
     provider id (UUID). Once selected, the name and id form a pair: the name
     should never be used with any other id, and the id should never be used
     with any other name. The easiest way to ensure this is to generate the id
-    as a hash of the name. The hashing used here matches the hashing used by
-    several other ETW APIs (e.g. .NET EventSource and WinRT LoggingChannel) as
-    well as several ETW tools.
+    as a hash of the name. The hashing uses native Windows invariant casing,
+    matching native TraceLogging.
 
     Note that this algorithm is not case-sensitive.
     """
@@ -223,7 +228,15 @@ def providerid_from_name(providername : str) -> uuid.UUID:
     # Not fixed here because it needs to match well-established behavior.
     sha1 = _Sha1NonSecret() # CodeQL [SM02167] SHA1 is not being used for security or cryptography. Collisions will not cause bugs.
     sha1.write(b'\x48\x2C\x2D\xB2\xC3\x90\x47\xC8\x87\xF8\x1A\x15\xBF\xC1\x30\xFB')
-    sha1.write(providername.upper().encode('utf_16_be'))
+    name_utf16le = providername.encode('utf_16_le')
+    if name_utf16le:
+        name_upper_utf16be = (ctypes.c_byte * len(name_utf16le))()
+        name_len = len(name_utf16le) // 2
+        # LCMAP_UPPERCASE | LCMAP_BYTEREV: invariant uppercase as UTF-16BE.
+        if _LCMapStringEx('', 0xA00, name_utf16le, name_len,
+            name_upper_utf16be, name_len, None, None, 0) == 0:
+            raise ctypes.WinError(ctypes.get_last_error())
+        sha1.write(bytes(name_upper_utf16be))
     arr = bytearray(sha1.finish()[0:16])
     arr[7] = (arr[7] & 0x0F) | 0x50
     return uuid.UUID(bytes_le = bytes(arr))
@@ -235,9 +248,8 @@ def providerid_from_name_bytes_utf8(providername_utf8 : bytes) -> uuid.UUID:
     provider id (UUID). Once selected, the name and id form a pair: the name
     should never be used with any other id, and the id should never be used
     with any other name. The easiest way to ensure this is to generate the id
-    as a hash of the name. The hashing used here matches the hashing used by
-    several other ETW APIs (e.g. .NET EventSource and WinRT LoggingChannel) as
-    well as several ETW tools.
+    as a hash of the name. The hashing uses native Windows invariant casing,
+    matching native TraceLogging.
 
     Note that this algorithm is not case-sensitive.
     """
@@ -738,11 +750,11 @@ class EventBuilder:
 
     def add_uint8(self, name_utf8 : bytes, val_int : int, out_type : int = OutType.NULL, tag : int = 0) -> None:
         self.__add_meta(name_utf8, 4, out_type, tag) # 4 = InType.UINT8
-        self.__add_data_packed(val_int, EventBuilder.__struct_i8)
+        self.__add_data_packed(val_int, EventBuilder.__struct_u8)
 
     def add_uint8_seq(self, name_utf8 : bytes, vals_int : typing.Sequence[int], out_type : int = OutType.NULL, tag : int = 0) -> None:
         self.__add_meta_seq(name_utf8, 4, out_type, tag) # 4 = InType.UINT8
-        self.__add_data_packed_seq(vals_int, EventBuilder.__struct_i8)
+        self.__add_data_packed_seq(vals_int, EventBuilder.__struct_u8)
 
     def add_int16(self, name_utf8 : bytes, val_int : int, out_type : int = OutType.NULL, tag : int = 0) -> None:
         self.__add_meta(name_utf8, 5, out_type, tag) # 5 = InType.INT16
@@ -1238,7 +1250,7 @@ class EventBuilder:
 
     def __grow_data(self, needed_len : int) -> bool:
 
-        old = self._meta
+        old = self._data
         old_len = len(old)
         new_len = old_len
         while new_len < needed_len:
@@ -1306,7 +1318,6 @@ class Provider:
 
     # Static fields
     __null_handle : ctypes.c_uint64 = ctypes.c_uint64()
-    __data_desc : ctypes.Array = (ctypes.c_byte * 48)()  # EVENT_DATA_DESCRIPTOR * 3
     __struct_data_desc : struct.Struct = struct.Struct(b'=QII') # Ptr, Size, Reserved
     __struct_u16 : struct.Struct = struct.Struct(b'=H')
     __struct_group : struct.Struct = struct.Struct(b'=HB16s')
@@ -1505,7 +1516,7 @@ class Provider:
         Provider.__struct_u16.pack_into(meta, 0, meta_pos)
 
         # Fill in the EVENT_DATA_DESCRIPTORs.
-        data_desc = Provider.__data_desc
+        data_desc = (ctypes.c_byte * 48)() # EVENT_DATA_DESCRIPTOR * 3
         struct_dd = Provider.__struct_data_desc
         struct_dd.pack_into(data_desc, 0, ctypes.addressof(self.__traits), len(self.__traits), 2)
         struct_dd.pack_into(data_desc, 16, ctypes.addressof(meta), meta_pos, 1)

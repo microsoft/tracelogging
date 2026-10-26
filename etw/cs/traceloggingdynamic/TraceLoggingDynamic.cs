@@ -296,7 +296,7 @@ namespace Microsoft.TraceLoggingDynamic
         }
 
         /// <summary>
-        /// Generates a GUID by uppercasing and then hashing the given provider name.
+        /// Generates a GUID using Windows invariant casing and hashing the given provider name.
         /// This hash uses the same name-hashing algorithm as is used by EventSource,
         /// LoggingChannel, WPR, tracelog, traceview, and many other ETW utilities.
         /// </summary>
@@ -304,8 +304,17 @@ namespace Microsoft.TraceLoggingDynamic
         {
             using (var sha1 = SHA1.Create())
             {
-                // Hash = Sha1(namespace + arg.ToUpper().ToUtf16be())
-                byte[] nameBytes = Encoding.BigEndianUnicode.GetBytes(providerName.ToUpperInvariant());
+                byte[] nameBytes = new byte[checked(providerName.Length * 2)];
+                if (providerName.Length != 0 &&
+                    NativeMethods.LCMapStringEx(
+                        "", 0xA00, // LOCALE_NAME_INVARIANT, LCMAP_UPPERCASE | LCMAP_BYTEREV
+                        providerName, providerName.Length,
+                        nameBytes, providerName.Length,
+                        IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) == 0)
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error(), "LCMapStringEx");
+                }
+
                 sha1.TransformBlock(namespaceBytes, 0, namespaceBytes.Length, null, 0);
                 sha1.TransformFinalBlock(nameBytes, 0, nameBytes.Length);
 
@@ -554,6 +563,18 @@ namespace Microsoft.TraceLoggingDynamic
 
         private sealed class NativeMethods
         {
+            [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, SetLastError = true)]
+            public static extern int LCMapStringEx(
+                string localeName,
+                int mapFlags,
+                string source,
+                int sourceLength,
+                [Out] byte[] destination,
+                int destinationLength,
+                IntPtr versionInformation,
+                IntPtr reserved,
+                IntPtr sortHandle);
+
             public delegate void EnableCallback(
                 in Guid sourceId,
                 int command,
