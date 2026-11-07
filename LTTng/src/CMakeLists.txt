@@ -43,5 +43,9 @@ install(
     NAMESPACE tracelogging::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/tracelogging)
 
-install(FILES ${PROJECT_SOURCE_DIR}/cmake/modules/traceloggingConfig.cmake
+install(FILES
+    ${PROJECT_SOURCE_DIR}/cmake/modules/traceloggingConfig.cmake
+    ${PROJECT_SOURCE_DIR}/cmake/modules/AliasPkgConfigTarget.cmake
+    ${PROJECT_SOURCE_DIR}/cmake/modules/FindLTTngUST.cmake
+    ${PROJECT_SOURCE_DIR}/cmake/modules/Findlttng-ust-tracepoint.cmake
     DESTINATION ${TRACELOGGING_CMAKE_DIR})
