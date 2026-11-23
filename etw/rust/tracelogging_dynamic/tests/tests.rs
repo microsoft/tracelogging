@@ -52,7 +52,7 @@ fn concurrent_unregister_is_safe() {
                 let barrier = Arc::clone(&barrier);
                 thread::spawn(move || {
                     barrier.wait();
-                    assert_eq!(unsafe { provider.unregister() }, 0);
+                    assert_eq!(provider.unregister(), 0);
                 })
             })
             .collect();
@@ -146,7 +146,7 @@ fn provider() {
     assert_eq!(provider.name(), "Hello");
     assert_eq!(provider.id(), &aid1);
 
-    unsafe { provider.unregister() };
+    provider.unregister();
 
     let provider = pin!(Provider::new("MyCompany.MyComponent", &Provider::options()));
     unsafe {
@@ -170,7 +170,7 @@ fn provider() {
 
     _ = provider.enabled(Level::Verbose, 0x123);
 
-    unsafe { provider.unregister() };
+    provider.unregister();
 
     let mut b = EventBuilder::new();
     let aid = Provider::create_activity_id();

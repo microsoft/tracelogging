@@ -39,6 +39,8 @@ impl Provider {
     /// Returns the current thread's thread-local activity id.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CTRL_GET_ID`.)
     ///
     /// The thread-local activity id will be used if [`write_event!`] is called with no
@@ -55,6 +57,8 @@ impl Provider {
     /// Sets the current thread's thread-local activity id. Returns the previous value.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CTRL_GET_SET_ID`.)
     ///
     /// The thread-local activity id will be used if [`write_event!`] is called with no
@@ -75,6 +79,8 @@ impl Provider {
     /// Generates and returns a new 128-bit value suitable for use as an activity id.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CREATE_ID`.)
     ///
     /// The returned value is not a true GUID/UUID since it is not globally-unique. The
@@ -160,12 +166,35 @@ impl Provider {
     ///   be registered (overlap with `register`) or the other thread's unregistration
     ///   may still be in progress (overlap with `unregister`) when this call returns.
     ///
+    /// When the `kernel_mode` feature is enabled, this method is `unsafe`: the caller
+    /// must ensure that no other thread is writing events using this provider while
+    /// `unregister` runs. In user mode, overlapping event writes are safe.
+    #[cfg(not(feature = "kernel_mode"))]
+    pub fn unregister(&self) -> u32 {
+        return self.context.unregister();
+    }
+
+    /// If this provider is not registered, does nothing and returns 0.
+    /// Otherwise, unregisters the provider.
+    ///
+    /// Returns 0 for success or an NTSTATUS from `EtwUnregister` for failure. The
+    /// return value is for diagnostic purposes only and should generally be ignored in
+    /// retail builds.
+    ///
+    /// # Preconditions
+    ///
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
+    ///
     /// # Safety
     ///
     /// - The caller must ensure that no other thread is writing events using this
     ///   provider (e.g. via [`write_event!`]) while `unregister` runs. An event write
-    ///   that overlaps `unregister` may pass an already-unregistered handle to ETW,
-    ///   which is a use-after-free in kernel mode.
+    ///   that overlaps `unregister` may pass an already-unregistered handle to
+    ///   `EtwWriteTransfer`, which is a use-after-free.
+    #[cfg(feature = "kernel_mode")]
     pub unsafe fn unregister(&self) -> u32 {
         return unsafe { self.context.unregister() };
     }
@@ -182,21 +211,24 @@ impl Provider {
     ///
     /// # Safety
     ///
-    /// - If creating a DLL or creating a provider that might run as part of a DLL, all
-    ///   registered providers **must** be unregistered before the DLL unloads.
+    /// - If creating a DLL or driver, or creating a provider that might run as part of a
+    ///   DLL or driver, all registered providers **must** be unregistered before the
+    ///   module unloads.
     ///
-    ///   If a provider variable is registered by a DLL and the DLL unloads while the
-    ///   provider is still registered, the process may subsequently crash. This occurs
-    ///   because `register` enables an ETW callback into the calling DLL and
-    ///   `unregister` ensures that the callback is disabled. If the module unloads
-    ///   without disabling the callback, the process will crash the next time that ETW
-    ///   tries to invoke the callback.
+    ///   If a provider variable is registered by a DLL or driver and the module unloads
+    ///   while the provider is still registered, the process (or, for a driver, the
+    ///   system) may subsequently crash. This occurs because `register` enables an ETW
+    ///   callback into the calling module and `unregister` ensures that the callback is
+    ///   disabled. If the module unloads without disabling the callback, a crash will
+    ///   occur the next time that ETW tries to invoke the callback.
     ///
     ///   The provider cannot unregister itself because the provider is static and Rust
     ///   does not drop static objects.
     ///
     ///   You'll typically register the provider during `DLL_PROCESS_ATTACH` and
-    ///   unregister during `DLL_PROCESS_DETACH`.
+    ///   unregister during `DLL_PROCESS_DETACH` (for a driver, register in
+    ///   `DriverEntry` and unregister in the driver's unload routine or before returning
+    ///   from a failed `DriverEntry`).
     pub unsafe fn register(&self) -> u32 {
         return self.register_impl(None, 0);
     }
@@ -213,21 +245,24 @@ impl Provider {
     ///
     /// # Safety
     ///
-    /// - If creating a DLL or creating a provider that might run as part of a DLL, all
-    ///   registered providers **must** be unregistered before the DLL unloads.
+    /// - If creating a DLL or driver, or creating a provider that might run as part of a
+    ///   DLL or driver, all registered providers **must** be unregistered before the
+    ///   module unloads.
     ///
-    ///   If a provider variable is registered by a DLL and the DLL unloads while the
-    ///   provider is still registered, the process may subsequently crash. This occurs
-    ///   because `register` enables an ETW callback into the calling DLL and
-    ///   `unregister` ensures that the callback is disabled. If the module unloads
-    ///   without disabling the callback, the process will crash the next time that ETW
-    ///   tries to invoke the callback.
+    ///   If a provider variable is registered by a DLL or driver and the module unloads
+    ///   while the provider is still registered, the process (or, for a driver, the
+    ///   system) may subsequently crash. This occurs because `register` enables an ETW
+    ///   callback into the calling module and `unregister` ensures that the callback is
+    ///   disabled. If the module unloads without disabling the callback, a crash will
+    ///   occur the next time that ETW tries to invoke the callback.
     ///
     ///   The provider cannot unregister itself because the provider is static and Rust
     ///   does not drop static objects.
     ///
     ///   You'll typically register the provider during `DLL_PROCESS_ATTACH` and
-    ///   unregister during `DLL_PROCESS_DETACH`.
+    ///   unregister during `DLL_PROCESS_DETACH` (for a driver, register in
+    ///   `DriverEntry` and unregister in the driver's unload routine or before returning
+    ///   from a failed `DriverEntry`).
     pub unsafe fn register_with_callback(
         &self,
         callback_fn: ProviderEnableCallback,
@@ -254,13 +289,8 @@ impl Provider {
     ) -> u32 {
         let result = unsafe {
             self.context
-                .register(&self.id, callback_fn, callback_context)
+                .register(&self.id, callback_fn, callback_context, self.meta)
         };
-
-        if result == 0 {
-            // 2 == EventProviderSetTraits
-            self.context.set_information(2, self.meta);
-        }
 
         return result;
     }

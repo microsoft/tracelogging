@@ -35,16 +35,18 @@
 //!   `unsafe { MY_PROVIDER.register(); }`
 //!
 //!   - Safety: [`Provider::register`] is unsafe because all providers registered by a DLL
-//!     **must** be properly unregistered before the DLL unloads. Since the provider is
-//!     static, Rust will not automatically drop it. If you are writing an EXE, this is
-//!     not a safety issue because the process exits before the EXE unloads.
+//!     or driver **must** be properly unregistered before the module unloads. Since the
+//!     provider is static, Rust will not automatically drop it. If you are writing an
+//!     EXE, this is not a safety issue because the process exits before the EXE unloads.
 //!
 //! - As needed, use [`write_event!`] to send events to ETW.
 //!
-//! - During component shutdown, after all threads have stopped writing events,
-//!   unregister the provider, e.g.
+//! - During component shutdown, unregister the provider, e.g.
 //!
-//!   `unsafe { MY_PROVIDER.unregister(); }`
+//!   `MY_PROVIDER.unregister();`
+//!
+//!   With the `kernel_mode` feature, `unregister` is `unsafe`: no other thread may be
+//!   writing events with the provider while it is being unregistered.
 //!
 //! Note that the provider symbol is not `pub` so it is not visible outside the module.
 //! If you need to share a provider symbol with multiple modules, define the provider in
@@ -63,7 +65,7 @@
 //! // Register the provider at module initialization. If you don't register (or if
 //! // register fails) then MY_PROVIDER.enabled() will always return false, the
 //! // write_event! macro will be a no-op, and MY_PROVIDER.unregister() will be a no-op.
-//! // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
+//! // Safety: If this is a DLL or driver, you MUST call MY_PROVIDER.unregister() before unload.
 //! unsafe { MY_PROVIDER.register(); }
 //!
 //! // As necessary, call write_event! to send events to ETW.
@@ -79,8 +81,7 @@
 //! );
 //!
 //! // Before module unload, unregister the provider.
-//! // Safety: No other thread may be writing events with MY_PROVIDER at this point.
-//! unsafe { MY_PROVIDER.unregister(); }
+//! MY_PROVIDER.unregister();
 //! ```
 //!
 //! # Notes
@@ -152,7 +153,7 @@
 ///
 /// tlg::define_provider!(MY_PROVIDER, "MyCompany.MyComponent");
 ///
-/// // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
+/// // Safety: If this is a DLL or driver, you MUST call MY_PROVIDER.unregister() before unload.
 /// unsafe { MY_PROVIDER.register(); }
 ///
 /// let message = "We're low on ice cream.";
@@ -163,7 +164,7 @@
 ///     str8("MyFieldName", message),
 /// );
 ///
-/// unsafe { MY_PROVIDER.unregister(); }
+/// MY_PROVIDER.unregister();
 /// ```
 ///
 /// # Syntax
@@ -308,7 +309,7 @@ pub use tracelogging_macros::define_provider;
 ///
 /// tlg::define_provider!(MY_PROVIDER, "MyCompany.MyComponent");
 ///
-/// // Safety: If this is a DLL, you MUST call MY_PROVIDER.unregister() before unload.
+/// // Safety: If this is a DLL or driver, you MUST call MY_PROVIDER.unregister() before unload.
 /// unsafe { MY_PROVIDER.register(); }
 ///
 /// let message = "We're low on ice cream.";
@@ -319,7 +320,7 @@ pub use tracelogging_macros::define_provider;
 ///     str8("MyFieldName", message),
 /// );
 ///
-/// unsafe { MY_PROVIDER.unregister(); }
+/// MY_PROVIDER.unregister();
 /// ```
 ///
 /// # Syntax
@@ -672,7 +673,9 @@ pub use tracelogging_macros::define_provider;
 /// [`FileTimeToSystemTime`](https://docs.microsoft.com/windows/win32/api/timezoneapi/nf-timezoneapi-filetimetosystemtime)
 /// can handle: if the `SystemTime` value is a date before 1601, the logged `FILETIME`
 /// value will be the start of 1601, and if the `SystemTime` value is a date after 30827,
-/// the logged `FILETIME` value will be the end of 30827.
+/// the logged `FILETIME` value will be the end of 30827. The `systemtime` field types
+/// require `std`, so they cannot be used in `no_std` code such as kernel-mode drivers;
+/// use the `win_filetime` field types instead.
 ///
 /// [^sid]: The `win_sid` type requires an input byte-slice value that is at least
 /// [`GetSidLength(value_bytes)`](https://docs.microsoft.com/windows/win32/api/securitybaseapi/nf-securitybaseapi-getlengthsid)
@@ -933,7 +936,8 @@ pub mod changelog;
 ///
 /// Note: `win_filetime_from_systemtime` is implemented as a macro because this crate is
 /// `[no_std]`. Implementing this via a function would require this crate to reference
-/// `std::time::SystemTimeError`.
+/// `std::time::SystemTimeError`. The macro expands to code that uses `std`, so it cannot
+/// be used in `no_std` code such as kernel-mode drivers.
 #[macro_export]
 macro_rules! win_filetime_from_systemtime {
     // Keep in sync with tracelogging_dynamic::win_filetime_from_systemtime.

@@ -40,3 +40,5 @@ jobs:
       run: cargo test --verbose
     - name: Run dynamic release tests
       run: cargo test --release --verbose -p tracelogging_dynamic --test tests
+    - name: Check kernel_mode build
+      run: cargo clippy --verbose -p tracelogging -p tracelogging_dynamic --lib --features tracelogging_dynamic/kernel_mode -- -D warnings

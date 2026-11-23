@@ -129,6 +129,18 @@ pub use provider::ProviderOptions;
 
 pub mod changelog;
 
+// With tracelogging/kernel_mode, unregister racing with event writes is a
+// use-after-free, so Provider::unregister must be unsafe. Its signature is controlled by
+// this crate's kernel_mode feature, so require it whenever tracelogging is in kernel mode.
+#[cfg(not(feature = "kernel_mode"))]
+const _: () = assert!(
+    !matches!(
+        NATIVE_IMPLEMENTATION,
+        NativeImplementation::WindowsKernelMode
+    ),
+    "tracelogging is built with the kernel_mode feature; enable the kernel_mode feature of tracelogging_dynamic too"
+);
+
 /// Converts a
 /// [`std::time::SystemTime`](https://doc.rust-lang.org/std/time/struct.SystemTime.html)
 /// into a Windows
@@ -148,7 +160,8 @@ pub mod changelog;
 ///
 /// Note: `win_filetime_from_systemtime` is implemented as a macro because this crate is
 /// `[no_std]`. Implementing this via a function would require this crate to reference
-/// `std::time::SystemTimeError`.
+/// `std::time::SystemTimeError`. The macro expands to code that uses `std`, so it cannot
+/// be used in `no_std` code such as kernel-mode drivers.
 #[macro_export]
 macro_rules! win_filetime_from_systemtime {
     // Keep in sync with tracelogging::win_filetime_from_systemtime.

@@ -127,6 +127,21 @@ impl ProviderContext {
 
     /// Calls EventUnregister (EtwUnregister for kernel_mode) and sets reg_handle = 0.
     ///
+    /// When the `kernel_mode` feature is enabled, this method is `unsafe`; see the
+    /// `kernel_mode` version's Safety section.
+    ///
+    /// # Preconditions
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
+    #[cfg(not(feature = "kernel_mode"))]
+    pub fn unregister(&self) -> u32 {
+        return self.unregister_impl();
+    }
+
+    /// Calls EtwUnregister and sets reg_handle = 0.
+    ///
     /// # Preconditions
     /// - If this call overlaps a call to `register` or `unregister` on another thread,
     ///   it does nothing and returns 0 immediately. In that case the provider may still
@@ -136,8 +151,13 @@ impl ProviderContext {
     /// # Safety
     /// - Must not be called while another thread may be calling `write_transfer` or
     ///   `set_information` on this context. A concurrent write may pass an
-    ///   already-unregistered handle to ETW (in kernel mode, a use-after-free).
+    ///   already-unregistered handle to EtwWriteTransfer, which is a use-after-free.
+    #[cfg(feature = "kernel_mode")]
     pub unsafe fn unregister(&self) -> u32 {
+        return self.unregister_impl();
+    }
+
+    fn unregister_impl(&self) -> u32 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
         {
@@ -150,7 +170,12 @@ impl ProviderContext {
         return result;
     }
 
-    /// Calls EventRegister (EtwRegister for kernel_mode).
+    /// Calls EventRegister (EtwRegister for kernel_mode). If registration succeeds and
+    /// `provider_traits` is not empty, also calls EventSetInformation
+    /// (EtwSetInformation for kernel_mode) with `EventProviderSetTraits` before the
+    /// registration handle is published, all while holding the registration guard, so
+    /// the traits are set before any events are written and cannot race with
+    /// `unregister`.
     ///
     /// # Preconditions
     /// - This will panic if provider is currently registered.
@@ -159,13 +184,14 @@ impl ProviderContext {
     ///
     /// # Safety
     /// 1. Pinning: Context must not be moved-from as long as provider is registered.
-    /// 2. Unregister: If a provider is registered in a DLL, unregister **must** be
-    ///    called before the DLL unloads.
+    /// 2. Unregister: If a provider is registered in a DLL or driver, unregister
+    ///    **must** be called before the module unloads.
     pub unsafe fn register(
         &self,
         _provider_id: &Guid,
         _callback_fn: Option<ProviderEnableCallback>,
         _callback_context: usize,
+        _provider_traits: &[u8],
     ) -> u32 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
@@ -174,9 +200,12 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            result = self
-                .inner
-                .register(_provider_id, _callback_fn, _callback_context);
+            result = self.inner.register(
+                _provider_id,
+                _callback_fn,
+                _callback_context,
+                _provider_traits,
+            );
         }
         return result;
     }
@@ -273,9 +302,9 @@ impl Default for ProviderContext {
 impl Drop for ProviderContext {
     /// Calls unregister.
     fn drop(&mut self) {
-        // SAFETY: `&mut self` guarantees no other thread is using this context, so no
-        // event write can overlap the unregistration.
-        unsafe { self.unregister() };
+        // `&mut self` guarantees no other thread is using this context, so no event
+        // write can overlap the unregistration (the kernel_mode safety requirement).
+        self.unregister_impl();
     }
 }
 
@@ -329,14 +358,17 @@ impl ProviderContextInner {
     //
     // `write_transfer` and `set_information` load `reg_handle` and then call into ETW. If
     // `unregister` runs between that load and the ETW call, the writer passes ETW a handle
-    // that has already been unregistered. EtwUnregister documents this as a caller error,
-    // and in kernel mode the REGHANDLE refers to the registration object, so this is a
-    // use-after-free. Like TraceLoggingProvider.h, we make this the caller's
-    // responsibility (`unregister` is an `unsafe fn` with this requirement in its Safety
-    // contract) rather than paying for it on every write.
+    // that has already been unregistered.
+    // - User mode: ntdll tolerates stale REGHANDLEs in EventWrite*/EventSetInformation
+    //   (not well documented, but relied upon), so `unregister` is a safe fn.
+    // - Kernel mode: the REGHANDLE refers to the kernel registration object, so this is
+    //   a use-after-free. Like TraceLoggingProvider.h, we make this the caller's
+    //   responsibility (with the `kernel_mode` feature, `unregister` is an `unsafe fn`
+    //   with this requirement in its Safety contract) rather than paying for it on every
+    //   write.
     //
     // Possible lock-free fix ("rundown protection"), which would allow `unregister` to be
-    // a safe fn again:
+    // a safe fn in kernel mode too (only needs to be compiled in for kernel_mode):
     // - Add `in_flight: atomic::AtomicUsize` to ProviderContextInner.
     // - Writers (`write_transfer`, `set_information`):
     //       in_flight.fetch_add(1, SeqCst);
@@ -390,6 +422,7 @@ impl ProviderContextInner {
         provider_id: &Guid,
         callback_fn: Option<ProviderEnableCallback>,
         callback_context: usize,
+        provider_traits: &[u8],
     ) -> u32 {
         let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
         if was_busy {
@@ -436,6 +469,30 @@ impl ProviderContextInner {
         };
 
         if result == 0 {
+            if !provider_traits.is_empty() {
+                // Set traits (e.g. provider name and group) before publishing the handle
+                // so that no event is written before the traits are set. Failure is
+                // ignored, as before: events are still written, just without traits.
+                #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
+                unsafe {
+                    EventSetInformation(
+                        reg_handle,
+                        2, // EventProviderSetTraits
+                        provider_traits.as_ptr(),
+                        provider_traits.len() as u32,
+                    )
+                };
+                #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
+                unsafe {
+                    EtwSetInformation(
+                        reg_handle,
+                        2, // EventProviderSetTraits
+                        provider_traits.as_ptr(),
+                        provider_traits.len() as u32,
+                    )
+                };
+            }
+
             self.reg_handle.store(reg_handle, atomic::Ordering::Release);
         }
         self.busy.swap(false, atomic::Ordering::Release);

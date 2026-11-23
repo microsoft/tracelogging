@@ -44,8 +44,7 @@ tlg::write_event!(
 );
 
 // Before module unload, unregister the provider.
-// Safety: No other thread may be writing events with MY_PROVIDER at this point.
-unsafe { MY_PROVIDER.unregister(); }
+MY_PROVIDER.unregister();
 ```
 
 ## Configuration

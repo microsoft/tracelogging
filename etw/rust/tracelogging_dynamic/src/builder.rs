@@ -162,7 +162,8 @@ impl EventBuilder {
 
     /// Sends the built event to ETW via the specified provider.
     ///
-    /// Returns 0 for success or a Win32 error from `EventWrite` for failure. The return
+    /// Returns 0 for success or a Win32 error from `EventWrite` (or an `NTSTATUS` from
+    /// `EtwWriteTransfer` with the `kernel_mode` feature) for failure. The return
     /// value is for diagnostic purposes only and should generally be ignored in retail
     /// builds.
     ///
