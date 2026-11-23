@@ -201,14 +201,15 @@ impl<'a> EventDataDescriptor<'a> {
     pub fn from_counted<T: Copy>(mut value: &'a [T]) -> Self {
         let value_len = value.len();
 
-        let max_len = 65535 / size_of::<T>();
+        let item_size = size_of::<T>();
+        let max_len = 65535usize.checked_div(item_size).unwrap_or(value_len);
         if max_len < value_len {
             value = &value[0..max_len];
         }
 
         return Self {
             ptr: value.as_ptr() as usize as u64,
-            size: (size_of::<T>() as u32) * (value.len() as u32),
+            size: (item_size as u32) * (value.len() as u32),
             reserved: 0,
             lifetime: PhantomData,
         };
@@ -236,9 +237,13 @@ impl<'a> EventDataDescriptor<'a> {
 /// Returns the size for a counted field.
 pub fn counted_size<T>(value: &[T]) -> u16 {
     let value_len = value.len();
-    let max_len = (65535 / size_of::<T>()) as u16;
-    let len = safe_len(max_len, value_len);
-    return (size_of::<T>() as u16) * len;
+    let item_size = size_of::<T>();
+    let Some(max_len) = 65535usize.checked_div(item_size) else {
+        return 0;
+    };
+
+    let len = safe_len(max_len as u16, value_len);
+    return (item_size as u16) * len;
 }
 
 /// Returns the count for a variable-length array field.

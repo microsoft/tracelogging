@@ -3,6 +3,18 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v2.0.0 (Unreleased, Breaking)
+/// - Update `tracelogging` dependency to 2.0.0, which fixes data races (undefined
+///   behavior) between the ETW enable callback and `Provider::enabled`, `register`, and
+///   `unregister`, and makes an ETW enable level of 0 enable events of all levels.
+/// - **Breaking:** `Provider::enabled` is no longer a `const fn`.
+/// - Provider, event, and field names containing `'\0'` now panic in release builds
+///   too (previously only checked in debug builds, producing corrupt metadata in
+///   release builds).
+/// - Document that `Provider::unregister` must not overlap with event writes or with
+///   `register`/`unregister` on other threads.
+pub mod v2_0_0 {}
+
 /// # v1.2.4 (2025-05-16)
 /// - Fix linker issues when building with rustc 1.87
 pub mod v1_2_4 {}

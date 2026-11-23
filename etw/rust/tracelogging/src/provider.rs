@@ -142,7 +142,7 @@ impl Provider {
     /// Note: [`write_event!`] already checks `enabled()`. You only need to make your own
     /// call to `enabled()` if you want to skip something other than [`write_event!`].
     #[inline(always)]
-    pub const fn enabled(&self, level: Level, keyword: u64) -> bool {
+    pub fn enabled(&self, level: Level, keyword: u64) -> bool {
         return self.context.enabled(level, keyword);
     }
 
@@ -152,6 +152,16 @@ impl Provider {
     /// Returns 0 for success or a Win32 error from `EventUnregister` for failure. The
     /// return value is for diagnostic purposes only and should generally be ignored in
     /// retail builds.
+    ///
+    /// # Preconditions
+    ///
+    /// - Do not call `unregister` while another thread may be writing events using this
+    ///   provider (e.g. via [`write_event!`]). An event write that overlaps
+    ///   `unregister` may pass an already-unregistered handle to ETW.
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
     pub fn unregister(&self) -> u32 {
         return self.context.unregister();
     }

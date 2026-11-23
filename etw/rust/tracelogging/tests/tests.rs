@@ -469,6 +469,12 @@ fn write_event() {
 
     tlg::write_event!(
         PROV,
+        "six_digit_unicode",
+        u8("\u{10ffff}", &1),
+    );
+
+    tlg::write_event!(
+        PROV,
         "cstrs-L4-kFF",
         level(tlg::Level::Informational),
         keyword(0xFF),

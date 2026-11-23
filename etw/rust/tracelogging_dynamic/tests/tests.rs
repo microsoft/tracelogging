@@ -3,7 +3,73 @@
 
 use core::pin::pin;
 use core::pin::Pin;
+use std::panic::AssertUnwindSafe;
+use std::sync::{Arc, Barrier};
+use std::thread;
 use tracelogging_dynamic::*;
+
+#[test]
+fn embedded_nuls_are_rejected() {
+    assert!(std::panic::catch_unwind(|| {
+        Provider::new("provider\0tail", &Provider::options());
+    })
+    .is_err());
+
+    let mut builder = EventBuilder::new();
+    assert!(std::panic::catch_unwind(AssertUnwindSafe(|| {
+        builder.reset("event\0tail", Level::Verbose, 1, 0);
+    }))
+    .is_err());
+
+    assert!(std::panic::catch_unwind(AssertUnwindSafe(|| {
+        builder
+            .reset("valid", Level::Verbose, 1, 0)
+            .add_u8("field\0tail", 1, OutType::Default, 0);
+    }))
+    .is_err());
+}
+
+#[test]
+fn concurrent_unregister_is_safe() {
+    const THREAD_COUNT: usize = 8;
+    const ROUNDS: usize = 20;
+
+    let provider = Arc::new(Box::pin(Provider::new(
+        "ConcurrentUnregisterTest",
+        &Provider::options(),
+    )));
+
+    for _ in 0..ROUNDS {
+        unsafe { (*provider).as_ref().register() };
+        if let NativeImplementation::Windows = NATIVE_IMPLEMENTATION {
+            assert!(!format!("{:?}", provider).ends_with("reg_handle: 0 }"));
+        }
+
+        let barrier = Arc::new(Barrier::new(THREAD_COUNT));
+        let threads: Vec<_> = (0..THREAD_COUNT)
+            .map(|_| {
+                let provider = Arc::clone(&provider);
+                let barrier = Arc::clone(&barrier);
+                thread::spawn(move || {
+                    barrier.wait();
+                    assert_eq!(provider.unregister(), 0);
+                })
+            })
+            .collect();
+
+        for thread in threads {
+            thread.join().unwrap();
+        }
+
+        // Overlapping unregister calls all return 0, the handle ends up 0, and the
+        // provider can be registered again.
+        assert!(
+            format!("{:?}", provider).ends_with("reg_handle: 0 }"),
+            "{:?}",
+            provider
+        );
+    }
+}
 
 #[test]
 fn provider() {

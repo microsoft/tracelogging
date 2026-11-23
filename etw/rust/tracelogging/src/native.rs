@@ -4,8 +4,6 @@
 use core::marker::PhantomPinned;
 
 #[cfg(all(windows, feature = "etw"))]
-use core::cell::UnsafeCell;
-#[cfg(all(windows, feature = "etw"))]
 use core::sync::atomic;
 
 use crate::descriptors::EventDataDescriptor;
@@ -64,7 +62,7 @@ pub struct ProviderContext {
     _pinned: PhantomPinned,
 
     #[cfg(all(windows, feature = "etw"))]
-    cell: UnsafeCell<ProviderContextInner>,
+    inner: ProviderContextInner,
 }
 
 impl ProviderContext {
@@ -94,12 +92,12 @@ impl ProviderContext {
             _pinned: PhantomPinned,
 
             #[cfg(all(windows, feature = "etw"))]
-            cell: UnsafeCell::new(ProviderContextInner::new()),
+            inner: ProviderContextInner::new(),
         };
     }
 
     /// Returns the registration handle. For diagnostic purposes only.
-    pub const fn reg_handle(&self) -> u64 {
+    pub fn reg_handle(&self) -> u64 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
         {
@@ -107,16 +105,14 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            let inner_ptr: *const ProviderContextInner = self.cell.get();
-            let inner = unsafe { &*inner_ptr };
-            result = inner.reg_handle;
+            result = self.inner.reg_handle.load(atomic::Ordering::Acquire);
         }
         return result;
     }
 
     /// Returns true if the provider is enabled at the specified level and keyword.
     #[inline(always)]
-    pub const fn enabled(&self, _level: Level, _keyword: u64) -> bool {
+    pub fn enabled(&self, _level: Level, _keyword: u64) -> bool {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
         {
@@ -124,9 +120,7 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            let inner_ptr: *const ProviderContextInner = self.cell.get();
-            let inner = unsafe { &*inner_ptr };
-            result = (_level.0 as i32) <= inner.level && inner.enabled_keyword(_keyword);
+            result = self.inner.enabled(_level, _keyword);
         }
         return result;
     }
@@ -134,8 +128,13 @@ impl ProviderContext {
     /// Calls EventUnregister (EtwUnregister for kernel_mode) and sets reg_handle = 0.
     ///
     /// # Preconditions
-    /// - This will panic if it overlaps with another thread simultaneously calling
-    ///   register or unregister.
+    /// - Must not be called while another thread may be calling `write_transfer` or
+    ///   `set_information` on this context. A concurrent write may pass an
+    ///   already-unregistered handle to ETW (in kernel mode, a use-after-free).
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
     pub fn unregister(&self) -> u32 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
@@ -144,9 +143,7 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            let inner_ptr: *mut ProviderContextInner = self.cell.get();
-            let inner_mut = unsafe { &mut *inner_ptr };
-            result = inner_mut.unregister();
+            result = self.inner.unregister();
         }
         return result;
     }
@@ -175,10 +172,9 @@ impl ProviderContext {
         }
         #[cfg(all(windows, feature = "etw"))]
         {
-            result = unsafe { &mut *self.cell.get() }.register(
-                _provider_id,
-                _callback_fn,
-                _callback_context);
+            result = self
+                .inner
+                .register(_provider_id, _callback_fn, _callback_context);
         }
         return result;
     }
@@ -258,8 +254,6 @@ impl ProviderContext {
     }
 }
 
-unsafe impl Sync for ProviderContext {}
-
 impl Default for ProviderContext {
     fn default() -> Self {
         Self::new()
@@ -275,56 +269,100 @@ impl Drop for ProviderContext {
 
 #[cfg(all(windows, feature = "etw"))]
 struct ProviderContextInner {
-    level: i32, // -1 means not enabled by anybody.
+    level: atomic::AtomicI32, // -1 means not enabled by anybody.
     busy: atomic::AtomicBool,
-    reg_handle: u64,
-    keyword_any: u64,
-    keyword_all: u64,
-    callback_fn: Option<ProviderEnableCallback>,
-    callback_context: usize,
+    reg_handle: atomic::AtomicU64,
+    keyword_any: atomic::AtomicU64,
+    keyword_all: atomic::AtomicU64,
+    callback_fn: atomic::AtomicPtr<()>, // null or a ProviderEnableCallback.
+    callback_context: atomic::AtomicUsize,
 }
 
 #[cfg(all(windows, feature = "etw"))]
 impl ProviderContextInner {
     const fn new() -> Self {
         return Self {
-            level: -1,
+            level: atomic::AtomicI32::new(-1),
             busy: atomic::AtomicBool::new(false),
-            reg_handle: 0,
-            keyword_any: 0,
-            keyword_all: 0,
-            callback_fn: None,
-            callback_context: 0,
+            reg_handle: atomic::AtomicU64::new(0),
+            keyword_any: atomic::AtomicU64::new(0),
+            keyword_all: atomic::AtomicU64::new(0),
+            callback_fn: atomic::AtomicPtr::new(core::ptr::null_mut()),
+            callback_context: atomic::AtomicUsize::new(0),
         };
     }
 
-    /// Returns true if the provider is enabled at the specified keyword.
-    const fn enabled_keyword(&self, keyword: u64) -> bool {
-        return keyword == 0
-            || ((keyword & self.keyword_any) != 0
-                && (keyword & self.keyword_all) == self.keyword_all);
+    /// Returns true if the provider is enabled at the specified level and keyword.
+    #[inline(always)]
+    fn enabled(&self, level: Level, keyword: u64) -> bool {
+        // Load level first: this Acquire pairs with the Release store of level in
+        // outer_callback_impl (which is done after the keyword stores), so the keywords
+        // read below are at least as new as the level. The early return also means the
+        // common "not enabled" case costs a single load.
+        let enabled_level = self.level.load(atomic::Ordering::Acquire);
+        if (level.0 as i32) > enabled_level {
+            return false;
+        }
+
+        if keyword == 0 {
+            return true;
+        }
+
+        let keyword_any = self.keyword_any.load(atomic::Ordering::Relaxed);
+        let keyword_all = self.keyword_all.load(atomic::Ordering::Relaxed);
+        return (keyword & keyword_any) != 0 && (keyword & keyword_all) == keyword_all;
     }
 
-    fn unregister(&mut self) -> u32 {
+    // Known limitation: unregister racing with event writes.
+    //
+    // `write_transfer` and `set_information` load `reg_handle` and then call into ETW. If
+    // `unregister` runs between that load and the ETW call, the writer passes ETW a handle
+    // that has already been unregistered. EtwUnregister documents this as a caller error,
+    // and in kernel mode the REGHANDLE refers to the registration object, so this is a
+    // use-after-free. Like TraceLoggingProvider.h, we currently make this the caller's
+    // responsibility (documented on `unregister`) rather than paying for it on every write.
+    //
+    // Possible lock-free fix ("rundown protection"), if ever needed:
+    // - Add `in_flight: atomic::AtomicUsize` to ProviderContextInner.
+    // - Writers (`write_transfer`, `set_information`):
+    //       in_flight.fetch_add(1, SeqCst);
+    //       let h = reg_handle.load(SeqCst);
+    //       if h != 0 { result = EventWriteTransfer(h, ...); }
+    //       in_flight.fetch_sub(1, Release);
+    // - `unregister` (while holding `busy`):
+    //       let h = reg_handle.swap(0, SeqCst);
+    //       if in_flight.load(SeqCst) != 0 {
+    //           while in_flight.load(Acquire) != 0 { core::hint::spin_loop(); }
+    //       }
+    //       EventUnregister(h);
+    // - The writer's fetch_add/load and unregister's swap/first load must all be SeqCst
+    //   (Dekker-style store->load ordering): either unregister observes the writer's
+    //   increment and waits for it, or the writer observes handle 0 and skips the call.
+    //   The Release fetch_sub pairs with the Acquire spin load so the ETW call
+    //   happens-before EventUnregister.
+    // - The crate is no_std, so unregister must spin (no OS wait primitive).
+    // - Cost: two RMWs on a shared (contended) cache line per written event, plus
+    //   unregister may spin for the duration of in-flight writes.
+    fn unregister(&self) -> u32 {
         let result;
 
         let was_busy = self.busy.swap(true, atomic::Ordering::Acquire);
         if was_busy {
             result = 0;
         } else {
-            if self.reg_handle == 0 {
+            let reg_handle = self.reg_handle.swap(0, atomic::Ordering::AcqRel);
+            if reg_handle == 0 {
                 result = 0;
             } else {
                 #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
                 {
-                    result = unsafe { EventUnregister(self.reg_handle) };
+                    result = unsafe { EventUnregister(reg_handle) };
                 }
                 #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
                 {
-                    result = unsafe { EtwUnregister(self.reg_handle) };
+                    result = unsafe { EtwUnregister(reg_handle) };
                 }
-                self.level = -1;
-                self.reg_handle = 0;
+                self.level.store(-1, atomic::Ordering::Release);
             }
 
             self.busy.swap(false, atomic::Ordering::Release);
@@ -334,7 +372,7 @@ impl ProviderContextInner {
     }
 
     fn register(
-        &mut self,
+        &self,
         provider_id: &Guid,
         callback_fn: Option<ProviderEnableCallback>,
         callback_context: usize,
@@ -344,22 +382,32 @@ impl ProviderContextInner {
             panic!("provider.register called simultaneously with another call to register or unregister.");
         }
 
-        if self.reg_handle != 0 {
+        if self.reg_handle.load(atomic::Ordering::Acquire) != 0 {
             self.busy.swap(false, atomic::Ordering::Relaxed);
             panic!("provider.register called when provider is already registered");
         }
 
-        self.callback_fn = callback_fn;
-        self.callback_context = callback_context;
+        self.callback_fn.store(
+            callback_fn.map_or(core::ptr::null_mut(), |callback| callback as *mut ()),
+            atomic::Ordering::Release,
+        );
+        self.callback_context
+            .store(callback_context, atomic::Ordering::Release);
 
-        let self_ptr: *mut Self = self;
+        // ETW writes the handle directly into reg_handle (as TraceLoggingProvider.h does)
+        // so that it is published as soon as ETW produces it, rather than only after
+        // EventRegister returns. This matters because ETW may invoke the enable callback
+        // (making `enabled()` return true) before EventRegister returns. Concurrent
+        // readers only use atomic loads, and ETW performs a single aligned 64-bit store.
+        let self_ptr = self as *const Self;
+        let reg_handle_ptr = self.reg_handle.as_ptr();
         #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         let result = unsafe {
             EventRegister(
                 provider_id,
                 Self::outer_callback,
                 self_ptr as usize,
-                &mut self.reg_handle,
+                reg_handle_ptr,
             )
         };
         #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
@@ -368,10 +416,14 @@ impl ProviderContextInner {
                 provider_id,
                 Self::outer_callback,
                 self_ptr as usize,
-                &mut self.reg_handle,
+                reg_handle_ptr,
             )
         };
 
+        if result != 0 {
+            // EventRegister sets the handle to 0 on failure; make sure of it.
+            self.reg_handle.store(0, atomic::Ordering::Release);
+        }
         self.busy.swap(false, atomic::Ordering::Release);
 
         return result;
@@ -379,7 +431,7 @@ impl ProviderContextInner {
 
     #[cfg(all(windows, feature = "etw"))]
     fn outer_callback_impl(
-        &mut self,
+        &self,
         source_id: &Guid,
         event_control_code: u32,
         level: u8,
@@ -389,17 +441,28 @@ impl ProviderContextInner {
     ) {
         match event_control_code {
             0 => {
-                self.level = -1;
+                self.level.store(-1, atomic::Ordering::Release);
             }
             1 => {
-                self.level = level as i32;
-                self.keyword_any = match_any_keyword;
-                self.keyword_all = match_all_keyword;
+                // Store keywords before level; see `enabled`.
+                self.keyword_any
+                    .store(match_any_keyword, atomic::Ordering::Relaxed);
+                self.keyword_all
+                    .store(match_all_keyword, atomic::Ordering::Relaxed);
+                // ETW enable level 0 means "all levels".
+                self.level.store(
+                    if level == 0 { 255 } else { level as i32 },
+                    atomic::Ordering::Release,
+                );
             }
             _ => {}
         }
 
-        if let Some(callback_fn) = self.callback_fn {
+        let callback_ptr = self.callback_fn.load(atomic::Ordering::Acquire);
+        if !callback_ptr.is_null() {
+            // SAFETY: register() only stores null or a ProviderEnableCallback.
+            let callback_fn =
+                unsafe { core::mem::transmute::<*mut (), ProviderEnableCallback>(callback_ptr) };
             callback_fn(
                 source_id,
                 event_control_code,
@@ -407,7 +470,7 @@ impl ProviderContextInner {
                 match_any_keyword,
                 match_all_keyword,
                 filter_data,
-                self.callback_context,
+                self.callback_context.load(atomic::Ordering::Acquire),
             );
         }
     }
@@ -423,7 +486,7 @@ impl ProviderContextInner {
         outer_context: usize,
     ) {
         unsafe {
-            (*(outer_context as *mut Self)).outer_callback_impl(
+            (*(outer_context as *const Self)).outer_callback_impl(
                 source_id,
                 event_control_code,
                 level,
@@ -443,7 +506,7 @@ extern "system" {
         provider_id: &Guid,
         outer_callback: OuterEnableCallback,
         outer_context: usize,
-        reg_handle: &mut u64,
+        reg_handle: *mut u64,
     ) -> u32;
 
     fn EventSetInformation(
@@ -470,7 +533,7 @@ extern "system" {
         provider_id: &Guid,
         outer_callback: OuterEnableCallback,
         outer_context: usize,
-        reg_handle: &mut u64,
+        reg_handle: *mut u64,
     ) -> u32;
     fn EtwSetInformation(
         reg_handle: u64,

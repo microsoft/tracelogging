@@ -7,6 +7,10 @@
 //!
 //! # Changelog
 //!
+//! ## v1.2.4 (Unreleased)
+//! - Fix `\u{...}` escapes with 6 hex digits (e.g. `"\u{10ffff}"`) in event and field
+//!   names.
+//!
 //! ## v1.2.3 (2025-03-02)
 //! - Fix `repr_packed_without_abi` warning.
 //!

@@ -214,7 +214,7 @@ impl Provider {
             name.len() < 32768,
             "provider name.len() must be less than 32KB"
         );
-        debug_assert!(!name.contains('\0'), "provider name must not contain '\\0'");
+        assert!(!name.contains('\0'), "provider name must not contain '\\0'");
 
         const GROUP_TRAIT_LEN: u16 = 2 + 1 + 16;
         let name_len = name.len() as u16;
@@ -269,7 +269,7 @@ impl Provider {
     /// Returns true if any ETW logging session is listening to this provider for events
     /// with the specified level and keyword.
     #[inline(always)]
-    pub const fn enabled(&self, level: Level, keyword: u64) -> bool {
+    pub fn enabled(&self, level: Level, keyword: u64) -> bool {
         return self.context.enabled(level, keyword);
     }
 
@@ -283,6 +283,16 @@ impl Provider {
     /// Use `provider.unregister()` if you want to unregister the provider before it goes
     /// out of scope. The provider automatically unregisters when it is dropped so most
     /// users do  not need to call `unregister` directly.
+    ///
+    /// # Preconditions
+    ///
+    /// - Do not call `unregister` while another thread may be writing events using this
+    ///   provider (e.g. via [EventBuilder::write()]). An event write that overlaps
+    ///   `unregister` may pass an already-unregistered handle to ETW.
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
     pub fn unregister(&self) -> u32 {
         return self.context.unregister();
     }
