@@ -132,5 +132,5 @@ fn main() {
         tlg::provider_enabled!(PROV1, tlg::Level::from_int(5), 1),
         tlg::provider_enabled!(PROV1, tlg::Level::Informational, 0x10),
     );
-    PROV1.unregister();
+    unsafe { PROV1.unregister() };
 }

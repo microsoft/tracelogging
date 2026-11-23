@@ -46,7 +46,8 @@ tlg::write_event!(
 );
 
 // Before module unload, unregister the provider.
-MY_PROVIDER.unregister();
+// Safety: No other thread may be writing events with MY_PROVIDER at this point.
+unsafe { MY_PROVIDER.unregister(); }
 ```
 
 The `tracelogging` crate depends on the

@@ -8,10 +8,13 @@ use crate::*; // For docs
 ///   behavior) between the ETW enable callback and `Provider::enabled`, `register`, and
 ///   `unregister`, and makes an ETW enable level of 0 enable events of all levels.
 /// - **Breaking:** `Provider::enabled` is no longer a `const fn`.
+/// - **Breaking:** `Provider::unregister` is now an `unsafe fn`. The caller must ensure
+///   that no other thread is writing events with the provider while it is being
+///   unregistered. Dropping the provider remains safe.
 /// - Provider, event, and field names containing `'\0'` now panic in release builds
 ///   too (previously only checked in debug builds, producing corrupt metadata in
 ///   release builds).
-/// - Document that `Provider::unregister` must not overlap with event writes or with
+/// - Document that `Provider::unregister` does nothing if it overlaps with
 ///   `register`/`unregister` on other threads.
 pub mod v2_0_0 {}
 

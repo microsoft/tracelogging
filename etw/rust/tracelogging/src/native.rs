@@ -128,14 +128,16 @@ impl ProviderContext {
     /// Calls EventUnregister (EtwUnregister for kernel_mode) and sets reg_handle = 0.
     ///
     /// # Preconditions
-    /// - Must not be called while another thread may be calling `write_transfer` or
-    ///   `set_information` on this context. A concurrent write may pass an
-    ///   already-unregistered handle to ETW (in kernel mode, a use-after-free).
     /// - If this call overlaps a call to `register` or `unregister` on another thread,
     ///   it does nothing and returns 0 immediately. In that case the provider may still
     ///   be registered (overlap with `register`) or the other thread's unregistration
     ///   may still be in progress (overlap with `unregister`) when this call returns.
-    pub fn unregister(&self) -> u32 {
+    ///
+    /// # Safety
+    /// - Must not be called while another thread may be calling `write_transfer` or
+    ///   `set_information` on this context. A concurrent write may pass an
+    ///   already-unregistered handle to ETW (in kernel mode, a use-after-free).
+    pub unsafe fn unregister(&self) -> u32 {
         let result;
         #[cfg(not(all(windows, feature = "etw")))]
         {
@@ -224,11 +226,19 @@ impl ProviderContext {
         {
             result = 0;
         }
+        #[cfg(all(windows, feature = "etw"))]
+        let reg_handle = self.reg_handle();
+        #[cfg(all(windows, feature = "etw"))]
+        if reg_handle == 0 {
+            // Not registered, or enabled by a callback before register has published
+            // the handle.
+            return 0;
+        }
         #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         {
             result = unsafe {
                 EventWriteTransfer(
-                    self.reg_handle(),
+                    reg_handle,
                     _descriptor,
                     _activity_id,
                     _related_id,
@@ -241,7 +251,7 @@ impl ProviderContext {
         {
             result = unsafe {
                 EtwWriteTransfer(
-                    self.reg_handle(),
+                    reg_handle,
                     _descriptor,
                     _activity_id,
                     _related_id,
@@ -263,7 +273,9 @@ impl Default for ProviderContext {
 impl Drop for ProviderContext {
     /// Calls unregister.
     fn drop(&mut self) {
-        self.unregister();
+        // SAFETY: `&mut self` guarantees no other thread is using this context, so no
+        // event write can overlap the unregistration.
+        unsafe { self.unregister() };
     }
 }
 
@@ -313,16 +325,18 @@ impl ProviderContextInner {
         return (keyword & keyword_any) != 0 && (keyword & keyword_all) == keyword_all;
     }
 
-    // Known limitation: unregister racing with event writes.
+    // Unregister racing with event writes.
     //
     // `write_transfer` and `set_information` load `reg_handle` and then call into ETW. If
     // `unregister` runs between that load and the ETW call, the writer passes ETW a handle
     // that has already been unregistered. EtwUnregister documents this as a caller error,
     // and in kernel mode the REGHANDLE refers to the registration object, so this is a
-    // use-after-free. Like TraceLoggingProvider.h, we currently make this the caller's
-    // responsibility (documented on `unregister`) rather than paying for it on every write.
+    // use-after-free. Like TraceLoggingProvider.h, we make this the caller's
+    // responsibility (`unregister` is an `unsafe fn` with this requirement in its Safety
+    // contract) rather than paying for it on every write.
     //
-    // Possible lock-free fix ("rundown protection"), if ever needed:
+    // Possible lock-free fix ("rundown protection"), which would allow `unregister` to be
+    // a safe fn again:
     // - Add `in_flight: atomic::AtomicUsize` to ProviderContextInner.
     // - Writers (`write_transfer`, `set_information`):
     //       in_flight.fetch_add(1, SeqCst);
@@ -394,20 +408,21 @@ impl ProviderContextInner {
         self.callback_context
             .store(callback_context, atomic::Ordering::Release);
 
-        // ETW writes the handle directly into reg_handle (as TraceLoggingProvider.h does)
-        // so that it is published as soon as ETW produces it, rather than only after
-        // EventRegister returns. This matters because ETW may invoke the enable callback
-        // (making `enabled()` return true) before EventRegister returns. Concurrent
-        // readers only use atomic loads, and ETW performs a single aligned 64-bit store.
+        // Receive the handle in local storage and publish it with an atomic store after
+        // EventRegister returns: other threads may be loading reg_handle concurrently, so
+        // ETW must not write to it directly. ETW may invoke the enable callback (making
+        // `enabled()` return true) before EventRegister returns; until the handle is
+        // published, `write_transfer` sees handle 0 and skips the ETW call, so events
+        // written during that window are dropped.
         let self_ptr = self as *const Self;
-        let reg_handle_ptr = self.reg_handle.as_ptr();
+        let mut reg_handle = 0u64;
         #[cfg(all(windows, feature = "etw", not(feature = "kernel_mode")))]
         let result = unsafe {
             EventRegister(
                 provider_id,
                 Self::outer_callback,
                 self_ptr as usize,
-                reg_handle_ptr,
+                &mut reg_handle,
             )
         };
         #[cfg(all(windows, feature = "etw", feature = "kernel_mode"))]
@@ -416,13 +431,12 @@ impl ProviderContextInner {
                 provider_id,
                 Self::outer_callback,
                 self_ptr as usize,
-                reg_handle_ptr,
+                &mut reg_handle,
             )
         };
 
-        if result != 0 {
-            // EventRegister sets the handle to 0 on failure; make sure of it.
-            self.reg_handle.store(0, atomic::Ordering::Release);
+        if result == 0 {
+            self.reg_handle.store(reg_handle, atomic::Ordering::Release);
         }
         self.busy.swap(false, atomic::Ordering::Release);
 
@@ -506,7 +520,7 @@ extern "system" {
         provider_id: &Guid,
         outer_callback: OuterEnableCallback,
         outer_context: usize,
-        reg_handle: *mut u64,
+        reg_handle: &mut u64,
     ) -> u32;
 
     fn EventSetInformation(
@@ -533,7 +547,7 @@ extern "system" {
         provider_id: &Guid,
         outer_callback: OuterEnableCallback,
         outer_context: usize,
-        reg_handle: *mut u64,
+        reg_handle: &mut u64,
     ) -> u32;
     fn EtwSetInformation(
         reg_handle: u64,

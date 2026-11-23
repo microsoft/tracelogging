@@ -8,11 +8,15 @@ use crate::*; // For docs
 ///   `Provider::enabled`, `register`, and `unregister`. Provider enable state is now
 ///   stored in atomics.
 /// - **Breaking:** `Provider::enabled` is no longer a `const fn`.
+/// - **Breaking:** `Provider::unregister` (and `ProviderContext::unregister`) is now an
+///   `unsafe fn`. The caller must ensure that no other thread is writing events with the
+///   provider while it is being unregistered (an overlapping write could use the freed
+///   registration handle, a use-after-free in kernel mode).
 /// - An ETW enable level of 0 now enables events of all levels (matching ETW and
 ///   TraceLoggingProvider.h). Previously only `Level::LogAlways` events were enabled.
 /// - Fix divide-by-zero panic in `counted_size` / `EventDataDescriptor::from_counted`
 ///   for zero-sized element types.
-/// - Document that `Provider::unregister` must not overlap with event writes or with
+/// - Document that `Provider::unregister` does nothing if it overlaps with
 ///   `register`/`unregister` on other threads.
 /// - Update `tracelogging_macros` dependency to 1.2.4.
 pub mod v2_0_0 {}

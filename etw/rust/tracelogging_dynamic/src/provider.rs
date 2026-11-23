@@ -37,7 +37,9 @@ use crate::EventBuilder;
 ///     when calling it.
 /// - Use an [EventBuilder] to construct and write events as needed.
 /// - The provider will automatically unregister when it is dropped. You can manually call
-///   `unregister()` if you want to unregister sooner or if the provider is static.
+///   `unsafe { provider.unregister(); }` if you want to unregister sooner or if the
+///   provider is static. `unregister` is unsafe because it must not overlap with event
+///   writes on other threads.
 ///
 /// # Pinning your provider
 ///
@@ -286,15 +288,20 @@ impl Provider {
     ///
     /// # Preconditions
     ///
-    /// - Do not call `unregister` while another thread may be writing events using this
-    ///   provider (e.g. via [EventBuilder::write()]). An event write that overlaps
-    ///   `unregister` may pass an already-unregistered handle to ETW.
     /// - If this call overlaps a call to `register` or `unregister` on another thread,
     ///   it does nothing and returns 0 immediately. In that case the provider may still
     ///   be registered (overlap with `register`) or the other thread's unregistration
     ///   may still be in progress (overlap with `unregister`) when this call returns.
-    pub fn unregister(&self) -> u32 {
-        return self.context.unregister();
+    ///
+    /// # Safety
+    ///
+    /// - The caller must ensure that no other thread is writing events using this
+    ///   provider (e.g. via [EventBuilder::write()]) while `unregister` runs. An event
+    ///   write that overlaps `unregister` may pass an already-unregistered handle to ETW,
+    ///   which is a use-after-free in kernel mode. (Dropping the provider is always safe
+    ///   because nothing else can be using it.)
+    pub unsafe fn unregister(&self) -> u32 {
+        return unsafe { self.context.unregister() };
     }
 
     /// Registers the provider, connecting it to the Windows ETW system.

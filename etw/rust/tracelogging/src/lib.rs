@@ -41,9 +41,10 @@
 //!
 //! - As needed, use [`write_event!`] to send events to ETW.
 //!
-//! - During component shutdown, unregister the provider, e.g.
+//! - During component shutdown, after all threads have stopped writing events,
+//!   unregister the provider, e.g.
 //!
-//!   `MY_PROVIDER.unregister();`
+//!   `unsafe { MY_PROVIDER.unregister(); }`
 //!
 //! Note that the provider symbol is not `pub` so it is not visible outside the module.
 //! If you need to share a provider symbol with multiple modules, define the provider in
@@ -78,7 +79,8 @@
 //! );
 //!
 //! // Before module unload, unregister the provider.
-//! MY_PROVIDER.unregister();
+//! // Safety: No other thread may be writing events with MY_PROVIDER at this point.
+//! unsafe { MY_PROVIDER.unregister(); }
 //! ```
 //!
 //! # Notes
@@ -161,7 +163,7 @@
 ///     str8("MyFieldName", message),
 /// );
 ///
-/// MY_PROVIDER.unregister();
+/// unsafe { MY_PROVIDER.unregister(); }
 /// ```
 ///
 /// # Syntax
@@ -317,7 +319,7 @@ pub use tracelogging_macros::define_provider;
 ///     str8("MyFieldName", message),
 /// );
 ///
-/// MY_PROVIDER.unregister();
+/// unsafe { MY_PROVIDER.unregister(); }
 /// ```
 ///
 /// # Syntax

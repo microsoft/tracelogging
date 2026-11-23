@@ -323,7 +323,7 @@ struct Unregister(&'static tlg::Provider);
 
 impl Drop for Unregister {
     fn drop(&mut self) {
-        self.0.unregister();
+        unsafe { self.0.unregister() };
     }
 }
 
@@ -345,17 +345,17 @@ fn define_provider() {
 
     let _u = Unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unsafe { PROV.unregister() };
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     unsafe { PROV.register() };
-    PROV.unregister();
+    unsafe { PROV.unregister() };
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unsafe { PROV.unregister() };
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     unsafe { PROV.register_with_callback(callback, 12345usize) };
-    PROV.unregister();
+    unsafe { PROV.unregister() };
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unsafe { PROV.unregister() };
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     PROV.raw_meta();
 

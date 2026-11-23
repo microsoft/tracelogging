@@ -155,15 +155,19 @@ impl Provider {
     ///
     /// # Preconditions
     ///
-    /// - Do not call `unregister` while another thread may be writing events using this
-    ///   provider (e.g. via [`write_event!`]). An event write that overlaps
-    ///   `unregister` may pass an already-unregistered handle to ETW.
     /// - If this call overlaps a call to `register` or `unregister` on another thread,
     ///   it does nothing and returns 0 immediately. In that case the provider may still
     ///   be registered (overlap with `register`) or the other thread's unregistration
     ///   may still be in progress (overlap with `unregister`) when this call returns.
-    pub fn unregister(&self) -> u32 {
-        return self.context.unregister();
+    ///
+    /// # Safety
+    ///
+    /// - The caller must ensure that no other thread is writing events using this
+    ///   provider (e.g. via [`write_event!`]) while `unregister` runs. An event write
+    ///   that overlaps `unregister` may pass an already-unregistered handle to ETW,
+    ///   which is a use-after-free in kernel mode.
+    pub unsafe fn unregister(&self) -> u32 {
+        return unsafe { self.context.unregister() };
     }
 
     /// Register the provider.
