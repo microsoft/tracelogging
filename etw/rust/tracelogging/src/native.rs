@@ -449,7 +449,7 @@ impl ProviderContextInner {
                     .store(match_any_keyword, atomic::Ordering::Relaxed);
                 self.keyword_all
                     .store(match_all_keyword, atomic::Ordering::Relaxed);
-                // ETW enable level 0 means "all levels".
+                // ETW treats an enable level of 0 as "all levels".
                 self.level.store(
                     if level == 0 { 255 } else { level as i32 },
                     atomic::Ordering::Release,
@@ -550,4 +550,43 @@ extern "system" {
         data: *const EventDataDescriptor,
     ) -> u32;
     fn EtwActivityIdControl(control_code: u32, activity_id: &mut Guid) -> u32;
+}
+
+#[cfg(all(test, windows, feature = "etw"))]
+mod tests {
+    use super::*;
+
+    fn enable(context: &ProviderContext, event_control_code: u32, level: u8) {
+        unsafe {
+            ProviderContextInner::outer_callback(
+                &Guid::zero(),
+                event_control_code,
+                level,
+                0,
+                0,
+                0,
+                &context.inner as *const ProviderContextInner as usize,
+            );
+        }
+    }
+
+    #[test]
+    fn enable_level_0_enables_all_levels() {
+        let context = ProviderContext::new();
+        enable(&context, 1, 0);
+        assert!(context.enabled(Level::LogAlways, 0));
+        assert!(context.enabled(Level::Verbose, 0));
+        assert!(context.enabled(Level(255), 0));
+
+        enable(&context, 0, 0);
+        assert!(!context.enabled(Level::LogAlways, 0));
+    }
+
+    #[test]
+    fn enable_level_nonzero_filters_levels() {
+        let context = ProviderContext::new();
+        enable(&context, 1, 4);
+        assert!(context.enabled(Level::Informational, 0));
+        assert!(!context.enabled(Level::Verbose, 0));
+    }
 }
