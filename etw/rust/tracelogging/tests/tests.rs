@@ -41,6 +41,7 @@ fn guid() {
     use std::format;
     use tlg::Guid;
     use uuid::Uuid;
+    #[cfg(windows)]
     use windows::core::GUID;
 
     let nil = Guid::from_u128(&0);
@@ -116,6 +117,7 @@ fn guid() {
     let g_lowercase = g.to_utf8_bytes();
 
     // Verify interoperability between Guid and windows::core::GUID.
+    #[cfg(windows)]
     {
         let v = GUID::from_u128(g.to_u128());
         assert_eq!(
@@ -319,11 +321,19 @@ fn ft_clamp(ft: i64) -> i64 {
     };
 }
 
+/// Calls `provider.unregister()`, which is an `unsafe fn` with the `kernel_mode` feature.
+#[allow(unused_unsafe)]
+fn unregister(provider: &tlg::Provider) -> u32 {
+    // SAFETY: These tests never write events with a provider on another thread while
+    // it is being unregistered.
+    unsafe { provider.unregister() }
+}
+
 struct Unregister(&'static tlg::Provider);
 
 impl Drop for Unregister {
     fn drop(&mut self) {
-        self.0.unregister();
+        unregister(self.0);
     }
 }
 
@@ -345,17 +355,17 @@ fn define_provider() {
 
     let _u = Unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     unsafe { PROV.register() };
-    PROV.unregister();
+    unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     unsafe { PROV.register_with_callback(callback, 12345usize) };
-    PROV.unregister();
+    unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
-    PROV.unregister();
+    unregister(&PROV);
     assert!(!PROV.enabled(tlg::Level::LogAlways, 0));
     PROV.raw_meta();
 
@@ -395,6 +405,8 @@ fn define_provider() {
     );
 }
 
+// Double-register detection only exists in the Windows (ETW) implementation.
+#[cfg(windows)]
 #[test]
 #[should_panic]
 fn provider_panic() {

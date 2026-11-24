@@ -81,7 +81,10 @@
 //! );
 //!
 //! // Before module unload, unregister the provider.
+//! # #[cfg(not(feature = "kernel_mode"))]
 //! MY_PROVIDER.unregister();
+//! # #[cfg(feature = "kernel_mode")] // unregister is an unsafe fn with kernel_mode.
+//! # unsafe { MY_PROVIDER.unregister(); }
 //! ```
 //!
 //! # Notes
@@ -164,7 +167,10 @@
 ///     str8("MyFieldName", message),
 /// );
 ///
+/// # #[cfg(not(feature = "kernel_mode"))]
 /// MY_PROVIDER.unregister();
+/// # #[cfg(feature = "kernel_mode")] // unregister is an unsafe fn with kernel_mode.
+/// # unsafe { MY_PROVIDER.unregister(); }
 /// ```
 ///
 /// # Syntax
@@ -320,7 +326,10 @@ pub use tracelogging_macros::define_provider;
 ///     str8("MyFieldName", message),
 /// );
 ///
+/// # #[cfg(not(feature = "kernel_mode"))]
 /// MY_PROVIDER.unregister();
+/// # #[cfg(feature = "kernel_mode")] // unregister is an unsafe fn with kernel_mode.
+/// # unsafe { MY_PROVIDER.unregister(); }
 /// ```
 ///
 /// # Syntax

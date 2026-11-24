@@ -33,5 +33,7 @@ macros = ["dep:tracelogging_macros"]
 tracelogging_macros = { optional = true, version = "= 1.2.4", path = "../tracelogging_macros" }
 
 [dev-dependencies]
-windows = ">= 0.39"
 uuid  = ">= 1.1"
+
+[target.'cfg(windows)'.dev-dependencies]
+windows = ">= 0.39"

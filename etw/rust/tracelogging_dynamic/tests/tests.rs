@@ -8,6 +8,14 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 use tracelogging_dynamic::*;
 
+/// Calls `provider.unregister()`, which is an `unsafe fn` with the `kernel_mode` feature.
+#[allow(unused_unsafe)]
+fn unregister(provider: &Provider) -> u32 {
+    // SAFETY: These tests never write events with a provider on another thread while
+    // it is being unregistered.
+    unsafe { provider.unregister() }
+}
+
 #[test]
 fn embedded_nuls_are_rejected() {
     assert!(std::panic::catch_unwind(|| {
@@ -52,7 +60,7 @@ fn concurrent_unregister_is_safe() {
                 let barrier = Arc::clone(&barrier);
                 thread::spawn(move || {
                     barrier.wait();
-                    assert_eq!(provider.unregister(), 0);
+                    assert_eq!(unregister(&provider), 0);
                 })
             })
             .collect();
@@ -146,7 +154,7 @@ fn provider() {
     assert_eq!(provider.name(), "Hello");
     assert_eq!(provider.id(), &aid1);
 
-    provider.unregister();
+    unregister(&provider);
 
     let provider = pin!(Provider::new("MyCompany.MyComponent", &Provider::options()));
     unsafe {
@@ -170,7 +178,7 @@ fn provider() {
 
     _ = provider.enabled(Level::Verbose, 0x123);
 
-    provider.unregister();
+    unregister(&provider);
 
     let mut b = EventBuilder::new();
     let aid = Provider::create_activity_id();

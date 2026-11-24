@@ -132,5 +132,8 @@ fn main() {
         tlg::provider_enabled!(PROV1, tlg::Level::from_int(5), 1),
         tlg::provider_enabled!(PROV1, tlg::Level::Informational, 0x10),
     );
-    PROV1.unregister();
+    // SAFETY: No other thread is writing events with PROV1. (unregister is only an
+    // unsafe fn with the kernel_mode feature.)
+    #[allow(unused_unsafe)]
+    let _ = unsafe { PROV1.unregister() };
 }
