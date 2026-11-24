@@ -43,10 +43,10 @@ jobs:
       run: cargo test --verbose
     - name: Run dynamic release tests
       run: cargo test --release --verbose -p tracelogging_dynamic --test tests
+    - name: Lint kernel_mode build
+      run: cargo clippy --verbose -p tracelogging -p tracelogging_dynamic --lib --features tracelogging_dynamic/kernel_mode -- -D warnings
     - name: Check kernel_mode build
-      run: |
-        cargo clippy --verbose -p tracelogging -p tracelogging_dynamic --lib --features tracelogging_dynamic/kernel_mode -- -D warnings
-        cargo check --verbose -p tracelogging -p tracelogging_dynamic --all-targets --features tracelogging_dynamic/kernel_mode
+      run: cargo check --verbose -p tracelogging -p tracelogging_dynamic --all-targets --features tracelogging_dynamic/kernel_mode
 
   # kernel_mode test binaries cannot link on Windows (the Etw* APIs are only available to
   # drivers), so run the tests, examples, and doctests against the no-op implementation.
