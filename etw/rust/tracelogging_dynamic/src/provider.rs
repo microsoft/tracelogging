@@ -37,7 +37,9 @@ use crate::EventBuilder;
 ///     when calling it.
 /// - Use an [EventBuilder] to construct and write events as needed.
 /// - The provider will automatically unregister when it is dropped. You can manually call
-///   `unregister()` if you want to unregister sooner or if the provider is static.
+///   `unregister()` if you want to unregister sooner or if the provider is static. (With
+///   the `kernel_mode` feature, `unregister` is unsafe because it must not overlap with
+///   event writes on other threads.)
 ///
 /// # Pinning your provider
 ///
@@ -93,6 +95,8 @@ impl Provider {
     /// Returns the current thread's thread-local activity id.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CTRL_GET_ID`.)
     ///
     /// The thread-local activity id will be used if [EventBuilder::write] is called with
@@ -109,6 +113,8 @@ impl Provider {
     /// Sets the current thread's thread-local activity id. Returns the previous value.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CTRL_GET_SET_ID`.)
     ///
     /// The thread-local activity id will be used if [EventBuilder::write] is called with
@@ -129,6 +135,8 @@ impl Provider {
     /// Generates and returns a new 128-bit value suitable for use as an activity id.
     /// (Calls
     /// [EventActivityIdControl](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventactivityidcontrol)
+    /// or, with the `kernel_mode` feature,
+    /// [EtwActivityIdControl](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwactivityidcontrol)
     /// with control code `EVENT_ACTIVITY_CREATE_ID`.)
     ///
     /// The returned value is not a true GUID/UUID since it is not globally-unique. The
@@ -214,7 +222,7 @@ impl Provider {
             name.len() < 32768,
             "provider name.len() must be less than 32KB"
         );
-        debug_assert!(!name.contains('\0'), "provider name must not contain '\\0'");
+        assert!(!name.contains('\0'), "provider name must not contain '\\0'");
 
         const GROUP_TRAIT_LEN: u16 = 2 + 1 + 16;
         let name_len = name.len() as u16;
@@ -269,7 +277,7 @@ impl Provider {
     /// Returns true if any ETW logging session is listening to this provider for events
     /// with the specified level and keyword.
     #[inline(always)]
-    pub const fn enabled(&self, level: Level, keyword: u64) -> bool {
+    pub fn enabled(&self, level: Level, keyword: u64) -> bool {
         return self.context.enabled(level, keyword);
     }
 
@@ -283,8 +291,54 @@ impl Provider {
     /// Use `provider.unregister()` if you want to unregister the provider before it goes
     /// out of scope. The provider automatically unregisters when it is dropped so most
     /// users do  not need to call `unregister` directly.
+    ///
+    /// # Preconditions
+    ///
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
+    ///
+    /// When the `kernel_mode` feature is enabled, this method is `unsafe`: the caller
+    /// must ensure that no other thread is writing events using this provider while
+    /// `unregister` runs. In user mode, overlapping event writes are safe.
+    #[cfg(not(feature = "kernel_mode"))]
     pub fn unregister(&self) -> u32 {
-        return self.context.unregister();
+        // ProviderContext::unregister is unsafe only if tracelogging/kernel_mode is
+        // enabled, which (see the assert in lib.rs) only matters on Windows+ETW, where
+        // it requires our kernel_mode feature too.
+        #[allow(unused_unsafe)]
+        let result = unsafe { self.context.unregister() };
+        return result;
+    }
+
+    /// If this provider is not registered, does nothing and returns 0.
+    /// Otherwise, unregisters the provider.
+    ///
+    /// Returns 0 for success or an NTSTATUS from `EtwUnregister` for failure. The
+    /// return value is for diagnostic purposes only and should generally be ignored in
+    /// retail builds.
+    ///
+    /// Use `unsafe { provider.unregister() }` if you want to unregister the provider
+    /// before it goes out of scope. The provider automatically (and safely) unregisters
+    /// when it is dropped so most users do not need to call `unregister` directly.
+    ///
+    /// # Preconditions
+    ///
+    /// - If this call overlaps a call to `register` or `unregister` on another thread,
+    ///   it does nothing and returns 0 immediately. In that case the provider may still
+    ///   be registered (overlap with `register`) or the other thread's unregistration
+    ///   may still be in progress (overlap with `unregister`) when this call returns.
+    ///
+    /// # Safety
+    ///
+    /// - The caller must ensure that no other thread is writing events using this
+    ///   provider (e.g. via [EventBuilder::write()]) while `unregister` runs. An event
+    ///   write that overlaps `unregister` may pass an already-unregistered handle to
+    ///   `EtwWriteTransfer`, which is a use-after-free.
+    #[cfg(feature = "kernel_mode")]
+    pub unsafe fn unregister(&self) -> u32 {
+        return unsafe { self.context.unregister() };
     }
 
     /// Registers the provider, connecting it to the Windows ETW system.
@@ -299,6 +353,9 @@ impl Provider {
     ///
     /// Returns 0 for success or a Win32 error from
     /// [EventRegister](https://docs.microsoft.com/windows/win32/api/evntprov/nf-evntprov-eventregister)
+    /// (or an `NTSTATUS` from
+    /// [EtwRegister](https://learn.microsoft.com/windows-hardware/drivers/ddi/wdm/nf-wdm-etwregister)
+    /// with the `kernel_mode` feature)
     /// for failure. The return value is for diagnostic purposes only and should
     /// generally be ignored in retail builds: if `register` fails then
     /// [Provider::enabled()] will always return `false`, [Provider::unregister()] will
@@ -314,30 +371,33 @@ impl Provider {
     ///
     /// # Safety
     ///
-    /// - If the provider is in a DLL, it **must** be unregistered before the DLL unloads.
+    /// - If the provider is in a DLL or driver, it **must** be unregistered before the
+    ///   module unloads.
     ///
     ///   [Provider::unregister] is called automatically when the provider is dropped so
     ///   this generally isn't an issue unless the provider is declared as a static variable.
     ///
-    ///   If a provider variable is registered by a DLL and the DLL unloads without dropping
-    ///   the variable, the process may subsequently crash. This occurs because `register`
-    ///   enables an ETW callback into the calling DLL and `unregister` ensures that the
-    ///   callback is disabled. If the module unloads without disabling the callback, the
-    ///   process will crash the next time that ETW tries to invoke the callback.
+    ///   If a provider variable is registered by a DLL or driver and the module unloads
+    ///   without dropping the variable, the process (or, for a driver, the system) may
+    ///   subsequently crash. This occurs because `register` enables an ETW callback into
+    ///   the calling module and `unregister` ensures that the callback is disabled. If the
+    ///   module unloads without disabling the callback, a crash will occur the next time
+    ///   that ETW tries to invoke the callback.
     ///
     /// - Once registered, you may not move-out of the provider variable until the
     ///   provider is dropped. (This is implied by the rules for `Pin` but repeated here
     ///   for clarity.)
     pub unsafe fn register(self: Pin<&Self>) -> u32 {
-        let result = unsafe { self
-            .context
-            .register(&self.id, self.callback_fn, self.callback_context) };
-        if result == 0 {
-            self.context.set_information(
-                2, // EventProviderSetTraits
+        // The provider traits are set inside the registration guard; see
+        // ProviderContext::register.
+        let result = unsafe {
+            self.context.register(
+                &self.id,
+                self.callback_fn,
+                self.callback_context,
                 &self.meta[..],
-            );
-        }
+            )
+        };
 
         return result;
     }

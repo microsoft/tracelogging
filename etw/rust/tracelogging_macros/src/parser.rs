@@ -436,7 +436,15 @@ fn unescape_u(dest: &mut String, it: &mut str::Chars) -> bool {
             }
         }
     }
-    return false; // Too many digits
+
+    if it.next() == Some('}') {
+        if let Some(val_ch) = char::from_u32(val) {
+            dest.push(val_ch);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 fn unescape(src: &str) -> Option<String> {

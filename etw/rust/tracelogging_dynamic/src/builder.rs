@@ -127,7 +127,7 @@ impl EventBuilder {
     /// event_tag is a 28-bit integer (range 0x0 to 0x0FFFFFFF). Use 0 if you are
     /// not using event tags.
     pub fn reset(&mut self, name: &str, level: Level, keyword: u64, event_tag: u32) -> &mut Self {
-        debug_assert!(!name.contains('\0'), "event name must not contain '\\0'");
+        assert!(!name.contains('\0'), "event name must not contain '\\0'");
         debug_assert_eq!(
             event_tag & 0x0FFFFFFF,
             event_tag,
@@ -162,7 +162,8 @@ impl EventBuilder {
 
     /// Sends the built event to ETW via the specified provider.
     ///
-    /// Returns 0 for success or a Win32 error from `EventWrite` for failure. The return
+    /// Returns 0 for success or a Win32 error from `EventWrite` (or an `NTSTATUS` from
+    /// `EtwWriteTransfer` with the `kernel_mode` feature) for failure. The return
     /// value is for diagnostic purposes only and should generally be ignored in retail
     /// builds.
     ///
@@ -1364,7 +1365,7 @@ impl EventBuilder {
         out_type: u8,
         field_tag: u32,
     ) -> &mut Self {
-        debug_assert!(
+        assert!(
             !field_name.contains('\0'),
             "field_name must not contain '\\0'"
         );

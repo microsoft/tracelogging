@@ -1,6 +1,6 @@
 [package]
 name = "tracelogging_dynamic"
-version = "1.2.4"
+version = "2.0.0"
 edition = "2021"
 authors = ["Microsoft"]
 license = "MIT"
@@ -26,6 +26,7 @@ rust-version = "1.80"
 [features]
 default = ["etw"]
 etw = ["tracelogging/etw"] # Logging is enabled if windows && etw.
+kernel_mode = ["tracelogging/kernel_mode"] # Use kernel-mode ETW APIs; Provider::unregister becomes unsafe.
 
 [dependencies]
-tracelogging = { default-features = false, version = "= 1.2.4", path = "../tracelogging" }
+tracelogging = { default-features = false, version = "= 2.0.0", path = "../tracelogging" }

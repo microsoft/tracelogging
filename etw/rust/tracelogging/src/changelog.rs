@@ -3,6 +3,30 @@
 #[allow(unused_imports)]
 use crate::*; // For docs
 
+/// # v2.0.0 (Unreleased, Breaking)
+/// - Fix data races (undefined behavior) between the ETW enable callback and
+///   `Provider::enabled`, `register`, and `unregister`. Provider enable state is now
+///   stored in atomics.
+/// - **Breaking:** `Provider::enabled` is no longer a `const fn`.
+/// - **Breaking (kernel_mode only):** With the `kernel_mode` feature,
+///   `Provider::unregister` (and `ProviderContext::unregister`) is an `unsafe fn`. The
+///   caller must ensure that no other thread is writing events with the provider while
+///   it is being unregistered (an overlapping write could use the freed registration
+///   handle, a use-after-free). In user mode it remains a safe fn.
+/// - An ETW enable level of 0 now enables events of all levels (matching ETW and
+///   TraceLoggingProvider.h). Previously only `Level::LogAlways` events were enabled.
+/// - Fix divide-by-zero panic in `counted_size` / `EventDataDescriptor::from_counted`
+///   for zero-sized element types.
+/// - Document that `Provider::unregister` does nothing if it overlaps with
+///   `register`/`unregister` on other threads.
+/// - `Provider::register` now sets the provider traits (`EventSetInformation`) while
+///   holding the registration guard and before the registration handle is published,
+///   so an overlapping `unregister` cannot free the handle while the traits are being
+///   set, and no events are written before the traits are set.
+///   (`_internal::ProviderContext::register` takes a new `provider_traits` parameter.)
+/// - Update `tracelogging_macros` dependency to 1.2.4.
+pub mod v2_0_0 {}
+
 /// # v1.2.4 (2025-05-16)
 /// - Fix linker issues when building with rustc 1.87
 pub mod v1_2_4 {}

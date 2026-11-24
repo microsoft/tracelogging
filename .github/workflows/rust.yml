@@ -10,6 +10,9 @@ on:
     paths:
       - "etw/rust/**"
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   CARGO_INCREMENTAL: 0
@@ -38,3 +41,20 @@ jobs:
       run: cargo build --verbose
     - name: Run tests
       run: cargo test --verbose
+    - name: Run dynamic release tests
+      run: cargo test --release --verbose -p tracelogging_dynamic --test tests
+    - name: Lint kernel_mode build
+      run: cargo clippy --verbose -p tracelogging -p tracelogging_dynamic --lib --features tracelogging_dynamic/kernel_mode -- -D warnings
+    - name: Check kernel_mode build
+      run: cargo check --verbose -p tracelogging -p tracelogging_dynamic --all-targets --features tracelogging_dynamic/kernel_mode
+
+  # kernel_mode test binaries cannot link on Windows (the Etw* APIs are only available to
+  # drivers), so run the tests, examples, and doctests against the no-op implementation.
+  linux-kernel-mode-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Run kernel_mode tests (no-op implementation)
+      run: cargo test --verbose -p tracelogging -p tracelogging_dynamic --all-targets --features tracelogging_dynamic/kernel_mode
+    - name: Run kernel_mode doctests (no-op implementation)
+      run: cargo test --verbose -p tracelogging -p tracelogging_dynamic --doc --features tracelogging_dynamic/kernel_mode
